@@ -1,0 +1,20 @@
+services:
+  postgres:
+    build:
+      context: .
+      dockerfile: dev_aphava_docker_file
+    image: "dev_alphava_docker_file"
+    container_name: ${PG_CONTAINER_NAME}
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      PGDATA: ${PGDATA}
+    volumes:
+      - d_alpha:/data/d_alpha
+    ports:
+      - "6999:5432"
+    restart: unless-stopped
+volumes:
+  d_alpha:
+    external: true
