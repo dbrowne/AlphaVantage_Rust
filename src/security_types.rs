@@ -337,7 +337,6 @@ pub mod sec_types {
         ///
         /// The decoded `SecurityType`
         ///
-
         pub fn get_sec_type(sid: i64) -> SecurityType {
             let sectype = sid >> SHIFT;
             match sectype {
@@ -358,23 +357,23 @@ pub mod sec_types {
             }
         }
 
-
+        /// Obtains the `SecurityType` and a String representation of the type from  the security type and name.
+        /// This is a helper function for the `Security` struct.
+        ///
+        /// # Arguments
+        ///
+        /// * `s_typ` - The security type as a `&str`.
+        /// * `s_name` - The security name as a `&str`. which can override the security type.
+        ///
+        /// # Returns
+        ///
+        /// A tuple of the `SecurityType` and a `String` representation of the type.
+        ///
+        /// # Example
+        ///
+        /// See test cases below
         pub fn get_detailed_sec_type(s_typ: &str, s_name: &str) -> (SecurityType, String) {
-            /// Obtains the `SecurityType` and a String representation of the type from  the security type and name.
-            /// This is a helper function for the `Security` struct.
-            ///
-            /// # Arguments
-            ///
-            /// * `s_typ` - The security type as a `&str`.
-            /// * `s_name` - The security name as a `&str`. which can override the security type.
-            ///
-            /// # Returns
-            ///
-            /// A tuple of the `SecurityType` and a `String` representation of the type.
-            ///
-            /// # Example
-            ///
-            /// See test cases
+
 
             let s_name_lower = s_name.to_lowercase();
             let s_typ_lower = s_typ.to_lowercase();
