@@ -78,7 +78,7 @@ macro_rules! create_url{
         format!("https://www.alphavantage.co/query?function=OVERVIEW&symbol={}&apikey={}",$string1,$string2)
     };
     (FuncType:SymSearch,$string1:expr, $string2:expr) =>{
-        format!("https://www.alphavantage.co/query?function=SYMBOL_SEARCH&keywords={}&apikey={}",$string1,$string2)
+        format!("https://www.alphavantage.co/query?function=SYMBOL_SEARCH&keywords={}&apikey={}&datatype=csv",$string1,$string2)
     };
 
     ($other:expr,$string1:expr, $string2:expr) =>{
@@ -94,23 +94,27 @@ pub  use create_url;
 mod  test{
     #[test]
     fn t_01(){
-        let  url = create_url!(FuncType:TsIntraExt,"AAPL","123456789");
+        let  (sym, api_key) = ("AAPL","123456789");
+        let  url = create_url!(FuncType:TsIntraExt,sym,api_key);
         assert_eq!(url,"https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY_EXTENDED&datatype=json&symbol=AAPL&interval=1min&slice=year1month1&apikey=123456789");
     }
     #[test]
     fn t_02(){
-        let  url = create_url!(FuncType:TsDaily,"AAPL","123456789");
+        let  (sym, api_key) = ("AAPL","123456789");
+        let  url = create_url!(FuncType:TsDaily,sym,api_key);
         assert_eq!(url,"https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&datatype=json&symbol=AAPL&apikey=123456789");
     }
     #[test]
     fn t_03(){
-        let  url = create_url!(FuncType:Overview,"AAPL","123456789");
+        let  (sym, api_key) = ("AAPL","123456789");
+        let  url = create_url!(FuncType:Overview,sym,api_key);
         assert_eq!(url,"https://www.alphavantage.co/query?function=OVERVIEW&symbol=AAPL&apikey=123456789");
     }
     #[test]
     fn  t_04(){
-        let  url = create_url!(FuncType:SymSearch,"AAPL","123456789");
-        assert_eq!(url,"https://www.alphavantage.co/query?function=SYMBOL_SEARCH&keywords=AAPL&apikey=123456789");
+        let  (sym, api_key) = ("AAPL","123456789");
+        let  url = create_url!(FuncType:SymSearch,sym,api_key);
+        assert_eq!(url,"https://www.alphavantage.co/query?function=SYMBOL_SEARCH&keywords=AAPL&apikey=123456789&datatype=csv");
     }
     #[test]
     fn  t_05(){
