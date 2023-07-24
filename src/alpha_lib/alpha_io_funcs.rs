@@ -32,7 +32,6 @@
 use  std::collections::HashMap;
 use  std::error::Error;
 use chrono::{DateTime, Local, Duration};
-use crate::alpha_lib::macros::FuncType;
 use crate::alpha_lib::alpha_data_types::AlphaSymbol;
 use crate::create_url;
 use crate::db_funcs::{create_symbol, establish_connection};
@@ -41,7 +40,6 @@ use crate::alpha_lib::alpha_funcs::normalize_alpha_region;
 
 const SYMBOL: &str = "symbol";
 const MAX_ERRORS: i32 = 50;
-const RATE: u32 = 75; // Requests per minute
 
 /// # process_symbols Function
 ///

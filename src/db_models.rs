@@ -30,7 +30,7 @@
 
 use  chrono::prelude::*;
 use  diesel::prelude::*;
-use crate::schema::symbols;
+use crate::schema::{symbols, overviews,overviewexts};
 use chrono::NaiveDateTime;
 #[derive(Queryable, Debug)]
 pub struct Symbol {
@@ -70,4 +70,127 @@ pub struct NewSymbol<'a> {
     pub c_time: &'a NaiveDateTime,
     pub m_time: &'a NaiveDateTime,
 
+}
+
+#[derive(Queryable, Debug)]
+pub struct Overview {
+    pub sid: i64,
+    pub symbol: String,
+    pub name: String,
+    pub description: String,
+    pub cik: String,
+    pub exch: String,
+    pub curr: String,
+    pub country: String,
+    pub sector: String,
+    pub industry: String,
+    pub address: String,
+    pub fiscalyearend: String,
+    pub latestquarter: NaiveDate,
+    pub marketcapitalization: i32,
+    pub ebitda: i32,
+    pub peratio: f32,
+    pub pegratio: f32,
+    pub bookvalue: f32,
+    pub dividendpershare: f32,
+    pub dividendyield: f32,
+    pub eps: f32,
+    pub c_time: NaiveDateTime,
+    pub mod_time: NaiveDateTime,
+}
+
+
+#[derive(Insertable, Debug)]
+#[diesel(table_name = overviews)]
+pub struct NewOverview<'a> {
+    pub sid: &'a i64,
+    pub symbol: &'a str,
+    pub name: &'a str,
+    pub description: &'a str,
+    pub cik: &'a str,
+    pub exch: &'a str,
+    pub curr: &'a str,
+    pub country: &'a str,
+    pub sector: &'a str,
+    pub industry: &'a str,
+    pub address: &'a str,
+    pub fiscalyearend: &'a str,
+    pub latestquarter: &'a NaiveDate,
+    pub marketcapitalization: &'a i32,
+    pub ebitda: &'a i32,
+    pub peratio: &'a f32,
+    pub pegratio: &'a f32,
+    pub bookvalue: &'a f32,
+    pub dividendpershare: &'a f32,
+    pub dividendyield: &'a f32,
+    pub eps: &'a f32,
+    pub c_time: &'a NaiveDateTime,
+    pub mod_time: &'a NaiveDateTime,
+}
+
+#[derive(Queryable, Debug)]
+pub struct Overviewext {
+    pub sid: i64,
+    pub revenuepersharettm: f32,
+    pub profitmargin: f32,
+    pub operatingmarginttm: f32,
+    pub returnonassetsttm: f32,
+    pub returnonequityttm: f32,
+    pub revenuettm: i32,
+    pub grossprofitttm: i32,
+    pub dilutedepsttm: f32,
+    pub quarterlyearningsgrowthyoy: f32,
+    pub quarterlyrevenuegrowthyoy: f32,
+    pub analysttargetprice: f32,
+    pub trailingpe: f32,
+    pub forwardpe: f32,
+    pub pricetosalesratiottm: f32,
+    pub pricetobookratio: f32,
+    pub evtorevenue: f32,
+    pub evtoebitda: f32,
+    pub beta: f32,
+    pub annweekhigh: f32,
+    pub annweeklow: f32,
+    pub fiftydaymovingaverage: f32,
+    pub twohdaymovingaverage: f32,
+    pub sharesoutstanding: f32,
+    pub dividenddate: NaiveDate,
+    pub exdividenddate: NaiveDate,
+    pub c_time: NaiveDateTime,
+    pub mod_time: NaiveDateTime,
+}
+
+/// Overviewexts table exists to minimize compile time Diesel 64 column feature is too slow.
+
+#[derive(Insertable, Debug)]
+#[diesel(table_name = overviewexts)]
+pub struct NewOverviewext<'a> {
+    pub sid: &'a i64,
+    pub revenuepersharettm: &'a f32,
+    pub profitmargin: &'a f32,
+    pub operatingmarginttm: &'a f32,
+    pub returnonassetsttm: &'a f32,
+    pub returnonequityttm: &'a f32,
+    pub revenuettm: &'a i32,
+    pub grossprofitttm: &'a i32,
+    pub dilutedepsttm: &'a f32,
+    pub quarterlyearningsgrowthyoy: &'a f32,
+    pub quarterlyrevenuegrowthyoy: &'a f32,
+    pub analysttargetprice: &'a f32,
+    pub trailingpe: &'a f32,
+    pub forwardpe: &'a f32,
+    pub pricetosalesratiottm: &'a f32,
+    pub pricetobookratio: &'a f32,
+    pub evtorevenue: &'a f32,
+    pub evtoebitda: &'a f32,
+    pub beta: &'a f32,
+    pub annweekhigh: &'a f32,
+    pub annweeklow: &'a f32,
+    pub fiftydaymovingaverage: &'a f32,
+    pub twohdaymovingaverage: &'a f32,
+    pub sharesoutstanding: &'a f32,
+    pub dividenddate: &'a NaiveDate,
+    pub exdividenddate: &'a NaiveDate,
+    pub c_time: &'a NaiveDateTime,
+    pub mod_time: &'a NaiveDateTime,
 }

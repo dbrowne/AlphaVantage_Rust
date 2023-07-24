@@ -224,7 +224,7 @@ pub mod sec_types {
 
 
     #[derive(PartialEq, Debug, Clone, Copy, Eq, Hash, Deserialize)]
-    pub enum SymboltFlag {
+    pub enum SymbolFlag {
         Overview,
         Intraday,
         Summary,
