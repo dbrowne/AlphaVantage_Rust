@@ -28,13 +28,14 @@
  */
 
 
-
+use std::{thread, time};
+use serde_json::Value;
 use  std::collections::HashMap;
 use  std::error::Error;
 use chrono::{DateTime, Local, Duration};
-use crate::alpha_lib::alpha_data_types::AlphaSymbol;
+use crate::alpha_lib::alpha_data_types::{AlphaSymbol,FullOverview};
 use crate::create_url;
-use crate::db_funcs::{create_symbol, establish_connection};
+use crate::db_funcs::{create_symbol, establish_connection,create_overview};
 use  crate::security_types::sec_types::{SecurityType};
 use crate::alpha_lib::alpha_funcs::normalize_alpha_region;
 
@@ -149,6 +150,51 @@ pub fn process_symbols(sec_vec: Vec<Vec<String>>) -> Result<(), Box<dyn Error>> 
                 println!("Error: {:?}", resp);
             }
         }
+    }
+
+    Ok(())
+}
+
+
+
+pub  fn get_overview(sid: i64, symbol: String) -> Result<(), Box<dyn Error>> {
+    const SYMBOL: &str = "Symbol";
+    let connection = &mut establish_connection()?;
+    let api_key = std::env::var("ALPHA_VANTAGE_API_KEY").expect("ALPHA_VANTAGE_API_KEY must be set");
+    let url =create_url!(FuncType:Overview,symbol,api_key);
+    let response = reqwest::blocking::get(&url);
+
+    if let Ok(response) = response {
+        println!("Response {:?}", response);
+        let text = match response.text() {
+            Ok(text) => text,
+            Err(err) => {
+                println!("Error getting text from response: {:?}", err);
+                return Err("Error getting text from response".into());
+            }
+        };
+
+        if !text.contains(SYMBOL) {
+            println!("Error: for {}: {:?}", symbol, text);
+            thread::sleep(time::Duration::from_secs(1));
+        } else {
+            let json = match serde_json::from_str::<Value>(&text) {
+                Ok(json) => json,
+                Err(err) => {
+                    println!("Error parsing json: {:?}", err);
+                    return Err("Error parsing json".into());
+                }
+            };
+            let ov = FullOverview::new(sid, json);
+            if let Some(ov) = ov {
+                println!("Overview: {:?}", ov);
+                create_overview(connection, ov)?;
+            } else {
+                println!("Error: for {}: {:?}", symbol, text);
+            }
+        }
+    } else {
+        println!("Error getting response: {:?}", response);
     }
 
     Ok(())

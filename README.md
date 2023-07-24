@@ -18,7 +18,7 @@ NASDAQ_LISTED=[Path_to_this_file]/data/nasdaq-listed_csv.csv
 
 Current Status:
 - [x] Security loader 
-- [ ] Security overview loader
+- [x] Security overview loader
 - [ ] Intraday price loader
 - [ ] Open Close price loader
 - [ ] Refactoring of security loader to async and multi-threading 
