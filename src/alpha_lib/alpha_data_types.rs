@@ -103,11 +103,7 @@ pub struct FullOverview {
 }
 
 
-impl FullOverview {
-    pub fn new(sid: i64, json_txt: Value) -> Option<Self> {
-        const ERROR: &str = "__Error__";
-        // Would have used serede but fields beginning with numbers are not allowed
-// /JSON: Object {"200DayMovingAverage": String("151.55"),
+// JSON: Object {"200DayMovingAverage": String("151.55"),
 // "50DayMovingAverage": String("160.75"),
 // "52WeekHigh": String("175.59"),
 // "52WeekLow": String("123.98"),
@@ -156,54 +152,71 @@ impl FullOverview {
 // "SharesOutstanding": String("15728700000"),
 // "Symbol": String("AAPL"),
 // "TrailingPE": String("29.11")}
+impl FullOverview {
+    fn get_string_field(json_txt: &Value, field: &str) -> String {
+        const ERROR: &str = "__Error__";
+        json_txt[field].as_str().unwrap_or(ERROR).to_string()
+    }
 
+    fn get_i32_field(json_txt: &Value, field: &str) -> i32 {
+        json_txt[field].as_str().unwrap_or("").parse::<i32>().unwrap_or(-9)
+    }
+
+    fn get_f32_field(json_txt: &Value, field: &str) -> f32 {
+        json_txt[field].as_str().unwrap_or("").parse::<f32>().unwrap_or(-9.99)
+    }
+
+    fn get_date_field(json_txt: &Value, field: &str) -> NaiveDate {
+        NaiveDate::parse_from_str(json_txt[field].as_str().unwrap_or(""), "%Y-%m-%d").unwrap_or(NaiveDate::from_ymd_opt(1900, 1, 1).unwrap())
+    }
+    pub fn new(sid: i64, json_txt: Value) -> Option<Self> {
         Some(Self {
             sid,
-            symbol: json_txt["Symbol"].as_str().unwrap_or(ERROR).to_string(),
-            name: json_txt["Name"].as_str().unwrap_or(ERROR).to_string(),
-            description: json_txt["Description"].as_str().unwrap_or(ERROR).to_string(),
-            cik: json_txt["CIK"].as_str().unwrap_or(ERROR).to_string(),
-            exch: json_txt["Exchange"].as_str().unwrap_or("ERROR").to_string(),
-            curr: json_txt["Currency"].as_str().unwrap_or("ERROR").to_string(),
-            country: json_txt["Country"].as_str().unwrap_or("ERROR").to_string(),
-            sector: json_txt["Sector"].as_str().unwrap_or("ERROR").to_string(),
-            industry: json_txt["Industry"].as_str().unwrap_or("ERROR").to_string(),
-            address: json_txt["Address"].as_str().unwrap_or("ERROR").to_string(),
-            fiscalyearend: json_txt["FiscalYearEnd"].as_str().unwrap_or("ERROR").to_string(),
-            latestquarter: NaiveDate::parse_from_str(json_txt["LatestQuarter"].as_str().unwrap_or(""), "%Y-%m-%d").unwrap_or(NaiveDate::from_ymd_opt(1900, 1, 1).unwrap()),
-            marketcapitalization: json_txt["MarketCapitalization"].as_str().unwrap_or("").parse::<i32>().unwrap_or(-9),
-            ebitda: json_txt["EBITDA"].as_str().unwrap_or("").parse::<i32>().unwrap_or(-9),
-            peratio: json_txt["PERatio"].as_str().unwrap_or("").parse::<f32>().unwrap_or(-9.99),
-            pegratio: json_txt["PEGRatio"].as_str().unwrap_or("").parse::<f32>().unwrap_or(-9.99),
-            bookvalue: json_txt["BookValue"].as_str().unwrap_or("").parse::<f32>().unwrap_or(-9.99),
-            dividendpershare: json_txt["DividendPerShare"].as_str().unwrap_or("").parse::<f32>().unwrap_or(-9.99),
-            dividendyield: json_txt["DividendYield"].as_str().unwrap_or("").parse::<f32>().unwrap_or(-9.99),
-            eps: json_txt["EPS"].as_str().unwrap_or("").parse::<f32>().unwrap_or(-9.99),
-            revenuepersharettm: json_txt["RevenuePerShareTTM"].as_str().unwrap_or("").parse::<f32>().unwrap_or(-9.99),
-            profitmargin: json_txt["ProfitMargin"].as_str().unwrap_or("").parse::<f32>().unwrap_or(-9.99),
-            operatingmarginttm: json_txt["OperatingMarginTTM"].as_str().unwrap_or("").parse::<f32>().unwrap_or(-9.99),
-            returnonassetsttm: json_txt["ReturnOnAssetsTTM"].as_str().unwrap_or("").parse::<f32>().unwrap_or(-9.99),
-            returnonequityttm: json_txt["ReturnOnEquityTTM"].as_str().unwrap_or("").parse::<f32>().unwrap_or(-9.99),
-            revenuettm: json_txt["RevenueTTM"].as_str().unwrap_or("").parse::<i32>().unwrap_or(0),
-            grossprofitttm: json_txt["GrossProfitTTM"].as_str().unwrap_or("").parse::<i32>().unwrap_or(0),
-            dilutedepsttm: json_txt["DilutedEPSTTM"].as_str().unwrap_or("").parse::<f32>().unwrap_or(-9.99),
-            quarterlyearningsgrowthyoy: json_txt["QuarterlyEarningsGrowthYOY"].as_str().unwrap_or("").parse::<f32>().unwrap_or(-9.99),
-            quarterlyrevenuegrowthyoy: json_txt["QuarterlyRevenueGrowthYOY"].as_str().unwrap_or("").parse::<f32>().unwrap_or(-9.99),
-            analysttargetprice: json_txt["AnalystTargetPrice"].as_str().unwrap_or("").parse::<f32>().unwrap_or(-9.99),
-            trailingpe: json_txt["TrailingPE"].as_str().unwrap_or("").parse::<f32>().unwrap_or(-9.99),
-            forwardpe: json_txt["ForwardPE"].as_str().unwrap_or("").parse::<f32>().unwrap_or(-9.99),
-            pricetosalesratiottm: json_txt["PriceToSalesRatioTTM"].as_str().unwrap_or("").parse::<f32>().unwrap_or(-9.99),
-            pricetobookratio: json_txt["PriceToBookRatio"].as_str().unwrap_or("").parse::<f32>().unwrap_or(-9.99),
-            evtorevenue: json_txt["EVToRevenue"].as_str().unwrap_or("").parse::<f32>().unwrap_or(-9.99),
-            evtoebitda: json_txt["EVToEBITDA"].as_str().unwrap_or("").parse::<f32>().unwrap_or(-9.99),
-            beta: json_txt["Beta"].as_str().unwrap_or("").parse::<f32>().unwrap_or(-9.99),
-            annweekhigh: json_txt["52WeekHigh"].as_str().unwrap_or("").parse::<f32>().unwrap_or(-9.99),
-            annweeklow: json_txt["52WeekLow"].as_str().unwrap_or("").parse::<f32>().unwrap_or(-9.99),
-            fiftydaymovingaverage: json_txt["50DayMovingAverage"].as_str().unwrap_or("").parse::<f32>().unwrap_or(-9.99),
-            twohdaymovingaverage: json_txt["200DayMovingAverage"].as_str().unwrap_or("").parse::<f32>().unwrap_or(-9.99),
-            sharesoutstanding: json_txt["SharesOutstanding"].as_str().unwrap_or("").parse::<f32>().unwrap_or(-9.99),
-            dividenddate: json_txt["DividendDate"].as_str().unwrap_or("").parse::<NaiveDate>().unwrap_or(NaiveDate::from_ymd_opt(1900, 1, 1).unwrap()),
-            exdividenddate: json_txt["ExDividendDate"].as_str().unwrap_or("ERROR").parse::<NaiveDate>().unwrap_or(NaiveDate::from_ymd_opt(1900, 1, 1).unwrap()),
+            symbol: Self::get_string_field(&json_txt, "Symbol"),
+            name: Self::get_string_field(&json_txt, "Name"),
+            description: Self::get_string_field(&json_txt, "Description"),
+            cik: Self::get_string_field(&json_txt, "CIK"),
+            exch: Self::get_string_field(&json_txt, "Exchange"),
+            curr: Self::get_string_field(&json_txt, "Currency"),
+            country: Self::get_string_field(&json_txt, "Country"),
+            sector: Self::get_string_field(&json_txt, "Sector"),
+            industry: Self::get_string_field(&json_txt, "Industry"),
+            address: Self::get_string_field(&json_txt, "Address"),
+            fiscalyearend: Self::get_string_field(&json_txt, "FiscalYearEnd"),
+            latestquarter: Self::get_date_field(&json_txt, "LatestQuarter"),
+            marketcapitalization: Self::get_i32_field(&json_txt, "MarketCapitalization"),
+            ebitda: Self::get_i32_field(&json_txt, "EBITDA"),
+            peratio: Self::get_f32_field(&json_txt, "PERatio"),
+            pegratio: Self::get_f32_field(&json_txt, "PEGRatio"),
+            bookvalue: Self::get_f32_field(&json_txt, "BookValue"),
+            dividendpershare: Self::get_f32_field(&json_txt, "DividendPerShare"),
+            dividendyield: Self::get_f32_field(&json_txt, "DividendYield"),
+            eps: Self::get_f32_field(&json_txt, "EPS"),
+            revenuepersharettm: Self::get_f32_field(&json_txt, "RevenuePerShareTTM"),
+            profitmargin: Self::get_f32_field(&json_txt, "ProfitMargin"),
+            operatingmarginttm: Self::get_f32_field(&json_txt, "OperatingMarginTTM"),
+            returnonassetsttm: Self::get_f32_field(&json_txt, "ReturnOnAssetsTTM"),
+            returnonequityttm: Self::get_f32_field(&json_txt, "ReturnOnEquityTTM"),
+            revenuettm: Self::get_i32_field(&json_txt, "RevenueTTM"),
+            grossprofitttm: Self::get_i32_field(&json_txt, "GrossProfitTTM"),
+            dilutedepsttm: Self::get_f32_field(&json_txt, "DilutedEPSTTM"),
+            quarterlyearningsgrowthyoy: Self::get_f32_field(&json_txt, "QuarterlyEarningsGrowthYOY"),
+            quarterlyrevenuegrowthyoy: Self::get_f32_field(&json_txt, "QuarterlyRevenueGrowthYOY"),
+            analysttargetprice: Self::get_f32_field(&json_txt, "AnalystTargetPrice"),
+            trailingpe: Self::get_f32_field(&json_txt, "TrailingPE"),
+            forwardpe: Self::get_f32_field(&json_txt, "ForwardPE"),
+            pricetosalesratiottm: Self::get_f32_field(&json_txt, "PriceToSalesRatioTTM"),
+            pricetobookratio: Self::get_f32_field(&json_txt, "PriceToBookRatio"),
+            evtorevenue: Self::get_f32_field(&json_txt, "EVToRevenue"),
+            evtoebitda: Self::get_f32_field(&json_txt, "EVToEBITDA"),
+            beta: Self::get_f32_field(&json_txt, "Beta"),
+            annweekhigh: Self::get_f32_field(&json_txt, "52WeekHigh"),
+            annweeklow: Self::get_f32_field(&json_txt, "52WeekLow"),
+            fiftydaymovingaverage: Self::get_f32_field(&json_txt, "50DayMovingAverage"),
+            twohdaymovingaverage: Self::get_f32_field(&json_txt, "200DayMovingAverage"),
+            sharesoutstanding: Self::get_f32_field(&json_txt, "SharesOutstanding"),
+            dividenddate: Self::get_date_field(&json_txt, "DividendDate"),
+            exdividenddate: Self::get_date_field(&json_txt, "ExDividendDate"),
         })
     }
 }

@@ -28,8 +28,8 @@
  */
 
 
-
 /// The current supported AlphaVantage API functions.
+#[allow(dead_code)]
 #[derive(PartialEq, Debug, Clone, Copy, Eq, Hash)]
 pub  enum FuncType {
     TsIntraExt,
