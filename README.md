@@ -2,6 +2,7 @@
 
 ![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-green.svg)
 ![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)
+![Build Status:](https://github.com/dbrowne/AlphaVantage_Rust/actions/workflows/rust.yml/badge.svg)
 
 A Rust API client and demonstration for the [Alpha Vantage](https://www.alphavantage.co/) API.
 
