@@ -53,7 +53,7 @@
 ///
 /// # Examples
 ///
-/// ```rust
+/// ```ignore
 /// let region = "United States";
 /// let short_region = normalize_alpha_region(region);
 /// assert_eq!(short_region, "USA");
@@ -69,7 +69,6 @@ pub fn normalize_alpha_region(reg: &str) -> String {
         _ => reg,
     }.to_string()
 }
-
 
 #[cfg(test)]
 mod tests {

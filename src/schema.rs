@@ -83,8 +83,4 @@ diesel::table! {
 diesel::joinable!(overviewexts -> symbols (sid));
 diesel::joinable!(overviews -> symbols (sid));
 
-diesel::allow_tables_to_appear_in_same_query!(
-    overviewexts,
-    overviews,
-    symbols,
-);
+diesel::allow_tables_to_appear_in_same_query!(overviewexts, overviews, symbols,);

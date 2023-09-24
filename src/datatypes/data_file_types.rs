@@ -27,12 +27,9 @@
  * SOFTWARE.
  */
 
-
-
 use serde::Deserialize;
 /// Data File Types
 /// Contain the corresponding data structures for the symbol data files.
-
 
 /// A structure representing other symbols on the New York Stock Exchange (NYSE).
 /// The data is based on the dataset provided at: https://datahub.io/core/nyse-other-listings
@@ -70,8 +67,6 @@ pub struct NyseOtherSymbol {
     /// The symbol used for this security on the Nasdaq exchange.
     pub nasdaqsymbol: String,
 }
-
-
 
 /// A structure representing listed symbols on the NASDAQ exchange.
 /// The data is based on the dataset provided at: https://datahub.io/core/nasdaq-listings#resource-nasdaq-listed

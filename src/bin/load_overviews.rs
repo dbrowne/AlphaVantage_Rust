@@ -27,8 +27,7 @@
  * SOFTWARE.
  */
 
-
-use chrono::{Duration, prelude::*};
+use chrono::{prelude::*, Duration};
 use dotenvy::dotenv;
 use std::process;
 use AlphaVantage_Rust::alpha_lib::alpha_io_funcs::get_overview;
@@ -48,7 +47,7 @@ fn main() {
     let mut resp_time: DateTime<Local>;
     let mut dur_time: DateTime<Local>;
     let res = &mut establish_connection();
-    let  conn = match res {
+    let conn = match res {
         Ok(conn) => conn,
         Err(err) => {
             println!("Error running reader: {}", err);
@@ -56,7 +55,7 @@ fn main() {
         }
     };
 
-    let  res = get_sids_and_names_for(conn, COUNTRY.to_string(), TYPE.to_string());
+    let res = get_sids_and_names_for(conn, COUNTRY.to_string(), TYPE.to_string());
     let results = match res {
         Ok(results) => results,
         Err(err) => {
@@ -72,7 +71,6 @@ fn main() {
             println!("Error running reader: {}", err);
             process::exit(1);
         }
-
 
         resp_time = Local::now();
         if resp_time - dur_time < *MIN_TIME {

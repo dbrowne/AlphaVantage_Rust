@@ -27,15 +27,14 @@
  * SOFTWARE.
  */
 
-
-use diesel::pg::PgConnection;
-use std::{env, error::Error, process};
-use dotenvy::dotenv;
-use diesel::prelude::*;
-use chrono::{DateTime, Local, NaiveTime};
-use crate::db_models::{Symbol, NewSymbol, NewOverview, Overview, NewOverviewext, Overviewext};
 use crate::alpha_lib::alpha_data_types::{AlphaSymbol, FullOverview};
+use crate::db_models::{NewOverview, NewOverviewext, NewSymbol, Overview, Overviewext, Symbol};
 use crate::security_types::sec_types::SymbolFlag;
+use chrono::{DateTime, Local, NaiveTime};
+use diesel::pg::PgConnection;
+use diesel::prelude::*;
+use dotenvy::dotenv;
+use std::{env, error::Error, process};
 
 /// Establishes a connection to a Postgres database using Diesel.
 ///
@@ -58,8 +57,7 @@ use crate::security_types::sec_types::SymbolFlag;
 /// - On failure, it will return `Err`, with a dynamic Error (`Box<dyn Error>`) indicating the reason for failure.
 ///
 /// # Example
-///
-/// rust,no_run
+///```ignore
 /// use db_funcs::establish_connection;
 ///
 /// fn main() {
@@ -68,6 +66,7 @@ use crate::security_types::sec_types::SymbolFlag;
 ///         Err(e) => eprintln!("Database connection failed: {}", e),
 ///     }
 /// }
+/// ```
 ///
 pub fn establish_connection() -> Result<PgConnection, Box<dyn Error>> {
     dotenv().ok();
@@ -77,12 +76,12 @@ pub fn establish_connection() -> Result<PgConnection, Box<dyn Error>> {
         Err(_) => return Err("DATABASE_URL must be set".into()),
     };
 
-    let conn = PgConnection::establish(&database_url)
-        .map_err(|_| -> Box<dyn Error> { format!("Error connecting to {}", database_url).into() })?;
+    let conn = PgConnection::establish(&database_url).map_err(|_| -> Box<dyn Error> {
+        format!("Error connecting to {}", database_url).into()
+    })?;
 
     Ok(conn)
 }
-
 
 /// Parses a time string into a `NaiveTime` struct.
 ///
@@ -115,7 +114,11 @@ pub fn establish_connection() -> Result<PgConnection, Box<dyn Error>> {
 ///     Err(e) => println!("Error: {}", e),
 /// }
 ///
-fn parse_time(time_str: &str, error_message: &str, a_sym: &AlphaSymbol) -> Result<NaiveTime, Box<dyn Error>> {
+fn parse_time(
+    time_str: &str,
+    error_message: &str,
+    a_sym: &AlphaSymbol,
+) -> Result<NaiveTime, Box<dyn Error>> {
     match NaiveTime::parse_from_str(time_str, "%H:%M") {
         Ok(time) => Ok(time),
         Err(e) => {
@@ -156,7 +159,11 @@ fn parse_time(time_str: &str, error_message: &str, a_sym: &AlphaSymbol) -> Resul
 ///     Err(e) => println!("Error inserting new symbol: {}", e),
 /// }
 /// ```
-pub fn create_symbol(conn: &mut PgConnection, sid: i64, a_sym: AlphaSymbol) -> Result<(), Box<dyn Error>> {
+pub fn create_symbol(
+    conn: &mut PgConnection,
+    sid: i64,
+    a_sym: AlphaSymbol,
+) -> Result<(), Box<dyn Error>> {
     use crate::schema::symbols;
     let now = Local::now().naive_local();
 
@@ -187,7 +194,10 @@ pub fn create_symbol(conn: &mut PgConnection, sid: i64, a_sym: AlphaSymbol) -> R
     {
         Ok(_) => Ok(()),
         Err(e) => {
-            eprintln!("Error saving new symbols {:?} for sid: {}{:?} ", e, sid, a_sym);
+            eprintln!(
+                "Error saving new symbols {:?} for sid: {}{:?} ",
+                e, sid, a_sym
+            );
             Err(Box::new(e))
         }
     }
@@ -230,9 +240,12 @@ pub fn create_symbol(conn: &mut PgConnection, sid: i64, a_sym: AlphaSymbol) -> R
 /// * Refactor the database insertion code to enhance maintainability.
 /// * Consider returning a custom error type or using more descriptive error handling.
 
-pub fn create_overview(conn: &mut PgConnection, full_ov: FullOverview) -> Result<(), Box<dyn Error>> {
-    use crate::schema::overviews;
+pub fn create_overview(
+    conn: &mut PgConnection,
+    full_ov: FullOverview,
+) -> Result<(), Box<dyn Error>> {
     use crate::schema::overviewexts;
+    use crate::schema::overviews;
 
     let localt: DateTime<Local> = Local::now();
     let now = localt.naive_local(); // NaiveDateTime::now();
@@ -262,7 +275,7 @@ pub fn create_overview(conn: &mut PgConnection, full_ov: FullOverview) -> Result
         c_time: &now,
         mod_time: &now,
     };
-//todo: refactor this
+    //todo: refactor this
     let _ = diesel::insert_into(overviews::table)
         .values(&new_overview)
         .get_result::<Overview>(conn)
@@ -299,7 +312,7 @@ pub fn create_overview(conn: &mut PgConnection, full_ov: FullOverview) -> Result
         mod_time: &now,
     };
 
-//todo: refactor this
+    //todo: refactor this
     let _ = diesel::insert_into(overviewexts::table)
         .values(&new_overviewext)
         .get_result::<Overviewext>(conn)
@@ -315,7 +328,6 @@ pub fn create_overview(conn: &mut PgConnection, full_ov: FullOverview) -> Result
     };
     Ok(())
 }
-
 
 /// Update boolean values (flags) of a specified symbol in the database.
 ///
@@ -356,42 +368,57 @@ pub fn create_overview(conn: &mut PgConnection, full_ov: FullOverview) -> Result
 /// This function will return an error if the database operation fails, for example,
 /// if there's a problem with the connection, or if the symbol with the specified `sid`
 /// does not exist in the database.
-fn set_symbol_booleans(conn: &mut PgConnection, sid: i64, flag: SymbolFlag, value: bool) -> Result<(), Box<dyn Error>> {
-    use crate::schema::symbols::dsl::{symbols, overview, intraday, summary, m_time};
+fn set_symbol_booleans(
+    conn: &mut PgConnection,
+    sid: i64,
+    flag: SymbolFlag,
+    value: bool,
+) -> Result<(), Box<dyn Error>> {
+    use crate::schema::symbols::dsl::{intraday, m_time, overview, summary, symbols};
     let localt: DateTime<Local> = Local::now();
     let now = localt.naive_local();
     match flag {
         SymbolFlag::Overview => {
             diesel::update(symbols.find(sid))
                 .set((overview.eq(value), m_time.eq(now)))
-                .get_result::<Symbol>(conn).map_err(|e: diesel::result::Error| {
-                eprintln!("Cannot update overview for sid {}: {:?}", sid, e);
-                Box::<dyn Error>::from(e)
-            })?;
+                .get_result::<Symbol>(conn)
+                .map_err(|e: diesel::result::Error| {
+                    eprintln!("Cannot update overview for sid {}: {:?}", sid, e);
+                    Box::<dyn Error>::from(e)
+                })?;
         }
         SymbolFlag::Intraday => {
             diesel::update(symbols.find(sid))
                 .set((intraday.eq(value), m_time.eq(now)))
-                .get_result::<Symbol>(conn).map_err(|e: diesel::result::Error| {
-                eprintln!("Cannot update intraday for sid {}: {:?}", sid, e);
-                Box::<dyn Error>::from(e)
-            })?;
+                .get_result::<Symbol>(conn)
+                .map_err(|e: diesel::result::Error| {
+                    eprintln!("Cannot update intraday for sid {}: {:?}", sid, e);
+                    Box::<dyn Error>::from(e)
+                })?;
         }
         SymbolFlag::Summary => {
             diesel::update(symbols.find(sid))
                 .set((summary.eq(value), m_time.eq(now)))
-                .get_result::<Symbol>(conn).map_err(|e: diesel::result::Error| {
-                eprintln!("Cannot update summary for sid {}: {:?}", sid, e);
-                Box::<dyn Error>::from(e)
-            })?;
+                .get_result::<Symbol>(conn)
+                .map_err(|e: diesel::result::Error| {
+                    eprintln!("Cannot update summary for sid {}: {:?}", sid, e);
+                    Box::<dyn Error>::from(e)
+                })?;
         }
-        SymbolFlag::All => {  // todo: need to test this
+        SymbolFlag::All => {
+            // todo: need to test this
             diesel::update(symbols.find(sid))
-                .set((overview.eq(value), intraday.eq(value), summary.eq(value), m_time.eq(now)))
-                .get_result::<Symbol>(conn).map_err(|e: diesel::result::Error| {
-                eprintln!("Cannot update all flags for sid {}: {:?}", sid, e);
-                Box::<dyn Error>::from(e)
-            })?;
+                .set((
+                    overview.eq(value),
+                    intraday.eq(value),
+                    summary.eq(value),
+                    m_time.eq(now),
+                ))
+                .get_result::<Symbol>(conn)
+                .map_err(|e: diesel::result::Error| {
+                    eprintln!("Cannot update all flags for sid {}: {:?}", sid, e);
+                    Box::<dyn Error>::from(e)
+                })?;
         }
     }
 
@@ -424,8 +451,12 @@ fn set_symbol_booleans(conn: &mut PgConnection, sid: i64, flag: SymbolFlag, valu
 ///
 /// This function will return an error if the database operation fails. For example, if there's a problem with the
 /// database connection, or if the `region` or `sec_type` fields do not exist in the symbols table in the database.
-pub fn get_sids_and_names_for(conn: &mut PgConnection, reg: String, s_typ: String) -> Result<Vec<(i64, String)>, diesel::result::Error> {
-    use crate::schema::symbols::dsl::{symbols, sid, symbol, region, sec_type};
+pub fn get_sids_and_names_for(
+    conn: &mut PgConnection,
+    reg: String,
+    s_typ: String,
+) -> Result<Vec<(i64, String)>, diesel::result::Error> {
+    use crate::schema::symbols::dsl::{region, sec_type, sid, symbol, symbols};
 
     symbols
         .filter(region.eq(reg).and(sec_type.eq(s_typ)))

@@ -27,11 +27,10 @@
  * SOFTWARE.
  */
 
-
-use  chrono::prelude::*;
-use  diesel::prelude::*;
-use crate::schema::{symbols, overviews,overviewexts};
+use crate::schema::{overviewexts, overviews, symbols};
+use chrono::prelude::*;
 use chrono::NaiveDateTime;
+use diesel::prelude::*;
 #[derive(Queryable, Debug)]
 pub struct Symbol {
     pub sid: i64,
@@ -43,13 +42,12 @@ pub struct Symbol {
     pub marketclose: NaiveTime,
     pub timezone: String,
     pub currency: String,
-    pub overview:bool,
-    pub intraday:bool,
-    pub summary:bool,
+    pub overview: bool,
+    pub intraday: bool,
+    pub summary: bool,
     pub c_time: NaiveDateTime,
     pub m_time: NaiveDateTime,
 }
-
 
 #[derive(Insertable, Debug)]
 #[diesel(table_name = symbols)]
@@ -64,12 +62,11 @@ pub struct NewSymbol<'a> {
     pub marketclose: &'a NaiveTime,
     pub timezone: &'a str,
     pub currency: &'a str,
-    pub overview:&'a bool,
-    pub intraday:&'a bool,
-    pub summary:&'a bool,
+    pub overview: &'a bool,
+    pub intraday: &'a bool,
+    pub summary: &'a bool,
     pub c_time: &'a NaiveDateTime,
     pub m_time: &'a NaiveDateTime,
-
 }
 
 #[derive(Queryable, Debug)]
@@ -98,7 +95,6 @@ pub struct Overview {
     pub c_time: NaiveDateTime,
     pub mod_time: NaiveDateTime,
 }
-
 
 #[derive(Insertable, Debug)]
 #[diesel(table_name = overviews)]

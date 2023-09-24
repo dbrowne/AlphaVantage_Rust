@@ -27,11 +27,10 @@
  * SOFTWARE.
  */
 
-
 /// The current supported AlphaVantage API functions.
 #[allow(dead_code)]
 #[derive(PartialEq, Debug, Clone, Copy, Eq, Hash)]
-pub  enum FuncType {
+pub enum FuncType {
     TsIntraExt,
     TsDaily,
     Overview,
@@ -86,39 +85,40 @@ macro_rules! create_url{
     };
 }
 
-pub  use create_url;
-
-
+pub use create_url;
 
 #[cfg(test)]
-mod  test{
+mod test {
     #[test]
-    fn t_01(){
-        let  (sym, api_key) = ("AAPL","123456789");
-        let  url = create_url!(FuncType:TsIntraExt,sym,api_key);
+    fn t_01() {
+        let (sym, api_key) = ("AAPL", "123456789");
+        let url = create_url!(FuncType:TsIntraExt,sym,api_key);
         assert_eq!(url,"https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY_EXTENDED&datatype=json&symbol=AAPL&interval=1min&slice=year1month1&apikey=123456789");
     }
     #[test]
-    fn t_02(){
-        let  (sym, api_key) = ("AAPL","123456789");
-        let  url = create_url!(FuncType:TsDaily,sym,api_key);
+    fn t_02() {
+        let (sym, api_key) = ("AAPL", "123456789");
+        let url = create_url!(FuncType:TsDaily,sym,api_key);
         assert_eq!(url,"https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&datatype=json&symbol=AAPL&apikey=123456789");
     }
     #[test]
-    fn t_03(){
-        let  (sym, api_key) = ("AAPL","123456789");
-        let  url = create_url!(FuncType:Overview,sym,api_key);
-        assert_eq!(url,"https://www.alphavantage.co/query?function=OVERVIEW&symbol=AAPL&apikey=123456789");
+    fn t_03() {
+        let (sym, api_key) = ("AAPL", "123456789");
+        let url = create_url!(FuncType:Overview,sym,api_key);
+        assert_eq!(
+            url,
+            "https://www.alphavantage.co/query?function=OVERVIEW&symbol=AAPL&apikey=123456789"
+        );
     }
     #[test]
-    fn  t_04(){
-        let  (sym, api_key) = ("AAPL","123456789");
-        let  url = create_url!(FuncType:SymSearch,sym,api_key);
+    fn t_04() {
+        let (sym, api_key) = ("AAPL", "123456789");
+        let url = create_url!(FuncType:SymSearch,sym,api_key);
         assert_eq!(url,"https://www.alphavantage.co/query?function=SYMBOL_SEARCH&keywords=AAPL&apikey=123456789&datatype=csv");
     }
     #[test]
-    fn  t_05(){
-        let  url = create_url!(55,"AAPL","123456789");
-        assert_eq!(url,"Unknown function type received 55");
+    fn t_05() {
+        let url = create_url!(55, "AAPL", "123456789");
+        assert_eq!(url, "Unknown function type received 55");
     }
 }

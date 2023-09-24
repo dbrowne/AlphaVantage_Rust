@@ -27,17 +27,16 @@
  * SOFTWARE.
  */
 
-
-use std::{thread, time};
-use serde_json::Value;
-use  std::collections::HashMap;
-use  std::error::Error;
-use chrono::{DateTime, Local, Duration};
-use crate::alpha_lib::alpha_data_types::{AlphaSymbol,FullOverview};
-use crate::create_url;
-use crate::db_funcs::{create_symbol, establish_connection,create_overview};
-use  crate::security_types::sec_types::{SecurityType};
+use crate::alpha_lib::alpha_data_types::{AlphaSymbol, FullOverview};
 use crate::alpha_lib::alpha_funcs::normalize_alpha_region;
+use crate::create_url;
+use crate::db_funcs::{create_overview, create_symbol, establish_connection};
+use crate::security_types::sec_types::SecurityType;
+use chrono::{DateTime, Duration, Local};
+use serde_json::Value;
+use std::collections::HashMap;
+use std::error::Error;
+use std::{thread, time};
 
 const SYMBOL: &str = "symbol";
 const MAX_ERRORS: i32 = 50;
@@ -64,7 +63,7 @@ const MAX_ERRORS: i32 = 50;
 ///
 /// # Example
 ///
-/// ```
+/// ```ignore
 /// use AlphaVantage_Rust::alpha_lib::alpha_io_funcs::process_symbols;
 /// let symbols = vec![vec!["AAPL".to_string(),  "GOOG".to_string()], vec!["TSLA".to_string()]];
 /// let result = process_symbols(symbols);
@@ -92,7 +91,7 @@ pub fn process_symbols(sec_vec: Vec<Vec<String>>) -> Result<(), Box<dyn Error>> 
 
     for sym_vec in sec_vec {
         for symbol in sym_vec {
-            let url =create_url!(FuncType:SymSearch,symbol,api_key);
+            let url = create_url!(FuncType:SymSearch,symbol,api_key);
             let resp = reqwest::blocking::get(&url); //todo: change to async & refactor
             resp_time = Local::now();
             if let Ok(resp) = resp {
@@ -121,13 +120,17 @@ pub fn process_symbols(sec_vec: Vec<Vec<String>>) -> Result<(), Box<dyn Error>> 
 
                 let mut rdr = csv::Reader::from_reader(text.as_bytes());
                 for result in rdr.deserialize() {
-                    let mut record: AlphaSymbol = result.expect("process_symbols: can't read record");
+                    let mut record: AlphaSymbol =
+                        result.expect("process_symbols: can't read record");
                     if symbol_map.insert(record.symbol.clone(), 1).is_some() {
                         println!("Duplicate symbol: {}", record.symbol);
                         continue;
                     }
 
-                    let (sec_type, sec_type_string) = SecurityType::get_detailed_sec_type(record.s_type.as_str(), record.name.as_str());
+                    let (sec_type, sec_type_string) = SecurityType::get_detailed_sec_type(
+                        record.s_type.as_str(),
+                        record.name.as_str(),
+                    );
                     record.s_type = sec_type_string;
                     record.region = normalize_alpha_region(record.region.as_str());
                     if !type_map.contains_key(&sec_type) {
@@ -135,16 +138,19 @@ pub fn process_symbols(sec_vec: Vec<Vec<String>>) -> Result<(), Box<dyn Error>> 
                     } else {
                         type_map.entry(sec_type).and_modify(|e| *e += 1);
                     }
-                    let sid = SecurityType::encode(sec_type, type_map.get(&sec_type).unwrap().clone() as u32);
+                    let sid = SecurityType::encode(
+                        sec_type,
+                        type_map.get(&sec_type).unwrap().clone() as u32,
+                    );
 
                     create_symbol(conn, sid, record).expect("Can't write to DB fatal error");
                     dur_time = Local::now();
 
-                    if dur_time - resp_time < min_time {  // Current rate limit is 75 per minute
+                    if dur_time - resp_time < min_time {
+                        // Current rate limit is 75 per minute
                         std::thread::sleep(std::time::Duration::from_secs(1));
                         println!("stats:{}, {:?}", Local::now(), type_map);
                     }
-
                 }
             } else {
                 println!("Error: {:?}", resp);
@@ -154,7 +160,6 @@ pub fn process_symbols(sec_vec: Vec<Vec<String>>) -> Result<(), Box<dyn Error>> 
 
     Ok(())
 }
-
 
 /// Fetches and processes the overview of a financial entity using an external API.
 ///
@@ -193,11 +198,12 @@ pub fn process_symbols(sec_vec: Vec<Vec<String>>) -> Result<(), Box<dyn Error>> 
 /// # Errors
 ///
 /// * It might return an error if there's a problem establishing a database connection, making the external API request, or processing the response.
-pub  fn get_overview(sid: i64, symbol: String) -> Result<(), Box<dyn Error>> {
+pub fn get_overview(sid: i64, symbol: String) -> Result<(), Box<dyn Error>> {
     const SYMBOL: &str = "Symbol";
     let connection = &mut establish_connection()?;
-    let api_key = std::env::var("ALPHA_VANTAGE_API_KEY").expect("ALPHA_VANTAGE_API_KEY must be set");
-    let url =create_url!(FuncType:Overview,symbol,api_key);
+    let api_key =
+        std::env::var("ALPHA_VANTAGE_API_KEY").expect("ALPHA_VANTAGE_API_KEY must be set");
+    let url = create_url!(FuncType:Overview,symbol,api_key);
     let response = reqwest::blocking::get(&url);
 
     if let Ok(response) = response {

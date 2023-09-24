@@ -27,9 +27,9 @@
  * SOFTWARE.
  */
 
+use chrono::NaiveDate;
 use serde::Deserialize;
-use chrono::{NaiveDate};
-use serde_json::{Value};
+use serde_json::Value;
 
 // based on https://www.alphavantage.co/query?function=SYMBOL_SEARCH&keywords=BA&apikey=demo&datatype=csv
 #[derive(Deserialize, Debug, Clone, Default)]
@@ -102,7 +102,6 @@ pub struct FullOverview {
     pub exdividenddate: NaiveDate,
 }
 
-
 // JSON: Object {"200DayMovingAverage": String("151.55"),
 // "50DayMovingAverage": String("160.75"),
 // "52WeekHigh": String("175.59"),
@@ -159,15 +158,24 @@ impl FullOverview {
     }
 
     fn get_i32_field(json_txt: &Value, field: &str) -> i32 {
-        json_txt[field].as_str().unwrap_or("").parse::<i32>().unwrap_or(-9)
+        json_txt[field]
+            .as_str()
+            .unwrap_or("")
+            .parse::<i32>()
+            .unwrap_or(-9)
     }
 
     fn get_f32_field(json_txt: &Value, field: &str) -> f32 {
-        json_txt[field].as_str().unwrap_or("").parse::<f32>().unwrap_or(-9.99)
+        json_txt[field]
+            .as_str()
+            .unwrap_or("")
+            .parse::<f32>()
+            .unwrap_or(-9.99)
     }
 
     fn get_date_field(json_txt: &Value, field: &str) -> NaiveDate {
-        NaiveDate::parse_from_str(json_txt[field].as_str().unwrap_or(""), "%Y-%m-%d").unwrap_or(NaiveDate::from_ymd_opt(1900, 1, 1).unwrap())
+        NaiveDate::parse_from_str(json_txt[field].as_str().unwrap_or(""), "%Y-%m-%d")
+            .unwrap_or(NaiveDate::from_ymd_opt(1900, 1, 1).unwrap())
     }
     pub fn new(sid: i64, json_txt: Value) -> Option<Self> {
         Some(Self {

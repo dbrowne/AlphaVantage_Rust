@@ -27,17 +27,14 @@
  * SOFTWARE.
  */
 
-
-
-use crate::datatypes::data_file_types::{NasdaqListed,NyseOtherSymbol};
-use std::io::BufReader;
+use crate::datatypes::data_file_types::{NasdaqListed, NyseOtherSymbol};
 use std::fs::File;
+use std::io::BufReader;
 use std::{env, error::Error, fmt};
 
 const NASDAQ: &str = "NASDAQ";
 const NYSE: &str = "NYSE";
 const MAX_SYMBOLS: usize = 10000;
-
 
 #[derive(Debug, Clone)]
 struct UnknownExchangeError(String);
@@ -133,5 +130,3 @@ pub fn file_proc(file_arr: Vec<(&str, &str)>) -> Result<Vec<Vec<String>>, Box<dy
 
     return Ok(security_vector);
 }
-
-
