@@ -26,18 +26,25 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-use chrono::Duration;
+
+
+use chrono::{Duration, prelude::*};
 use dotenvy::dotenv;
-use chrono::prelude::*;
 use std::process;
 use AlphaVantage_Rust::alpha_lib::alpha_io_funcs::get_overview;
 use AlphaVantage_Rust::db_funcs::{establish_connection, get_sids_and_names_for};
+extern crate lazy_static;
+use lazy_static::lazy_static;
+
+//We can't make MIN_TIME a constant because it is not a primitive type
+lazy_static! {
+    static ref MIN_TIME: Duration = Duration::milliseconds(350);
+}
+const COUNTRY: &str = "USA";
+const TYPE: &str = "Eqty";
 
 fn main() {
     dotenv().ok();
-
-    #[allow(non_snake_case)]   //We cant make MIN_TIME a constant because it is not a primitive type
-    let MIN_TIME: Duration = Duration::milliseconds(350);
     let mut resp_time: DateTime<Local>;
     let mut dur_time: DateTime<Local>;
     let res = &mut establish_connection();
@@ -49,7 +56,7 @@ fn main() {
         }
     };
 
-    let  res = get_sids_and_names_for(conn, "USA".to_string(), "Eqty".to_string());
+    let  res = get_sids_and_names_for(conn, COUNTRY.to_string(), TYPE.to_string());
     let results = match res {
         Ok(results) => results,
         Err(err) => {
@@ -68,7 +75,7 @@ fn main() {
 
 
         resp_time = Local::now();
-        if resp_time - dur_time < MIN_TIME {
+        if resp_time - dur_time < *MIN_TIME {
             std::thread::sleep(std::time::Duration::from_secs(1));
         }
     }

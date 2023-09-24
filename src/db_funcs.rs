@@ -59,7 +59,7 @@ use crate::security_types::sec_types::SymbolFlag;
 ///
 /// # Example
 ///
-/// ```rust,no_run
+/// rust,no_run
 /// use db_funcs::establish_connection;
 ///
 /// fn main() {
@@ -68,7 +68,7 @@ use crate::security_types::sec_types::SymbolFlag;
 ///         Err(e) => eprintln!("Database connection failed: {}", e),
 ///     }
 /// }
-/// ```
+///
 pub fn establish_connection() -> Result<PgConnection, Box<dyn Error>> {
     dotenv().ok();
 
@@ -107,14 +107,14 @@ pub fn establish_connection() -> Result<PgConnection, Box<dyn Error>> {
 ///
 /// # Example
 ///
-/// ```
+///
 /// let time_str = "13:45";
 /// let a_sym = AlphaSymbol::new();
 /// match parse_time(time_str, "Failed to parse time string", &a_sym) {
 ///     Ok(time) => println!("Parsed time: {:?}", time),
 ///     Err(e) => println!("Error: {}", e),
 /// }
-/// ```
+///
 fn parse_time(time_str: &str, error_message: &str, a_sym: &AlphaSymbol) -> Result<NaiveTime, Box<dyn Error>> {
     match NaiveTime::parse_from_str(time_str, "%H:%M") {
         Ok(time) => Ok(time),
@@ -193,6 +193,42 @@ pub fn create_symbol(conn: &mut PgConnection, sid: i64, a_sym: AlphaSymbol) -> R
     }
 }
 
+/// Inserts a full overview of a financial entity into the database.
+///
+/// This function takes in a `PgConnection` reference and a `FullOverview` struct.
+/// It then inserts the overview data into two database tables: `overviews` and `overviewexts`.
+/// Additionally, it sets a symbol flag for the given financial entity.
+///
+/// # Parameters
+///
+/// * `conn`: A mutable reference to a `PgConnection` which represents the database connection.
+/// * `full_ov`: A `FullOverview` struct containing comprehensive overview data of the financial entity.
+///
+/// # Returns
+///
+/// * `Result<(), Box<dyn Error>>`: Returns an `Ok(())` if the operation is successful. Returns an `Err` wrapped in a `Box` if any error occurs.
+///
+/// # Examples
+///
+/// ```ignore
+/// let conn = establish_connection();
+/// let overview = FullOverview { /* ...populate data fields... */ };
+///
+/// match create_overview(&mut conn, overview) {
+///     Ok(_) => println!("Overview created successfully."),
+///     Err(e) => println!("Error creating overview: {:?}", e),
+/// }
+/// ```
+///
+/// # Panics
+///
+/// * This function will panic if there's an error while saving data into the `overviews` or `overviewexts` tables.
+/// * This function will also panic if there's an error setting the symbol flag for the provided `sid` in `FullOverview`.
+///
+/// # ToDo
+///
+/// * Refactor the database insertion code to enhance maintainability.
+/// * Consider returning a custom error type or using more descriptive error handling.
 
 pub fn create_overview(conn: &mut PgConnection, full_ov: FullOverview) -> Result<(), Box<dyn Error>> {
     use crate::schema::overviews;

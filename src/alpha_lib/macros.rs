@@ -39,7 +39,7 @@ pub  enum FuncType {
 }
 
 /// `create_url!` is a macro used for constructing request URLs to various endpoints of the AlphaVantage API.
-/// It is necessary because macros wun becfore name resolution
+/// It is necessary because macros run before name resolution
 /// see https://github.com/rust-lang/rust/issues/69133 for more details
 ///
 /// This macro takes a `FuncType`, which denotes the AlphaVantage API endpoint to construct a URL for, and
@@ -55,10 +55,10 @@ pub  enum FuncType {
 ///
 /// # Example
 ///
-/// ```rust
+///
 /// let url = create_url!(FuncType:TsDaily, "AAPL", "demo");
 /// assert_eq!(url, "https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&datatype=json&symbol=AAPL&apikey=demo");
-/// ```
+///
 ///
 /// If an unrecognized `FuncType` is passed, it returns a string saying "Unknown function type received".
 ///

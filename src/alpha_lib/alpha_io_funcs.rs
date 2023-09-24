@@ -66,7 +66,7 @@ const MAX_ERRORS: i32 = 50;
 ///
 /// ```
 /// use AlphaVantage_Rust::alpha_lib::alpha_io_funcs::process_symbols;
-/// let symbols = vec![vec!["AAPL", "MSFT", "GOOG"], vec!["TSLA", "AMZN"]];
+/// let symbols = vec![vec!["AAPL".to_string(),  "GOOG".to_string()], vec!["TSLA".to_string()]];
 /// let result = process_symbols(symbols);
 ///
 /// match result {
@@ -156,7 +156,43 @@ pub fn process_symbols(sec_vec: Vec<Vec<String>>) -> Result<(), Box<dyn Error>> 
 }
 
 
-
+/// Fetches and processes the overview of a financial entity using an external API.
+///
+/// This function contacts the external API specified by the `ALPHA_VANTAGE_API_KEY` environment variable to get a detailed overview of a financial entity identified by its `sid` and `symbol`.
+/// After obtaining the overview, the function processes the response to create a `FullOverview` struct and subsequently stores it in the database.
+///
+/// # Parameters
+///
+/// * `sid`: An `i64` identifier representing the financial entity.
+/// * `symbol`: A `String` representing the symbol of the financial entity.
+///
+/// # Returns
+///
+/// * `Result<(), Box<dyn Error>>`: Returns an `Ok(())` if the operation is successful. Returns an `Err` wrapped in a `Box` if any error occurs.
+///
+/// # Environment Variables
+///
+/// * `ALPHA_VANTAGE_API_KEY`: This environment variable should be set with the API key that will be used to access the external API.
+///
+/// # Examples
+///
+/// ```ignore
+/// let sid = 12345;
+/// let symbol = "AAPL".to_string();
+///
+/// match get_overview(sid, symbol) {
+///     Ok(_) => println!("Overview fetched and processed successfully."),
+///     Err(e) => println!("Error fetching or processing overview: {:?}", e),
+/// }
+/// ```
+///
+/// # Panics
+///
+/// * This function will panic if the `ALPHA_VANTAGE_API_KEY` environment variable is not set.
+///
+/// # Errors
+///
+/// * It might return an error if there's a problem establishing a database connection, making the external API request, or processing the response.
 pub  fn get_overview(sid: i64, symbol: String) -> Result<(), Box<dyn Error>> {
     const SYMBOL: &str = "Symbol";
     let connection = &mut establish_connection()?;
