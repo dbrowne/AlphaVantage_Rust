@@ -27,29 +27,29 @@
  * SOFTWARE.
  */
 
-use dotenvy::dotenv;
-use std::process;
-use AlphaVantage_Rust::alpha_lib::alpha_io_funcs::load_intraday;
+use  dotenvy::dotenv;
+use  std::process;
+use AlphaVantage_Rust::alpha_lib::alpha_io_funcs::load_summary;
 use AlphaVantage_Rust::db_funcs::{establish_connection_or_exit, get_sids_and_names_with_overview};
 
-
 fn main() {
-    let conn = &mut establish_connection_or_exit();
 
-
+    let  conn = &mut establish_connection_or_exit();
     dotenv().ok();
-    let results: Vec<(i64, String)> = get_sids_and_names_with_overview(conn)
+    let  results: Vec<(i64,String)> = get_sids_and_names_with_overview(conn)
         .unwrap_or_else(|err| {
-            println!("Cannot load results from database {}", err);
+            eprintln!("Cannot load results from database {}",err);
             process::exit(1);
-        }
-        );
+        });
 
     for (sid, symbol) in results {
-        println!("{}:{}", sid, symbol);
-        if let Err(err) = load_intraday(conn,symbol, sid) {
-            println!("Error getting intraday prices {} for sid {}", err,sid);
+        println!("{}:{}",sid, symbol);
+        if  let  Err(err) = load_summary(conn,symbol,sid) {
+            println!("Error loading open close prices {} for sid {}",err, sid );
             process::exit(1);
         }
+
     }
+
+
 }

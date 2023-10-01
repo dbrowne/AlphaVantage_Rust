@@ -1,1 +1,1 @@
-drop table if exists intradayprices;-- This file should undo anything in `up.sql`
+drop table if exists intradayprices;

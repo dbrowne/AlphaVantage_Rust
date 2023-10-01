@@ -27,10 +27,10 @@
  * SOFTWARE.
  */
 
-use crate::alpha_lib::alpha_data_types::{AlphaSymbol, FullOverview};
-use crate::db_models::{IntraDayPrice, NewIntraDayPrice, NewOverview, NewOverviewext, NewSymbol,Symbol};
+use crate::alpha_lib::alpha_data_types::{AlphaSymbol, FullOverview, RawDailyPrice};
+use crate::db_models::{IntraDayPrice, NewIntraDayPrice, NewOverview, NewOverviewext, NewSummaryPrice, NewSymbol, Symbol};
 use crate::security_types::sec_types::SymbolFlag;
-use chrono::{DateTime, Local, NaiveTime};
+use chrono::{DateTime, Local, NaiveDate, NaiveTime};
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
 use dotenvy::dotenv;
@@ -283,11 +283,10 @@ pub fn create_overview(
         mod_time: &now,
     };
     //todo: refactor this
-    if let  Err(err) = diesel::insert_into(overviews::table)
+    if let Err(err) = diesel::insert_into(overviews::table)
         .values(&new_overview)
         .execute(conn) {
-        eprintln!("Error {:?}",err);
-
+        eprintln!("Error {:?}", err);
     }
 
 
@@ -323,18 +322,17 @@ pub fn create_overview(
     };
 
     //todo: refactor this
-    if let  Err(err) = diesel::insert_into(overviewexts::table)
+    if let Err(err) = diesel::insert_into(overviewexts::table)
         .values(&new_overviewext)
-        .execute(conn){
-        eprintln!("{:?}",err);
+        .execute(conn) {
+        eprintln!("{:?}", err);
         eprintln!("cannot insert overviewext");
     }
 
 
-
-    if  let  Err(err) = set_symbol_booleans(conn, full_ov.sid.clone(), SymbolFlag::Overview, true) {
-        eprintln!("{:?}",err);
-        eprintln!("Cannot set symbol flag for overview: fro sid {:?}",full_ov.sid);
+    if let Err(err) = set_symbol_booleans(conn, full_ov.sid.clone(), SymbolFlag::Overview, true) {
+        eprintln!("{:?}", err);
+        eprintln!("Cannot set symbol flag for overview: fro sid {:?}", full_ov.sid);
     };
     Ok(())
 }
@@ -477,7 +475,7 @@ pub fn get_sids_and_names_for(
 
 pub fn get_sids_and_names_with_overview(
     conn: &mut PgConnection) -> Result<Vec<(i64, String)>, diesel::result::Error> {
-    use crate::schema::symbols::dsl::{sid, symbol, symbols, overview};
+    use crate::schema::symbols::dsl::{sid, symbol,symbols, overview};
     symbols
         .filter(overview.eq(true))
         .select((sid, symbol))
@@ -501,13 +499,68 @@ pub fn create_intra_day(conn: &mut PgConnection, tick: IntraDayPrice) -> Result<
         .values(&new_mkt_price)
         .execute(conn)?;
 
+// todo Refactor this
     let _ = match set_symbol_booleans(conn, new_mkt_price.sid.clone(), SymbolFlag::Intraday, true) {
         Ok(_) => (),
         Err(err) => {
             println!("{:?}", err);
             println!("cannot set overfiew flag for sid: {}", new_mkt_price.sid.clone());
-            return  Err(err);
+            return Err(err);
         }
     };
     Ok(())
 }
+
+pub  fn  insert_open_close(conn: &mut PgConnection,symb:String, s_id:i64, open_close:RawDailyPrice) ->Result<(), Box<dyn Error>>{
+    use  crate::schema::summaryprices;
+
+    let  np:NewSummaryPrice = NewSummaryPrice{
+        date : &open_close.date,
+        sid : &s_id,
+        symbol : &symb,
+        open : &open_close.open,
+        high : &open_close.high,
+        low : &open_close.low,
+        close : &open_close.close,
+        volume : &open_close.volume,
+    };
+    diesel::insert_into(summaryprices::table)
+        .values(&np)
+        .execute(conn)?;
+// todo Refactor this
+    let _ = match set_symbol_booleans(conn, s_id.clone(), SymbolFlag::Summary, true) {
+        Ok(_) => (),
+        Err(err) => {
+            println!("{:?}", err);
+            println!("cannot set overfiew flag for sid: {}", s_id.clone());
+            return Err(err);
+        }
+    };
+    Ok(())
+
+}
+
+
+pub fn get_max_date(conn: &mut PgConnection, s_id: i64) -> NaiveDate {
+    use crate::schema::summaryprices::dsl::{summaryprices, date, sid};
+
+    let  xx=
+    summaryprices
+        .filter(sid.eq(s_id))
+        .select(date)
+        .order(date.desc())
+        .first::<NaiveDate>(conn);
+
+    let  _tt=match xx {
+        Ok(res)=>{
+            return res;
+        }
+        Err(_) =>{
+            println!("No max date found for security {}", s_id);
+            return NaiveDate::from_ymd_opt(1900, 1, 1).unwrap();
+        }
+    };
+
+}
+
+

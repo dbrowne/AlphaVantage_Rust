@@ -27,7 +27,7 @@
  * SOFTWARE.
  */
 
-use crate::schema::{overviewexts, overviews, symbols, intradayprices};
+use crate::schema::{overviewexts, overviews, symbols, intradayprices,summaryprices};
 use chrono::prelude::*;
 use chrono::NaiveDateTime;
 use diesel::prelude::*;
@@ -211,6 +211,33 @@ pub struct IntraDayPrice {
 pub struct NewIntraDayPrice<'a> {
     pub sid: &'a i64,
     pub tstamp: &'a NaiveDateTime,
+    pub symbol: &'a str,
+    pub open: &'a f32,
+    pub high: &'a f32,
+    pub low: &'a f32,
+    pub close: &'a f32,
+    pub volume: &'a i32,
+}
+
+#[derive(Queryable, Debug)]
+pub struct SummaryPrice {
+    pub eventid: i32,
+    pub date: NaiveDate,
+    pub sid: i64,
+    pub symbol: String,
+    pub open: f32,
+    pub high: f32,
+    pub low: f32,
+    pub close: f32,
+    pub volume: i32,
+
+}
+
+#[derive(Insertable, Debug)]
+#[diesel(table_name = summaryprices)]
+pub struct NewSummaryPrice<'a> {
+    pub date: &'a NaiveDate,
+    pub sid: &'a i64,
     pub symbol: &'a str,
     pub open: &'a f32,
     pub high: &'a f32,

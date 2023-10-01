@@ -27,12 +27,13 @@
  * SOFTWARE.
  */
 
-use crate::alpha_lib::alpha_data_types::{AlphaSymbol, FullOverview, RawIntraDayPrice};
+use crate::alpha_lib::alpha_data_types::{AlphaSymbol, FullOverview, RawDailyPrice, RawIntraDayPrice};
 use crate::alpha_lib::alpha_funcs::normalize_alpha_region;
 use crate::create_url;
-use crate::db_funcs::{create_intra_day, create_overview, create_symbol, establish_connection_or_exit};
+use crate::db_funcs::{create_intra_day, create_overview, create_symbol,
+                      establish_connection_or_exit, get_max_date, insert_open_close};
 use crate::security_types::sec_types::SecurityType;
-use chrono::{DateTime, Duration, Local, NaiveDateTime};
+use chrono::{DateTime, Duration, Local, NaiveDate, NaiveDateTime};
 use serde_json::Value;
 use std::collections::HashMap;
 use std::error::Error;
@@ -40,7 +41,8 @@ use std::{thread, time};
 use std::env::VarError;
 use diesel::PgConnection;
 use crate::db_models::IntraDayPrice;
-use crate::schema::symbols::symbol;
+
+
 
 const SYMBOL: &str = "symbol";
 const MAX_ERRORS: i32 = 50;
@@ -123,7 +125,7 @@ pub fn process_symbols(sec_vec: Vec<Vec<String>>) -> Result<(), Box<dyn Error>> 
                 }
 
                 if !text.contains(SYMBOL) {
-                    println!("Bad response for symbol: {:?}", symbol);
+                    println!("Bad response for symbol: {:?}", symb);
                     println!("text error: for {:?}", text);
                     continue;
                 }
@@ -279,9 +281,8 @@ fn persist_ticks(connection: &mut PgConnection, s_id: i64, symb: String, ticks: 
     }
     Ok(())
 }
-pub fn load_intraday(symb: String, s_id: i64) -> Result<(), Box<dyn Error>> {
+pub fn load_intraday(conn: &mut PgConnection, symb: String, s_id: i64) -> Result<(), Box<dyn Error>> {
     const HEADER: &str = "timestamp,open,high,low,close,volume";
-    let connection = &mut establish_connection_or_exit();
     let api_key = get_api_key()?;
     let url = create_url!(FuncType:TsIntra,symb,api_key);
     let text = get_api_data(&url)?;
@@ -292,7 +293,82 @@ pub fn load_intraday(symb: String, s_id: i64) -> Result<(), Box<dyn Error>> {
     };
 
     let ticks = parse_intraday_from_csv(&text)?;
-    persist_ticks(connection, s_id,symb,ticks)?;
+    persist_ticks(conn, s_id,symb,ticks)?;
 
     Ok(())
+}
+
+
+
+
+
+fn gen_new_summary_price(json_inp: (&String, &Value), sym: String) -> Option<RawDailyPrice> {
+    let dt = NaiveDate::parse_from_str(json_inp.0, "%Y-%m-%d").map_err(|e| {
+        println!("Error parsing date: {:?}", e);
+        e
+    }).ok()?;
+
+    let open = json_inp.1["1. open"].as_str().unwrap().parse::<f32>().ok()?;
+    let high = json_inp.1["2. high"].as_str().unwrap().parse::<f32>().ok()?;
+    let low =json_inp.1["3. low"].as_str().unwrap().parse::<f32>().ok()?;
+    let close = json_inp.1["4. close"].as_str().unwrap().parse::<f32>().ok()?;
+    let volume = json_inp.1["5. volume"].as_str().unwrap().parse::<i32>().ok()?;
+
+    Some(RawDailyPrice {
+        date: dt,
+        symbol: sym,
+        open,
+        high,
+        low,
+        close,
+        volume,
+    })
+}
+
+pub  fn  load_summary(conn:&mut PgConnection,   symb:String, s_id:i64) -> Result<(),Box<dyn Error>>{
+    let  api_key = get_api_key()?;
+    let  url= create_url!(FuncType:TsDaily,symb.clone(),api_key);
+    let  text= get_api_data(&url)?;
+    const  HEADER: &str = "Meta Data";
+    if  !text.contains(HEADER){
+        eprintln!("Error: for {}: {:?}", symb.clone(), text);
+        // alpha vantage will return an error for a symol missing a price
+        return  Ok(());
+    };
+
+    let daily_prices = get_open_close(&text, &symb)?;
+    let last_date = get_max_date(conn,s_id);
+    println!("last date for sid{} is {:?}",s_id,last_date);
+    for oc in daily_prices  {
+        print!("{:?}",oc.date);
+        if oc.date >last_date{
+            insert_open_close(conn, symb.clone(), s_id, oc)?;
+
+        }
+
+    }
+
+    Ok(())
+}
+
+fn get_open_close(inp: &str, symb: &String) -> Result<Vec<RawDailyPrice>, Box<dyn Error>> {
+    const HEADER: &str = "Time Series (Daily)";
+    let mut daily_prices: Vec<RawDailyPrice> = Vec::new();
+    let json_data: Value = serde_json::from_str(inp)?;
+
+    let json_prices = json_data[HEADER]
+        .as_object()
+        .ok_or_else(|| {
+            let err_msg = format!("Error getting {} from json data", HEADER);
+            eprintln!("{}", err_msg);
+            err_msg
+        })?;
+
+    for (date, data) in json_prices.iter() {
+        if let Some(open_close) = gen_new_summary_price((date, data), symb.clone()) {
+            daily_prices.push(open_close);
+        }
+    }
+
+    Ok(daily_prices)
 }

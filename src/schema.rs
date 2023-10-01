@@ -76,6 +76,20 @@ diesel::table! {
 }
 
 diesel::table! {
+    summaryprices (eventid) {
+        eventid -> Int4,
+        date -> Date,
+        sid -> Int8,
+        symbol -> Text,
+        open -> Float4,
+        high -> Float4,
+        low -> Float4,
+        close -> Float4,
+        volume -> Int4,
+    }
+}
+
+diesel::table! {
     symbols (sid) {
         sid -> Int8,
         symbol -> Text,
@@ -101,5 +115,6 @@ diesel::allow_tables_to_appear_in_same_query!(
     intradayprices,
     overviewexts,
     overviews,
+    summaryprices,
     symbols,
 );

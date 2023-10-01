@@ -235,6 +235,7 @@ impl FullOverview {
 pub  struct RawIntraDayPrice {
     ///This is for the TIME_SERIES_INTRADAY endpoint
     /// based on https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol=IBM&interval=5min&apikey=demo&datatype=csv
+    ///
 
     pub timestamp: String,
     pub open: f32,
@@ -245,4 +246,17 @@ pub  struct RawIntraDayPrice {
 
 }
 
+#[derive(Debug, Clone, Default)]
+pub struct RawDailyPrice {
+    /// This is for the TIME_SERIES_DAILY endpoint based on
+    /// https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=IBM&apikey=demo
+    ///
+    pub date: NaiveDate,
+    pub symbol: String,
+    pub open: f32,
+    pub high: f32,
+    pub low: f32,
+    pub close: f32,
+    pub volume: i32,
+}
 

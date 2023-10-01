@@ -43,10 +43,12 @@ This section will provide guidance on how to utilize the API client. (Expand upo
 
 - [x] Security loader
 - [x] Security overview loader
-- [ ] Intraday price loader
-- [ ] Open-Close price loader
+- [x] Intraday price loader
+- [x] open/close price loader
+- [ ] Symbol activity loader
+- [ ] News loader
 - [ ] Refactor code for production use eg improved error handling and logging 
-
+- [ ] Front end
 ## Contributing
 
 1. Fork the repository.
