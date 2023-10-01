@@ -93,7 +93,7 @@ mod test {
     fn t_01() {
         let (sym, api_key) = ("AAPL", "123456789");
         let url = create_url!(FuncType:TsIntra,sym,api_key);
-        assert_eq!(url,"https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&datatype=csv&symbol=AAPL&interval=1min&slice=year1month1&apikey=123456789");
+        assert_eq!(url,"https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&datatype=csv&symbol=AAPL&interval=1min&apikey=123456789");
     }
     #[test]
     fn t_02() {

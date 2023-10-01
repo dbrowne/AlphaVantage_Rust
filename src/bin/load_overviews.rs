@@ -31,7 +31,7 @@ use chrono::{prelude::*, Duration};
 use dotenvy::dotenv;
 use std::process;
 use AlphaVantage_Rust::alpha_lib::alpha_io_funcs::get_overview;
-use AlphaVantage_Rust::db_funcs::{establish_connection, get_sids_and_names_for};
+use AlphaVantage_Rust::db_funcs::{establish_connection_or_exit, get_sids_and_names_for};
 extern crate lazy_static;
 use lazy_static::lazy_static;
 
@@ -46,14 +46,7 @@ fn main() {
     dotenv().ok();
     let mut resp_time: DateTime<Local>;
     let mut dur_time: DateTime<Local>;
-    let res = &mut establish_connection();
-    let conn = match res {
-        Ok(conn) => conn,
-        Err(err) => {
-            println!("Error running reader: {}", err);
-            process::exit(1);
-        }
-    };
+    let conn = &mut establish_connection_or_exit();
 
     let res = get_sids_and_names_for(conn, COUNTRY.to_string(), TYPE.to_string());
     let results = match res {
