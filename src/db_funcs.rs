@@ -28,13 +28,14 @@
  */
 
 use crate::alpha_lib::alpha_data_types::{AlphaSymbol, FullOverview};
-use crate::db_models::{NewOverview, NewOverviewext, NewSymbol, Overview, Overviewext, Symbol};
+use crate::db_models::{IntraDayPrice, NewIntraDayPrice, NewOverview, NewOverviewext, NewSymbol,Symbol};
 use crate::security_types::sec_types::SymbolFlag;
 use chrono::{DateTime, Local, NaiveTime};
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
 use dotenvy::dotenv;
 use std::{env, error::Error, process};
+
 
 /// Establishes a connection to a Postgres database using Diesel.
 ///
@@ -68,19 +69,25 @@ use std::{env, error::Error, process};
 /// }
 /// ```
 ///
-pub fn establish_connection() -> Result<PgConnection, Box<dyn Error>> {
+pub fn establish_connection_or_exit() -> PgConnection {
     dotenv().ok();
 
     let database_url = match env::var("DATABASE_URL") {
         Ok(db) => db,
-        Err(_) => return Err("DATABASE_URL must be set".into()),
+        Err(_) => {
+            println!("No Database url set");
+            process::exit(1);
+        }
     };
 
-    let conn = PgConnection::establish(&database_url).map_err(|_| -> Box<dyn Error> {
-        format!("Error connecting to {}", database_url).into()
-    })?;
+    let conn = PgConnection::establish(&database_url).unwrap_or_else(|_| {
+        println!("Can't establish db connection");
+        process::exit(1);
+    }
+    );
 
-    Ok(conn)
+
+    conn
 }
 
 /// Parses a time string into a `NaiveTime` struct.
@@ -161,7 +168,7 @@ fn parse_time(
 /// ```
 pub fn create_symbol(
     conn: &mut PgConnection,
-    sid: i64,
+    s_id: i64,
     a_sym: AlphaSymbol,
 ) -> Result<(), Box<dyn Error>> {
     use crate::schema::symbols;
@@ -172,7 +179,7 @@ pub fn create_symbol(
     let market_close = parse_time(&a_sym.marketClose, "market close time", &a_sym)?;
 
     let new_symbol: NewSymbol = NewSymbol {
-        sid: &sid,
+        sid: &s_id,
         symbol: &a_sym.symbol,
         name: &a_sym.name,
         sec_type: &a_sym.s_type,
@@ -196,7 +203,7 @@ pub fn create_symbol(
         Err(e) => {
             eprintln!(
                 "Error saving new symbols {:?} for sid: {}{:?} ",
-                e, sid, a_sym
+                e, s_id, a_sym
             );
             Err(Box::new(e))
         }
@@ -276,10 +283,13 @@ pub fn create_overview(
         mod_time: &now,
     };
     //todo: refactor this
-    let _ = diesel::insert_into(overviews::table)
+    if let  Err(err) = diesel::insert_into(overviews::table)
         .values(&new_overview)
-        .get_result::<Overview>(conn)
-        .expect("Error saving new overview");
+        .execute(conn) {
+        eprintln!("Error {:?}",err);
+
+    }
+
 
     let new_overviewext: NewOverviewext = NewOverviewext {
         sid: &full_ov.sid.clone(),
@@ -313,18 +323,18 @@ pub fn create_overview(
     };
 
     //todo: refactor this
-    let _ = diesel::insert_into(overviewexts::table)
+    if let  Err(err) = diesel::insert_into(overviewexts::table)
         .values(&new_overviewext)
-        .get_result::<Overviewext>(conn)
-        .expect("Error saving new overviewext");
+        .execute(conn){
+        eprintln!("{:?}",err);
+        eprintln!("cannot insert overviewext");
+    }
 
-    let _ = match set_symbol_booleans(conn, full_ov.sid.clone(), SymbolFlag::Overview, true) {
-        Ok(_) => (),
-        Err(err) => {
-            println!("{:?}", err);
-            println!("cannot set symbolt flag for sid: {}", full_ov.sid.clone());
-            process::exit(1);
-        }
+
+
+    if  let  Err(err) = set_symbol_booleans(conn, full_ov.sid.clone(), SymbolFlag::Overview, true) {
+        eprintln!("{:?}",err);
+        eprintln!("Cannot set symbol flag for overview: fro sid {:?}",full_ov.sid);
     };
     Ok(())
 }
@@ -370,11 +380,11 @@ pub fn create_overview(
 /// does not exist in the database.
 fn set_symbol_booleans(
     conn: &mut PgConnection,
-    sid: i64,
+    s_id: i64,
     flag: SymbolFlag,
     value: bool,
 ) -> Result<(), Box<dyn Error>> {
-    use crate::schema::symbols::dsl::{intraday, m_time, overview, summary, symbols};
+    use crate::schema::symbols::dsl::{intraday, m_time, sid, overview, summary, symbols};
     let localt: DateTime<Local> = Local::now();
     let now = localt.naive_local();
     match flag {
@@ -383,7 +393,7 @@ fn set_symbol_booleans(
                 .set((overview.eq(value), m_time.eq(now)))
                 .get_result::<Symbol>(conn)
                 .map_err(|e: diesel::result::Error| {
-                    eprintln!("Cannot update overview for sid {}: {:?}", sid, e);
+                    eprintln!("Cannot update overview for sid {}: {:?}", s_id, e);
                     Box::<dyn Error>::from(e)
                 })?;
         }
@@ -392,7 +402,7 @@ fn set_symbol_booleans(
                 .set((intraday.eq(value), m_time.eq(now)))
                 .get_result::<Symbol>(conn)
                 .map_err(|e: diesel::result::Error| {
-                    eprintln!("Cannot update intraday for sid {}: {:?}", sid, e);
+                    eprintln!("Cannot update intraday for sid {}: {:?}", s_id, e);
                     Box::<dyn Error>::from(e)
                 })?;
         }
@@ -401,7 +411,7 @@ fn set_symbol_booleans(
                 .set((summary.eq(value), m_time.eq(now)))
                 .get_result::<Symbol>(conn)
                 .map_err(|e: diesel::result::Error| {
-                    eprintln!("Cannot update summary for sid {}: {:?}", sid, e);
+                    eprintln!("Cannot update summary for sid {}: {:?}", s_id, e);
                     Box::<dyn Error>::from(e)
                 })?;
         }
@@ -416,7 +426,7 @@ fn set_symbol_booleans(
                 ))
                 .get_result::<Symbol>(conn)
                 .map_err(|e: diesel::result::Error| {
-                    eprintln!("Cannot update all flags for sid {}: {:?}", sid, e);
+                    eprintln!("Cannot update all flags for sid {}: {:?}", s_id, e);
                     Box::<dyn Error>::from(e)
                 })?;
         }
@@ -462,4 +472,42 @@ pub fn get_sids_and_names_for(
         .filter(region.eq(reg).and(sec_type.eq(s_typ)))
         .select((sid, symbol))
         .load::<(i64, String)>(conn)
+}
+
+
+pub fn get_sids_and_names_with_overview(
+    conn: &mut PgConnection) -> Result<Vec<(i64, String)>, diesel::result::Error> {
+    use crate::schema::symbols::dsl::{sid, symbol, symbols, overview};
+    symbols
+        .filter(overview.eq(true))
+        .select((sid, symbol))
+        .load::<(i64, String)>(conn)
+}
+
+pub fn create_intra_day(conn: &mut PgConnection, tick: IntraDayPrice) -> Result<(), Box<dyn Error>> {
+    use crate::schema::intradayprices;
+
+    let new_mkt_price = NewIntraDayPrice {
+        sid: &tick.sid,
+        tstamp: &tick.tstamp,
+        symbol: &tick.symbol,
+        open: &tick.open,
+        high: &tick.high,
+        low: &tick.low,
+        close: &tick.close,
+        volume: &tick.volume,
+    };
+    diesel::insert_into(intradayprices::table)
+        .values(&new_mkt_price)
+        .execute(conn)?;
+
+    let _ = match set_symbol_booleans(conn, new_mkt_price.sid.clone(), SymbolFlag::Intraday, true) {
+        Ok(_) => (),
+        Err(err) => {
+            println!("{:?}", err);
+            println!("cannot set overfiew flag for sid: {}", new_mkt_price.sid.clone());
+            return  Err(err);
+        }
+    };
+    Ok(())
 }

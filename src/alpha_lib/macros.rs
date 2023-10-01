@@ -31,7 +31,7 @@
 #[allow(dead_code)]
 #[derive(PartialEq, Debug, Clone, Copy, Eq, Hash)]
 pub enum FuncType {
-    TsIntraExt,
+    TsIntra,
     TsDaily,
     Overview,
     SymSearch,
@@ -67,8 +67,8 @@ pub enum FuncType {
 
 #[macro_export]
 macro_rules! create_url{
-    (FuncType:TsIntraExt,$string1:expr, $string2:expr) =>{
-        format!("https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY_EXTENDED&datatype=json&symbol={}&interval=1min&slice=year1month1&apikey={}",$string1,$string2)
+    (FuncType:TsIntra,$string1:expr, $string2:expr) =>{
+        format!("https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&datatype=csv&symbol={}&interval=1min&apikey={}",$string1,$string2)
     };
     (FuncType:TsDaily,$string1:expr, $string2:expr) =>{
         format!("https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&datatype=json&symbol={}&apikey={}",$string1,$string2)
@@ -92,8 +92,8 @@ mod test {
     #[test]
     fn t_01() {
         let (sym, api_key) = ("AAPL", "123456789");
-        let url = create_url!(FuncType:TsIntraExt,sym,api_key);
-        assert_eq!(url,"https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY_EXTENDED&datatype=json&symbol=AAPL&interval=1min&slice=year1month1&apikey=123456789");
+        let url = create_url!(FuncType:TsIntra,sym,api_key);
+        assert_eq!(url,"https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&datatype=csv&symbol=AAPL&interval=1min&slice=year1month1&apikey=123456789");
     }
     #[test]
     fn t_02() {

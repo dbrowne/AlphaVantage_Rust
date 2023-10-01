@@ -1,6 +1,20 @@
 // @generated automatically by Diesel CLI.
 
 diesel::table! {
+    intradayprices (eventid) {
+        eventid -> Int4,
+        tstamp -> Timestamp,
+        sid -> Int8,
+        symbol -> Text,
+        open -> Float4,
+        high -> Float4,
+        low -> Float4,
+        close -> Float4,
+        volume -> Int4,
+    }
+}
+
+diesel::table! {
     overviewexts (sid) {
         sid -> Int8,
         revenuepersharettm -> Float4,
@@ -83,4 +97,9 @@ diesel::table! {
 diesel::joinable!(overviewexts -> symbols (sid));
 diesel::joinable!(overviews -> symbols (sid));
 
-diesel::allow_tables_to_appear_in_same_query!(overviewexts, overviews, symbols,);
+diesel::allow_tables_to_appear_in_same_query!(
+    intradayprices,
+    overviewexts,
+    overviews,
+    symbols,
+);

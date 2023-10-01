@@ -152,6 +152,7 @@ pub struct FullOverview {
 // "Symbol": String("AAPL"),
 // "TrailingPE": String("29.11")}
 impl FullOverview {
+    /// a set of helper functions
     fn get_string_field(json_txt: &Value, field: &str) -> String {
         const ERROR: &str = "__Error__";
         json_txt[field].as_str().unwrap_or(ERROR).to_string()
@@ -228,3 +229,20 @@ impl FullOverview {
         })
     }
 }
+
+
+#[derive(Debug, Clone, Default, Deserialize)]
+pub  struct RawIntraDayPrice {
+    ///This is for the TIME_SERIES_INTRADAY endpoint
+    /// based on https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol=IBM&interval=5min&apikey=demo&datatype=csv
+
+    pub timestamp: String,
+    pub open: f32,
+    pub high: f32,
+    pub low: f32,
+    pub close: f32,
+    pub volume: i32,
+
+}
+
+

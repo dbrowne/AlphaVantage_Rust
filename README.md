@@ -45,7 +45,7 @@ This section will provide guidance on how to utilize the API client. (Expand upo
 - [x] Security overview loader
 - [ ] Intraday price loader
 - [ ] Open-Close price loader
-- [ ] Refactor security loader for asynchronous processing and multi-threading
+- [ ] Refactor code for production use eg improved error handling and logging 
 
 ## Contributing
 

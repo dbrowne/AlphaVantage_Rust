@@ -27,19 +27,29 @@
  * SOFTWARE.
  */
 
-use crate::alpha_lib::alpha_data_types::{AlphaSymbol, FullOverview};
+use crate::alpha_lib::alpha_data_types::{AlphaSymbol, FullOverview, RawIntraDayPrice};
 use crate::alpha_lib::alpha_funcs::normalize_alpha_region;
 use crate::create_url;
-use crate::db_funcs::{create_overview, create_symbol, establish_connection};
+use crate::db_funcs::{create_intra_day, create_overview, create_symbol, establish_connection_or_exit};
 use crate::security_types::sec_types::SecurityType;
-use chrono::{DateTime, Duration, Local};
+use chrono::{DateTime, Duration, Local, NaiveDateTime};
 use serde_json::Value;
 use std::collections::HashMap;
 use std::error::Error;
 use std::{thread, time};
+use std::env::VarError;
+use diesel::PgConnection;
+use crate::db_models::IntraDayPrice;
+use crate::schema::symbols::symbol;
 
 const SYMBOL: &str = "symbol";
 const MAX_ERRORS: i32 = 50;
+
+
+fn get_api_key()->Result<String,VarError>{
+    std::env::var("ALPHA_VANTAGE_API_KEY")
+}
+
 
 /// # process_symbols Function
 ///
@@ -74,24 +84,24 @@ const MAX_ERRORS: i32 = 50;
 /// }
 /// ```
 ///
-/// Note: It is assumed that the `ALPHA_VANTAGE_API_KEY` environment variable has been set with a valid API key.
-
+///
+/// TODO:  Refactor as this is a bit of a mess
+///
 pub fn process_symbols(sec_vec: Vec<Vec<String>>) -> Result<(), Box<dyn Error>> {
-    let api_key = std::env::var("ALPHA_VANTAGE_API_KEY")
-        .map_err(|e| format!("Couldn't read ALPHA_VANTAGE_API_KEY: {}", e))?;
+    let api_key =get_api_key()?;
 
     let mut type_map: HashMap<SecurityType, i32> = HashMap::new();
     let mut symbol_map: HashMap<String, i32> = HashMap::new();
     let mut err_ct = 0;
 
-    let conn = &mut establish_connection()?;
+    let conn = &mut establish_connection_or_exit();
     let mut dur_time: DateTime<Local>;
     let mut resp_time: DateTime<Local>;
     let min_time = Duration::milliseconds(350); //We cant make MIN_TIME a constant because it is not a primitive type
 
     for sym_vec in sec_vec {
-        for symbol in sym_vec {
-            let url = create_url!(FuncType:SymSearch,symbol,api_key);
+        for symb in sym_vec {
+            let url = create_url!(FuncType:SymSearch,symb,api_key);
             let resp = reqwest::blocking::get(&url); //todo: change to async & refactor
             resp_time = Local::now();
             if let Ok(resp) = resp {
@@ -113,7 +123,7 @@ pub fn process_symbols(sec_vec: Vec<Vec<String>>) -> Result<(), Box<dyn Error>> 
                 }
 
                 if !text.contains(SYMBOL) {
-                    println!("Bad response for symbol: {}", symbol);
+                    println!("Bad response for symbol: {:?}", symbol);
                     println!("text error: for {:?}", text);
                     continue;
                 }
@@ -138,12 +148,12 @@ pub fn process_symbols(sec_vec: Vec<Vec<String>>) -> Result<(), Box<dyn Error>> 
                     } else {
                         type_map.entry(sec_type).and_modify(|e| *e += 1);
                     }
-                    let sid = SecurityType::encode(
+                    let s_id: i64 = SecurityType::encode(
                         sec_type,
                         type_map.get(&sec_type).unwrap().clone() as u32,
                     );
 
-                    create_symbol(conn, sid, record).expect("Can't write to DB fatal error");
+                    create_symbol(conn, s_id, record).expect("Can't write to DB fatal error");
                     dur_time = Local::now();
 
                     if dur_time - resp_time < min_time {
@@ -169,23 +179,20 @@ pub fn process_symbols(sec_vec: Vec<Vec<String>>) -> Result<(), Box<dyn Error>> 
 /// # Parameters
 ///
 /// * `sid`: An `i64` identifier representing the financial entity.
-/// * `symbol`: A `String` representing the symbol of the financial entity.
+/// * `symb`: A `String` representing the symbol of the financial entity.
 ///
 /// # Returns
 ///
 /// * `Result<(), Box<dyn Error>>`: Returns an `Ok(())` if the operation is successful. Returns an `Err` wrapped in a `Box` if any error occurs.
 ///
-/// # Environment Variables
-///
-/// * `ALPHA_VANTAGE_API_KEY`: This environment variable should be set with the API key that will be used to access the external API.
 ///
 /// # Examples
 ///
 /// ```ignore
 /// let sid = 12345;
-/// let symbol = "AAPL".to_string();
+/// let symb = "AAPL".to_string();
 ///
-/// match get_overview(sid, symbol) {
+/// match get_overview(sid, symb) {
 ///     Ok(_) => println!("Overview fetched and processed successfully."),
 ///     Err(e) => println!("Error fetching or processing overview: {:?}", e),
 /// }
@@ -198,12 +205,11 @@ pub fn process_symbols(sec_vec: Vec<Vec<String>>) -> Result<(), Box<dyn Error>> 
 /// # Errors
 ///
 /// * It might return an error if there's a problem establishing a database connection, making the external API request, or processing the response.
-pub fn get_overview(sid: i64, symbol: String) -> Result<(), Box<dyn Error>> {
+pub fn get_overview(s_id: i64, symb: String) -> Result<(), Box<dyn Error>> {
     const SYMBOL: &str = "Symbol";
-    let connection = &mut establish_connection()?;
-    let api_key =
-        std::env::var("ALPHA_VANTAGE_API_KEY").expect("ALPHA_VANTAGE_API_KEY must be set");
-    let url = create_url!(FuncType:Overview,symbol,api_key);
+    let connection = &mut establish_connection_or_exit();
+    let api_key=get_api_key()?;
+    let url = create_url!(FuncType:Overview,symb,api_key);
     let response = reqwest::blocking::get(&url);
 
     if let Ok(response) = response {
@@ -217,7 +223,7 @@ pub fn get_overview(sid: i64, symbol: String) -> Result<(), Box<dyn Error>> {
         };
 
         if !text.contains(SYMBOL) {
-            println!("Error: for {}: {:?}", symbol, text);
+            println!("Error: for {}: {:?}", symb, text);
             thread::sleep(time::Duration::from_secs(1));
         } else {
             let json = match serde_json::from_str::<Value>(&text) {
@@ -227,17 +233,66 @@ pub fn get_overview(sid: i64, symbol: String) -> Result<(), Box<dyn Error>> {
                     return Err("Error parsing json".into());
                 }
             };
-            let ov = FullOverview::new(sid, json);
+            let ov = FullOverview::new(s_id, json);
             if let Some(ov) = ov {
                 println!("Overview: {:?}", ov);
                 create_overview(connection, ov)?;
             } else {
-                println!("Error: for {}: {:?}", symbol, text);
+                println!("Error: for {}: {:?}", symb, text);
             }
         }
     } else {
         println!("Error getting response: {:?}", response);
     }
+
+    Ok(())
+}
+
+
+fn get_api_data(url: &str) -> Result<String, Box<dyn Error>> {
+    let response = reqwest::blocking::get(url)?;
+    let text = response.text()?;
+    Ok(text)
+}
+
+fn parse_intraday_from_csv(text: &str) -> Result<Vec<RawIntraDayPrice>, Box<dyn Error>> {
+    let mut recs = csv::Reader::from_reader(text.as_bytes());
+    recs.deserialize()
+        .collect::<Result<Vec<RawIntraDayPrice>, _>>()
+        .map_err(|e| e.into())
+}
+
+fn persist_ticks(connection: &mut PgConnection, s_id: i64, symb: String, ticks: Vec<RawIntraDayPrice>) ->Result<(), Box<dyn Error>>{
+    for tick in ticks  {
+        let tmp_tick = IntraDayPrice{
+            eventid: 0,
+            tstamp: NaiveDateTime::parse_from_str(&tick.timestamp, "%Y-%m-%d %H:%M:%S")?,
+            sid: s_id,
+            symbol: symb.clone(),
+            open: tick.open,
+            high: tick.high,
+            low: tick.low,
+            close: tick.close,
+            volume: tick.volume,
+        };
+        _ = create_intra_day(connection, tmp_tick);
+    }
+    Ok(())
+}
+pub fn load_intraday(symb: String, s_id: i64) -> Result<(), Box<dyn Error>> {
+    const HEADER: &str = "timestamp,open,high,low,close,volume";
+    let connection = &mut establish_connection_or_exit();
+    let api_key = get_api_key()?;
+    let url = create_url!(FuncType:TsIntra,symb,api_key);
+    let text = get_api_data(&url)?;
+    if  !text.contains(HEADER){
+        eprintln!("Error: for {}: {:?}", symb, text);
+        // alpha vantage will return an error for a symol missing a price
+        return  Ok(());
+    };
+
+    let ticks = parse_intraday_from_csv(&text)?;
+    persist_ticks(connection, s_id,symb,ticks)?;
 
     Ok(())
 }
