@@ -27,10 +27,12 @@
  * SOFTWARE.
  */
 
-use crate::schema::{overviewexts, overviews, symbols, intradayprices,summaryprices};
+use crate::schema::{overviewexts, overviews, symbols, intradayprices,
+                    topstats, summaryprices};
 use chrono::prelude::*;
 use chrono::NaiveDateTime;
 use diesel::prelude::*;
+
 #[derive(Queryable, Debug)]
 pub struct Symbol {
     pub sid: i64,
@@ -157,7 +159,6 @@ pub struct Overviewext {
 }
 
 /// Overviewexts table exists to minimize compile time Diesel 64 column feature is too slow.
-
 #[derive(Insertable, Debug)]
 #[diesel(table_name = overviewexts)]
 pub struct NewOverviewext<'a> {
@@ -243,5 +244,33 @@ pub struct NewSummaryPrice<'a> {
     pub high: &'a f32,
     pub low: &'a f32,
     pub close: &'a f32,
+    pub volume: &'a i32,
+}
+
+
+#[derive(Queryable, Debug)]
+pub struct TopStat {
+    pub eventid: i32,
+    pub date: NaiveDateTime,
+    pub event_type: String,
+    pub sid: i64,
+    pub symbol: String,
+    pub price: f32,
+    pub change_val: f32,
+    pub change_pct: f32,
+    pub volume: i32,
+}
+
+
+#[derive(Insertable, Debug)]
+#[diesel(table_name = topstats)]
+pub struct NewTopStat<'a> {
+    pub date: &'a NaiveDateTime,
+    pub event_type: &'a str,
+    pub sid: &'a i64,
+    pub symbol: &'a str,
+    pub price: &'a f32,
+    pub change_val: &'a f32,
+    pub change_pct: &'a f32,
     pub volume: &'a i32,
 }

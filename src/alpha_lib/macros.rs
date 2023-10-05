@@ -35,6 +35,7 @@ pub enum FuncType {
     TsDaily,
     Overview,
     SymSearch,
+    TopQuery,
 }
 
 /// `create_url!` is a macro used for constructing request URLs to various endpoints of the AlphaVantage API.
@@ -64,9 +65,8 @@ pub enum FuncType {
 /// # Panics
 ///
 /// This macro does not panic.
-
 #[macro_export]
-macro_rules! create_url{
+macro_rules! create_url {
     (FuncType:TsIntra,$string1:expr, $string2:expr) =>{
         format!("https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&datatype=csv&symbol={}&interval=1min&apikey={}",$string1,$string2)
     };
@@ -79,7 +79,9 @@ macro_rules! create_url{
     (FuncType:SymSearch,$string1:expr, $string2:expr) =>{
         format!("https://www.alphavantage.co/query?function=SYMBOL_SEARCH&keywords={}&apikey={}&datatype=csv",$string1,$string2)
     };
-
+    (FuncType:TopQuery,$string1:expr, $string2:expr) =>{
+        format!("https://www.alphavantage.co/query?function=TOP_GAINERS_LOSERS&apikey={}",$string2)
+    };
     ($other:expr,$string1:expr, $string2:expr) =>{
         format!("Unknown function type received {:?}",$other)
     };
@@ -89,18 +91,21 @@ pub use create_url;
 
 #[cfg(test)]
 mod test {
+
     #[test]
     fn t_01() {
         let (sym, api_key) = ("AAPL", "123456789");
         let url = create_url!(FuncType:TsIntra,sym,api_key);
-        assert_eq!(url,"https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&datatype=csv&symbol=AAPL&interval=1min&apikey=123456789");
+        assert_eq!(url, "https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&datatype=csv&symbol=AAPL&interval=1min&apikey=123456789");
     }
+
     #[test]
     fn t_02() {
         let (sym, api_key) = ("AAPL", "123456789");
         let url = create_url!(FuncType:TsDaily,sym,api_key);
-        assert_eq!(url,"https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&datatype=json&symbol=AAPL&apikey=123456789");
+        assert_eq!(url, "https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&datatype=json&symbol=AAPL&apikey=123456789");
     }
+
     #[test]
     fn t_03() {
         let (sym, api_key) = ("AAPL", "123456789");
@@ -110,15 +115,24 @@ mod test {
             "https://www.alphavantage.co/query?function=OVERVIEW&symbol=AAPL&apikey=123456789"
         );
     }
+
     #[test]
     fn t_04() {
         let (sym, api_key) = ("AAPL", "123456789");
         let url = create_url!(FuncType:SymSearch,sym,api_key);
-        assert_eq!(url,"https://www.alphavantage.co/query?function=SYMBOL_SEARCH&keywords=AAPL&apikey=123456789&datatype=csv");
+        assert_eq!(url, "https://www.alphavantage.co/query?function=SYMBOL_SEARCH&keywords=AAPL&apikey=123456789&datatype=csv");
     }
+
     #[test]
     fn t_05() {
-        let url = create_url!(55, "AAPL", "123456789");
+        let url = create_url!(55,"AAPL",  "123456789");
         assert_eq!(url, "Unknown function type received 55");
+    }
+
+
+    #[test]
+    fn t_06(){
+        let  url = create_url!(FuncType:TopQuery,"NONE","12345678");
+        assert_eq!(url,"https://www.alphavantage.co/query?function=TOP_GAINERS_LOSERS&apikey=12345678" );
     }
 }

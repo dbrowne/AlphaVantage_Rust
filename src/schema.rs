@@ -108,6 +108,20 @@ diesel::table! {
     }
 }
 
+diesel::table! {
+    topstats (eventid) {
+        eventid -> Int4,
+        date -> Timestamp,
+        event_type -> Text,
+        sid -> Int8,
+        symbol -> Text,
+        price -> Float4,
+        change_val -> Float4,
+        change_pct -> Float4,
+        volume -> Int4,
+    }
+}
+
 diesel::joinable!(overviewexts -> symbols (sid));
 diesel::joinable!(overviews -> symbols (sid));
 
@@ -117,4 +131,5 @@ diesel::allow_tables_to_appear_in_same_query!(
     overviews,
     summaryprices,
     symbols,
+    topstats,
 );

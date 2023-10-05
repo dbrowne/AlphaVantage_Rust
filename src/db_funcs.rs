@@ -27,10 +27,10 @@
  * SOFTWARE.
  */
 
-use crate::alpha_lib::alpha_data_types::{AlphaSymbol, FullOverview, RawDailyPrice};
-use crate::db_models::{IntraDayPrice, NewIntraDayPrice, NewOverview, NewOverviewext, NewSummaryPrice, NewSymbol, Symbol};
+use crate::alpha_lib::alpha_data_types::{AlphaSymbol, FullOverview, RawDailyPrice, GTopStat};
+use crate::db_models::{IntraDayPrice, NewIntraDayPrice, NewOverview, NewOverviewext, NewSummaryPrice, NewSymbol, NewTopStat, Symbol};
 use crate::security_types::sec_types::SymbolFlag;
-use chrono::{DateTime, Local, NaiveDate, NaiveTime};
+use chrono::{DateTime, Local, NaiveDate, NaiveDateTime, NaiveTime};
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
 use dotenvy::dotenv;
@@ -475,7 +475,7 @@ pub fn get_sids_and_names_for(
 
 pub fn get_sids_and_names_with_overview(
     conn: &mut PgConnection) -> Result<Vec<(i64, String)>, diesel::result::Error> {
-    use crate::schema::symbols::dsl::{sid, symbol,symbols, overview};
+    use crate::schema::symbols::dsl::{sid, symbol, symbols, overview};
     symbols
         .filter(overview.eq(true))
         .select((sid, symbol))
@@ -511,18 +511,18 @@ pub fn create_intra_day(conn: &mut PgConnection, tick: IntraDayPrice) -> Result<
     Ok(())
 }
 
-pub  fn  insert_open_close(conn: &mut PgConnection,symb:String, s_id:i64, open_close:RawDailyPrice) ->Result<(), Box<dyn Error>>{
-    use  crate::schema::summaryprices;
+pub fn insert_open_close(conn: &mut PgConnection, symb: String, s_id: i64, open_close: RawDailyPrice) -> Result<(), Box<dyn Error>> {
+    use crate::schema::summaryprices;
 
-    let  np:NewSummaryPrice = NewSummaryPrice{
-        date : &open_close.date,
-        sid : &s_id,
-        symbol : &symb,
-        open : &open_close.open,
-        high : &open_close.high,
-        low : &open_close.low,
-        close : &open_close.close,
-        volume : &open_close.volume,
+    let np: NewSummaryPrice = NewSummaryPrice {
+        date: &open_close.date,
+        sid: &s_id,
+        symbol: &symb,
+        open: &open_close.open,
+        high: &open_close.high,
+        low: &open_close.low,
+        close: &open_close.close,
+        volume: &open_close.volume,
     };
     diesel::insert_into(summaryprices::table)
         .values(&np)
@@ -537,30 +537,77 @@ pub  fn  insert_open_close(conn: &mut PgConnection,symb:String, s_id:i64, open_c
         }
     };
     Ok(())
-
 }
 
 
 pub fn get_max_date(conn: &mut PgConnection, s_id: i64) -> NaiveDate {
     use crate::schema::summaryprices::dsl::{summaryprices, date, sid};
 
-    let  xx=
-    summaryprices
-        .filter(sid.eq(s_id))
-        .select(date)
-        .order(date.desc())
-        .first::<NaiveDate>(conn);
+    let xx =
+        summaryprices
+            .filter(sid.eq(s_id))
+            .select(date)
+            .order(date.desc())
+            .first::<NaiveDate>(conn);
 
-    let  _tt=match xx {
-        Ok(res)=>{
+    let _tt = match xx {
+        Ok(res) => {
             return res;
         }
-        Err(_) =>{
+        Err(_) => {
             println!("No max date found for security {}", s_id);
             return NaiveDate::from_ymd_opt(1900, 1, 1).unwrap();
         }
     };
+}
 
+pub fn get_sid(conn: &mut PgConnection, ticker: String) -> Result<i64, diesel::result::Error> {
+    use crate::schema::symbols::dsl::{symbols, symbol, sid};
+    let res = symbols
+        .filter(symbol.eq(ticker.clone()))
+        .select(sid)
+        .load::<i64>(conn);
+    let _tt = match res {
+        Ok(res) => {
+            if res.len() > 0 {
+                return Ok(res[0]);
+            } else {
+                eprintln!("Cannot find sid for ticker {}", ticker);
+                return  Err(diesel::result::Error::NotFound);
+            }
+        }
+        Err(err) => {
+            eprintln!("Cannot find sid for ticker {}", ticker);
+            return Err(err);
+        }
+    };
+}
+
+
+pub fn insert_top_stat(conn: &mut PgConnection, s_id: i64, ts: GTopStat, evt_type: &str, upd_time: NaiveDateTime) -> Result<(), Box<dyn Error>> {
+    use crate::schema::topstats;
+    let ns = NewTopStat {
+        date: &upd_time,
+        event_type: evt_type,
+        sid: &s_id,
+        symbol: &ts.ticker,
+        price: &ts.price,
+        change_val: &ts.change_amount,
+        change_pct: &ts.change_percentage,
+        volume: &ts.volume,
+    };
+
+    let row_cnt = diesel::insert_into(topstats::table)
+        .values(&ns)
+        .execute(conn)?;
+
+    if row_cnt == 1 {
+        return Ok(());
+    }
+
+    eprintln!("Error row_count should be 1 have {}", row_cnt);
+
+    Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, "db insert problem")))
 }
 
 
