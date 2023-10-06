@@ -31,7 +31,9 @@ use chrono::{prelude::*, Duration};
 use dotenvy::dotenv;
 use std::process;
 use AlphaVantage_Rust::alpha_lib::alpha_io_funcs::get_overview;
-use AlphaVantage_Rust::db_funcs::{establish_connection_or_exit, get_sids_and_names_for};
+use AlphaVantage_Rust::db_funcs::get_sids_and_names_for;
+use AlphaVantage_Rust::dbfunctions::base::establish_connection_or_exit;
+
 extern crate lazy_static;
 use lazy_static::lazy_static;
 
@@ -60,7 +62,7 @@ fn main() {
     for (sid, symbol) in results {
         println!("{}: {}", sid, symbol);
         dur_time = Local::now();
-        if let Err(err) = get_overview(sid, symbol) {
+        if let Err(err) = get_overview(conn,sid, symbol) {
             println!("Error running reader: {}", err);
             process::exit(1);
         }

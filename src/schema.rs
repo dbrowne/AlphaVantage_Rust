@@ -109,6 +109,13 @@ diesel::table! {
 }
 
 diesel::table! {
+    topicrefs (id) {
+        id -> Int4,
+        name -> Text,
+    }
+}
+
+diesel::table! {
     topstats (eventid) {
         eventid -> Int4,
         date -> Timestamp,
@@ -131,5 +138,6 @@ diesel::allow_tables_to_appear_in_same_query!(
     overviews,
     summaryprices,
     symbols,
+    topicrefs,
     topstats,
 );

@@ -27,68 +27,20 @@
  * SOFTWARE.
  */
 
+
+
+// NOTE!!! THIS WILL BE BROKEN INTO SEPARATE FILES INTO dbfunctions
 use crate::alpha_lib::alpha_data_types::{AlphaSymbol, FullOverview, RawDailyPrice, GTopStat};
 use crate::db_models::{IntraDayPrice, NewIntraDayPrice, NewOverview, NewOverviewext, NewSummaryPrice, NewSymbol, NewTopStat, Symbol};
 use crate::security_types::sec_types::SymbolFlag;
 use chrono::{DateTime, Local, NaiveDate, NaiveDateTime, NaiveTime};
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
-use dotenvy::dotenv;
 use std::{env, error::Error, process};
 
 
-/// Establishes a connection to a Postgres database using Diesel.
-///
-/// This function will read the `DATABASE_URL` environment variable,
-/// which should contain the database connection string.
-/// It is expected that this environment variable is already set before
-/// calling this function.
-///
-/// If the `DATABASE_URL` environment variable is not set, the function will
-/// return an Err value with the message "DATABASE_URL must be set".
-///
-/// If a connection to the database cannot be established,
-/// the function will return an Err value with a message indicating
-/// the failure to connect to the database URL provided.
-///
-/// # Returns
-///
-/// This function will return a Result:
-/// - On successful connection to the database, it will return `Ok(PgConnection)`.
-/// - On failure, it will return `Err`, with a dynamic Error (`Box<dyn Error>`) indicating the reason for failure.
-///
-/// # Example
-///```ignore
-/// use db_funcs::establish_connection;
-///
-/// fn main() {
-///     match establish_connection() {
-///         Ok(conn) => println!("Successfully connected to the database."),
-///         Err(e) => eprintln!("Database connection failed: {}", e),
-///     }
-/// }
-/// ```
-///
-pub fn establish_connection_or_exit() -> PgConnection {
-    dotenv().ok();
-
-    let database_url = match env::var("DATABASE_URL") {
-        Ok(db) => db,
-        Err(_) => {
-            println!("No Database url set");
-            process::exit(1);
-        }
-    };
-
-    let conn = PgConnection::establish(&database_url).unwrap_or_else(|_| {
-        println!("Can't establish db connection");
-        process::exit(1);
-    }
-    );
 
 
-    conn
-}
 
 /// Parses a time string into a `NaiveTime` struct.
 ///

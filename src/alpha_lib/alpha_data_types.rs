@@ -154,6 +154,7 @@ pub struct FullOverview {
 // "TrailingPE": String("29.11")}
 impl FullOverview {
     /// a set of helper functions
+    ///  TO BE REFACTORED!!!
     fn get_string_field(json_txt: &Value, field: &str) -> String {
         const ERROR: &str = "__Error__";
         json_txt[field].as_str().unwrap_or(ERROR).to_string()
@@ -323,6 +324,7 @@ pub struct MostActivelyTraded {
 
 #[derive(Debug, Clone)]
 pub struct GTopStat {
+    ///Generic Top Statistics had to change name to avoid confusion with dbmodeal::TopSat
     pub ticker: String,
     pub price: f32,
     pub change_amount: f32,
@@ -381,4 +383,3 @@ mod tests {
         assert_eq!(stat.volume, 1000);
     }
 }
-

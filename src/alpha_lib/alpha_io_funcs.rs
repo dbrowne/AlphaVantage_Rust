@@ -31,7 +31,8 @@ extern crate chrono_tz;
 use crate::alpha_lib::alpha_data_types::{AlphaSymbol, Convert, FullOverview, RawDailyPrice, RawIntraDayPrice, Root, TopType};
 use crate::alpha_lib::alpha_funcs::{normalize_alpha_region, top_constants};
 use crate::create_url;
-use crate::db_funcs::{create_intra_day, create_overview, create_symbol, establish_connection_or_exit, get_max_date, get_sid, insert_open_close, insert_top_stat};
+use crate::db_funcs::{create_intra_day, create_overview, create_symbol, get_max_date, get_sid, insert_open_close, insert_top_stat};
+use crate::dbfunctions::base::establish_connection_or_exit;
 use crate::security_types::sec_types::SecurityType;
 use chrono::{DateTime, Duration, Local, NaiveDate, NaiveDateTime};
 use serde_json::Value;
@@ -206,9 +207,8 @@ pub fn process_symbols(sec_vec: Vec<Vec<String>>) -> Result<(), Box<dyn Error>> 
 /// # Errors
 ///
 /// * It might return an error if there's a problem establishing a database connection, making the external API request, or processing the response.
-pub fn get_overview(s_id: i64, symb: String) -> Result<(), Box<dyn Error>> {
+pub fn get_overview(connection: &mut PgConnection, s_id: i64, symb: String) -> Result<(), Box<dyn Error>> {
     const SYMBOL: &str = "Symbol";
-    let connection = &mut establish_connection_or_exit();
     let api_key = get_api_key()?;
     let url = create_url!(FuncType:Overview,symb,api_key);
     let response = reqwest::blocking::get(&url);

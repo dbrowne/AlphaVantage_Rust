@@ -5,3 +5,4 @@ pub mod db_models;
 pub mod file_processors;
 pub mod schema;
 pub mod security_types;
+pub mod dbfunctions;

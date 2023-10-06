@@ -30,8 +30,8 @@
 use dotenvy::dotenv;
 use std::process;
 use AlphaVantage_Rust::alpha_lib::alpha_io_funcs::load_intraday;
-use AlphaVantage_Rust::db_funcs::{establish_connection_or_exit, get_sids_and_names_with_overview};
-
+use AlphaVantage_Rust::db_funcs::get_sids_and_names_with_overview;
+use AlphaVantage_Rust::dbfunctions::base::establish_connection_or_exit;
 
 fn main() {
     let conn = &mut establish_connection_or_exit();

@@ -28,7 +28,7 @@
  */
 
 use crate::schema::{overviewexts, overviews, symbols, intradayprices,
-                    topstats, summaryprices};
+                    topstats, summaryprices, topicrefs};
 use chrono::prelude::*;
 use chrono::NaiveDateTime;
 use diesel::prelude::*;
@@ -273,4 +273,18 @@ pub struct NewTopStat<'a> {
     pub change_val: &'a f32,
     pub change_pct: &'a f32,
     pub volume: &'a i32,
+}
+
+#[derive(Queryable, Debug)]
+pub struct TopicRef {
+    pub id: i32,
+    pub name: String,
+
+}
+
+#[derive(Insertable, Debug)]
+#[diesel(table_name = topicrefs)]
+pub struct NewTopicRef<'a> {
+    pub id: &'a i32,
+    pub name: &'a String,
 }

@@ -172,3 +172,6 @@ Temporary Items
 
 #configuration files
 .env
+
+#misc
+migrations/.keep
