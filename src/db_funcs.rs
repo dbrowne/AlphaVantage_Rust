@@ -36,7 +36,7 @@ use crate::security_types::sec_types::SymbolFlag;
 use chrono::{DateTime, Local, NaiveDate, NaiveDateTime, NaiveTime};
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
-use std::{env, error::Error, process};
+use std::error::Error;
 
 
 

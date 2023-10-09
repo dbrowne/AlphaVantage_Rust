@@ -42,13 +42,14 @@ use std::{thread, time};
 use std::env::VarError;
 
 use diesel::PgConnection;
+use crate::alpha_lib::news_type::NewsRoot;
 use crate::db_models::IntraDayPrice;
 
 const SYMBOL: &str = "symbol";
 const MAX_ERRORS: i32 = 50;
 
 
-fn get_api_key() -> Result<String, VarError> {
+pub  fn get_api_key() -> Result<String, VarError> {
     std::env::var("ALPHA_VANTAGE_API_KEY")
 }
 
@@ -262,6 +263,16 @@ fn get_top_data(url: &str) -> Result<Root, Box<dyn Error>> {
     Ok(text)
 }
 
+pub  fn get_news_root(url: &str) -> Result<NewsRoot, Box<dyn Error>> {
+    let response = reqwest::blocking::get(url)?;
+    let nr  =NewsRoot::default();
+    // let text = response.text()?;
+    // println!("news root: {:?}", text);
+
+    let text =response.json::<NewsRoot>()?;
+    Ok(text)
+}
+
 fn parse_intraday_from_csv(text: &str) -> Result<Vec<RawIntraDayPrice>, Box<dyn Error>> {
     let mut recs = csv::Reader::from_reader(text.as_bytes());
     recs.deserialize()
@@ -306,6 +317,7 @@ pub fn load_intraday(conn: &mut PgConnection, symb: String, s_id: i64) -> Result
 
 
 fn gen_new_summary_price(json_inp: (&String, &Value), sym: String) -> Option<RawDailyPrice> {
+    //todo   Refactor
     let dt = NaiveDate::parse_from_str(json_inp.0, "%Y-%m-%d").map_err(|e| {
         println!("Error parsing date: {:?}", e);
         e
@@ -428,6 +440,30 @@ pub fn load_tops(conn: &mut PgConnection) -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
+/// Processes a set of data items for a specific type, converting them to top statistics
+/// and inserting them into a database.
+///
+/// This function iterates through a collection of data items, converts each item into a
+/// top statistic using the provided conversion trait, determines the corresponding ID
+/// for the ticker, and then inserts the top statistic into the database.
+///
+/// # Parameters
+///
+/// * `conn`: A mutable reference to a PostgreSQL connection.
+/// * `data`: A slice of data items that implement the `Convert` trait.
+/// * `top_type`: The type of top data being processed, represented by the `TopType` enum.
+/// * `last_update`: A timestamp indicating the last update time for the data.
+///
+/// # Returns
+///
+/// * `Ok(())` if the processing succeeds.
+/// * `Err(Box<dyn Error>)` if any step in the process encounters an error.
+///
+/// # Note
+///
+/// If there's an error while fetching the ID for a specific ticker, the function will
+/// skip that ticker and continue with the next item in the data collection.
+///
 fn process_data_for_type(
     conn: &mut PgConnection,
     data: &[impl Convert],

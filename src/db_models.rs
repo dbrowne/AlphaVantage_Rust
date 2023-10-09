@@ -285,6 +285,5 @@ pub struct TopicRef {
 #[derive(Insertable, Debug)]
 #[diesel(table_name = topicrefs)]
 pub struct NewTopicRef<'a> {
-    pub id: &'a i32,
     pub name: &'a String,
 }

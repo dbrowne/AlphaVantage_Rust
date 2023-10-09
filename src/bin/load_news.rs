@@ -27,9 +27,21 @@
  * SOFTWARE.
  */
 
-pub(crate) mod alpha_data_types;
-mod alpha_funcs;
-pub mod alpha_io_funcs;
-mod macros;
-pub  mod news_type;
-pub  mod alpha_io;
+use dotenvy::dotenv;
+use std::process;
+use AlphaVantage_Rust::alpha_lib::alpha_io::news_loader::load_news;
+use AlphaVantage_Rust::dbfunctions::base::establish_connection_or_exit;
+fn main() {
+    dotenv().ok();
+    let conn = &mut establish_connection_or_exit();
+
+    let news_status = load_news(conn, "AAPL".to_string());
+    match news_status {
+        Ok(_news) => println!("News loaded"),
+        Err(err) => {
+            eprintln!("Error loading news {}", err);
+            process::exit(1);
+        }
+    }
+
+}

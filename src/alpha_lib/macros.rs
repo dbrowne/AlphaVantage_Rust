@@ -36,6 +36,7 @@ pub enum FuncType {
     Overview,
     SymSearch,
     TopQuery,
+    NewsQuery,
 }
 
 /// `create_url!` is a macro used for constructing request URLs to various endpoints of the AlphaVantage API.
@@ -82,6 +83,9 @@ macro_rules! create_url {
     (FuncType:TopQuery,$string1:expr, $string2:expr) =>{
         format!("https://www.alphavantage.co/query?function=TOP_GAINERS_LOSERS&apikey={}",$string2)
     };
+    (FuncType:NewsQuery,$string1:expr, $string2:expr) =>{
+        format!("https://www.alphavantage.co/query?function=NEWS_SENTIMENT&tickers={}&apikey={}",$string1,$string2)
+    };
     ($other:expr,$string1:expr, $string2:expr) =>{
         format!("Unknown function type received {:?}",$other)
     };
@@ -91,7 +95,6 @@ pub use create_url;
 
 #[cfg(test)]
 mod test {
-
     #[test]
     fn t_01() {
         let (sym, api_key) = ("AAPL", "123456789");
@@ -131,8 +134,14 @@ mod test {
 
 
     #[test]
-    fn t_06(){
-        let  url = create_url!(FuncType:TopQuery,"NONE","12345678");
-        assert_eq!(url,"https://www.alphavantage.co/query?function=TOP_GAINERS_LOSERS&apikey=12345678" );
+    fn t_06() {
+        let url = create_url!(FuncType:TopQuery,"NONE","12345678");
+        assert_eq!(url, "https://www.alphavantage.co/query?function=TOP_GAINERS_LOSERS&apikey=12345678");
+    }
+
+    #[test]
+    fn t_09(){
+        let url = create_url!(FuncType:NewsQuery,"AAPL","12345678");
+        assert_eq!(url,"https://www.alphavantage.co/query?function=NEWS_SENTIMENT&tickers=AAPL&apikey=12345678");
     }
 }

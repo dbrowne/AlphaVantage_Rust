@@ -31,10 +31,11 @@
 
 
 use serde::Deserialize;
+use serde_with::{serde_as,DefaultOnNull};
 
 #[derive(Default, Debug, Clone, PartialEq,  Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct Root {
+pub struct NewsRoot {
     pub items: String,
     #[serde(rename = "sentiment_score_definition")]
     pub sentiment_score_definition: String,
@@ -43,6 +44,7 @@ pub struct Root {
     pub feed: Vec<Feed>,
 }
 
+#[serde_as]
 #[derive(Default, Debug, Clone, PartialEq,  Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Feed {
@@ -53,6 +55,7 @@ pub struct Feed {
     pub authors: Vec<String>,
     pub summary: String,
     #[serde(rename = "banner_image")]
+    #[serde_as(deserialize_as = "DefaultOnNull")]
     pub banner_image: String,
     pub source: String,
     #[serde(rename = "category_within_source")]
