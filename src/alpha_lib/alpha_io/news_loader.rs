@@ -28,63 +28,88 @@
  */
 
 
-use std::collections::{HashMap, HashSet};
+use std::collections::{HashMap};
 use std::error::Error;
 use diesel::PgConnection;
 use crate::alpha_lib::alpha_io_funcs::{get_api_key, get_news_root};
 use crate::alpha_lib::news_type::{Feed, NewsRoot};
 use crate::dbfunctions::topic_refs::{get_topics, insert_topic};
 use crate::create_url;
-use crate::schema::symbols::name;
+use crate::dbfunctions::author::{get_authors, insert_author};
 
-pub  fn load_news(conn: &mut PgConnection,ticker:String) -> Result<(), Box<dyn Error>> {
-    let api_key = get_api_key()?;
 
-    let url =create_url!(FuncType:NewsQuery,ticker,api_key);
-    let root = get_news_root(&url)?;
-    process_news(conn, root)?;
-Ok(())
-
+#[derive(Debug, Default)]
+struct Params {
+    topics: HashMap<String, i32>,
+    authors: HashMap<String, i32>,
 }
 
-fn process_news(conn:&mut PgConnection,root:NewsRoot) -> Result<(), Box<dyn Error>> {
+pub fn load_news(conn: &mut PgConnection, ticker: String) -> Result<(), Box<dyn Error>> {
+    let api_key = get_api_key()?;
 
+    let url = create_url!(FuncType:NewsQuery,ticker,api_key);
+    let root = get_news_root(&url)?;
+    process_news(conn, root)?;
+    Ok(())
+}
+
+fn process_news(conn: &mut PgConnection, root: NewsRoot) -> Result<(), Box<dyn Error>> {
     let item_count = root.items.parse::<i32>()?;
     let sentiment_def = root.sentiment_score_definition;
     let relevance_def = root.relevance_score_definition;
 
-    process_feed(conn,root.feed)?;
+    process_feed(conn, root.feed)?;
     Ok(())
 }
 
-fn process_feed(conn:&mut PgConnection,feed:Vec<Feed>) -> Result<(), Box<dyn Error>> {
+fn process_feed(conn: &mut PgConnection, feed: Vec<Feed>) -> Result<(), Box<dyn Error>> {
+    let mut params = Params::default();
+
     let topics = get_topics(conn)?;
-    let mut topic_set:HashMap<String,i32> = HashMap::new();
+    let authors = get_authors(conn)?;
+
 
     for tp in topics {
-        topic_set.insert(tp.name,tp.id);
+        params.topics.insert(tp.name, tp.id);
     }
 
+    for auth in authors {
+        params.authors.insert(auth.author_name, auth.id);
+    }
+
+
     for article in feed {
-        process_article(conn, article, &mut topic_set)?;
+        process_article(conn, article, &mut params)?;
     }
 
     Ok(())
 }
 
 
-fn process_article(conn:&mut PgConnection,article:Feed, topic_set: &mut HashMap<String,i32>) -> Result<(), Box<dyn Error>> {
-
+fn process_article(conn: &mut PgConnection, article: Feed, params: &mut Params) -> Result<(), Box<dyn Error>> {
+    for auth in article.authors {
+        if params.authors.contains_key(&auth) {
+            continue;
+        }
+        if auth.eq("") {
+            continue;
+        }
+        println!("Inserting new author {}", auth);
+        let auth = insert_author(conn, auth)?;
+        params.authors.insert(auth.author_name, auth.id);
+    }
 
 
     for topic in article.topics {
-        if  topic_set.contains_key(&topic.topic) {
+        if params.topics.contains_key(&topic.topic) {
             continue;
         }
-        insert_topic(conn,topic.topic)?;
+        println!("Inserting new topic {}", topic.topic);
+        let tp = insert_topic(conn, topic.topic)?;
+        params.topics.insert(tp.name, tp.id);
     };
 
-    println!("{:?} {:?}",article.title,article.url);
+    println!("{:?} {:?}", article.title, article.url);
 
     Ok(())
 }

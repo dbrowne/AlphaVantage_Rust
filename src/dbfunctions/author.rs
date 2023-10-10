@@ -30,70 +30,64 @@
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
 use std::{error::Error, process};
-use crate::db_models::{NewTopicRef, TopicRef};
-use crate::schema::topicrefs::dsl::topicrefs;
+use crate::db_models::{NewAuthor, Author};
+use crate::schema::authors::dsl::authors;
 
 
-pub  fn get_topics(conn: &mut PgConnection) ->Result<Vec<TopicRef>, Box<dyn Error>> {
-
-    let topics = topicrefs.load::<TopicRef>(conn);
-    match topics {
-        Ok(topics) => Ok(topics),
+pub fn get_authors(conn: &mut PgConnection) -> Result<Vec<Author>, Box<dyn Error>> {
+    let auths = authors.load::<Author>(conn);
+    match auths {
+        Ok(auths) => Ok(auths),
         Err(err) => {
-            eprintln!("Error loading topics {}", err);
+            eprintln!("Error loading authors {}", err);
             process::exit(1);
         }
     }
 }
 
-pub fn get_topic_by_id(conn: &mut PgConnection, topic_id: i32) -> Result<TopicRef, Box<dyn Error>> {
-    use crate::schema::topicrefs::dsl::{id };
 
-    let topic = topicrefs
-        .filter(id.eq(topic_id))
-        .first::<TopicRef>(conn);
-    match topic {
-        Ok(topic) => Ok(topic),
+pub  fn get_author_by_name(conn: &mut PgConnection, auth_name: String) ->Result<Author, Box<dyn Error>> {
+    use crate::schema::authors::dsl::{author_name};
+
+    let author = authors
+        .filter(author_name.eq(auth_name))
+        .first::<Author>(conn);
+    match author {
+        Ok(author) => Ok(author),
         Err(err) => {
-            eprintln!("Error loading topic {}", err);
+            eprintln!("Error loading author {}", err);
             process::exit(1);
         }
     }
 }
 
-pub  fn get_id_topic_by_name(conn: &mut PgConnection, topic_name: String) ->Result<TopicRef, Box<dyn Error>> {
-    use crate::schema::topicrefs::dsl::{name };
+pub fn get_author_by_id(conn: &mut PgConnection, author_id: i32) -> Result<Author, Box<dyn Error>> {
+    use crate::schema::authors::dsl::{id};
 
-    let topic = topicrefs
-        .filter(name.eq(topic_name))
-        .first::<TopicRef>(conn);
-    match topic {
-        Ok(topic) => Ok(topic),
+    let author = authors
+        .filter(id.eq(author_id))
+        .first::<Author>(conn);
+    match author {
+        Ok(author) => Ok(author),
         Err(err) => {
-            eprintln!("Error loading topic {}", err);
+            eprintln!("Error loading author {}", err);
             process::exit(1);
         }
     }
 }
 
-pub fn insert_topic(conn: &mut PgConnection, topic_name:String) ->Result<(TopicRef), Box<dyn Error>>{
-
-    let new_topic = NewTopicRef{
-        name: &topic_name,
+pub fn insert_author(conn: &mut PgConnection, author: String) -> Result<Author, Box<dyn Error>> {
+    let auth = NewAuthor {
+        author_name: &author,
     };
-    let row_cnt = diesel::insert_into(topicrefs)
-        .values(&new_topic)
-        .get_result::<TopicRef>(conn);
-    match  row_cnt{
-        Ok(topic) => Ok(topic),
+    let author = diesel::insert_into(authors)
+        .values(&auth)
+        .get_result(conn);
+    match author {
+        Ok(author) => Ok(author),
         Err(err) => {
-            eprintln!("Error inserting topic {}", err);
+            eprintln!("Error inserting author {}", err);
             process::exit(1);
         }
     }
-
-
 }
-
-
-

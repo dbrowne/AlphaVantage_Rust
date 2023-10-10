@@ -1,6 +1,13 @@
 // @generated automatically by Diesel CLI.
 
 diesel::table! {
+    authors (id) {
+        id -> Int4,
+        author_name -> Text,
+    }
+}
+
+diesel::table! {
     intradayprices (eventid) {
         eventid -> Int4,
         tstamp -> Timestamp,
@@ -133,6 +140,7 @@ diesel::joinable!(overviewexts -> symbols (sid));
 diesel::joinable!(overviews -> symbols (sid));
 
 diesel::allow_tables_to_appear_in_same_query!(
+    authors,
     intradayprices,
     overviewexts,
     overviews,

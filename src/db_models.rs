@@ -28,7 +28,7 @@
  */
 
 use crate::schema::{overviewexts, overviews, symbols, intradayprices,
-                    topstats, summaryprices, topicrefs};
+                    topstats, summaryprices, topicrefs, authors};
 use chrono::prelude::*;
 use chrono::NaiveDateTime;
 use diesel::prelude::*;
@@ -286,4 +286,17 @@ pub struct TopicRef {
 #[diesel(table_name = topicrefs)]
 pub struct NewTopicRef<'a> {
     pub name: &'a String,
+}
+
+#[derive(Queryable, Debug)]
+pub struct Author {
+    pub id: i32,
+    pub author_name: String,
+
+}
+
+#[derive(Insertable, Debug)]
+#[diesel(table_name = authors)]
+pub struct NewAuthor<'a> {
+    pub author_name: &'a String,
 }
