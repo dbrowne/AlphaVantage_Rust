@@ -27,9 +27,13 @@
  * SOFTWARE.
  */
 
+use diesel::pg::PgConnection;
+use diesel::prelude::*;
+use std::{error::Error, process};
+use crate::db_models::{NewsOverview, NewNewsOverview};
 
-pub  mod topic_refs;
-pub mod base;
-pub mod author;
-mod news_summary;
+pub  fn insert_news_summary(conn: &mut PgConnection, news: &NewsOverview) ->Result<(), Box<dyn Error>> {
+    use crate::schema::newsoverviews::dsl::{newsoverviews};
+    todo!("Insert news summary")
+}
 

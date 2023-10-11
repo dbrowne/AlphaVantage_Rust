@@ -28,7 +28,8 @@
  */
 
 use crate::schema::{overviewexts, overviews, symbols, intradayprices,
-                    topstats, summaryprices, topicrefs, authors};
+                    topstats, summaryprices, topicrefs, authors, newsoverviews,
+                    feeds,authormaps, tickersentiments};
 use chrono::prelude::*;
 use chrono::NaiveDateTime;
 use diesel::prelude::*;
@@ -299,4 +300,98 @@ pub struct Author {
 #[diesel(table_name = authors)]
 pub struct NewAuthor<'a> {
     pub author_name: &'a String,
+}
+
+#[derive(Queryable, Debug)]
+pub struct NewsOverview {
+    pub id: i32,
+    pub sid: i64,
+    pub items: i32,
+    pub sentiment: String,
+    pub relevance: String,
+    pub creation: NaiveDateTime,
+
+}
+
+#[derive(Insertable, Debug)]
+#[diesel(table_name = newsoverviews)]
+pub struct NewNewsOverview<'a> {
+    pub items: &'a i32,
+    pub sid: i64,
+    pub sentiment: &'a String,
+    pub relevance: &'a String,
+    pub creation: &'a NaiveDateTime,
+}
+
+
+#[derive(Queryable, Debug)]
+pub struct Feed {
+    pub id: i32,
+    pub sid: i64,
+    pub overviewid: i32,
+    pub title: String,
+    pub url: String,
+    pub publishedt: NaiveDateTime,
+    pub summary: String,
+    pub banner: String,
+    pub source: String,
+    pub sourcecategory: String,
+    pub sourcedomain: String,
+    pub osentiment: f64,
+    pub sentlabel: String,
+}
+
+#[derive(Insertable, Debug)]
+#[diesel(table_name = feeds)]
+pub struct NewFeed<'a> {
+    pub id: &'a i32,
+    pub sid: &'a i64,
+    pub overviewid: &'a i32,
+    pub title: &'a String,
+    pub url: &'a String,
+    pub publishedt: &'a NaiveDateTime,
+    pub summary: &'a String,
+    pub banner: &'a String,
+    pub source: &'a String,
+    pub sourcecategory: &'a String,
+    pub sourcedomain: &'a String,
+    pub osentiment: &'a f64,
+    pub sentlabel: &'a String,
+}
+
+#[derive(Queryable, Debug)]
+pub struct AuthorMap {
+    pub id: i32,
+    pub feedid: i32,
+    pub authorid: i32,
+}
+
+#[derive(Insertable, Debug)]
+#[diesel(table_name = authormaps)]
+pub struct NewAuthorMap<'a> {
+    pub feedid: &'a i32,
+    pub authorid: &'a i32,
+}
+
+#[derive(Queryable, Debug)]
+pub  struct TickerSentiment {
+    pub id: i32,
+    pub feedid: i32,
+    pub ticker: String,
+    pub sid: i64,
+    pub relevance: f64,
+    pub tsentiment: f64,
+    pub sentimentlable: String,
+}
+
+
+#[derive(Insertable, Debug)]
+#[diesel(table_name = tickersentiments)]
+pub struct NewTickerSentiment<'a> {
+    pub feedid: &'a i32,
+    pub ticker: &'a String,
+    pub sid: &'a i64,
+    pub relevance: &'a f64,
+    pub tsentiment: &'a f64,
+    pub sentimentlable: &'a String,
 }

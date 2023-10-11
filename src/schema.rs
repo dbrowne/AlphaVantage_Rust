@@ -1,9 +1,35 @@
 // @generated automatically by Diesel CLI.
 
 diesel::table! {
+    authormaps (id) {
+        id -> Int4,
+        feedid -> Int4,
+        authorid -> Int4,
+    }
+}
+
+diesel::table! {
     authors (id) {
         id -> Int4,
         author_name -> Text,
+    }
+}
+
+diesel::table! {
+    feeds (id) {
+        id -> Int4,
+        sid -> Int8,
+        overviewid -> Nullable<Int4>,
+        title -> Text,
+        url -> Text,
+        publishedt -> Timestamp,
+        summary -> Text,
+        banner -> Text,
+        source -> Text,
+        sourcecategory -> Text,
+        sourcedomain -> Text,
+        osentiment -> Float8,
+        sentlabel -> Text,
     }
 }
 
@@ -18,6 +44,17 @@ diesel::table! {
         low -> Float4,
         close -> Float4,
         volume -> Int4,
+    }
+}
+
+diesel::table! {
+    newsoverviews (id) {
+        id -> Int4,
+        sid -> Int8,
+        items -> Int4,
+        sentiment -> Text,
+        relevance -> Text,
+        creation -> Timestamp,
     }
 }
 
@@ -116,6 +153,18 @@ diesel::table! {
 }
 
 diesel::table! {
+    tickersentiments (id) {
+        id -> Int4,
+        feedid -> Nullable<Int4>,
+        ticker -> Text,
+        sid -> Int8,
+        relevance -> Float8,
+        tsentiment -> Float8,
+        sentimentlable -> Text,
+    }
+}
+
+diesel::table! {
     topicrefs (id) {
         id -> Int4,
         name -> Text,
@@ -136,16 +185,24 @@ diesel::table! {
     }
 }
 
+diesel::joinable!(authormaps -> authors (authorid));
+diesel::joinable!(authormaps -> feeds (feedid));
+diesel::joinable!(feeds -> newsoverviews (overviewid));
 diesel::joinable!(overviewexts -> symbols (sid));
 diesel::joinable!(overviews -> symbols (sid));
+diesel::joinable!(tickersentiments -> feeds (feedid));
 
 diesel::allow_tables_to_appear_in_same_query!(
+    authormaps,
     authors,
+    feeds,
     intradayprices,
+    newsoverviews,
     overviewexts,
     overviews,
     summaryprices,
     symbols,
+    tickersentiments,
     topicrefs,
     topstats,
 );
