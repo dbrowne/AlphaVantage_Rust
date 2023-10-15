@@ -2,7 +2,7 @@
 
 diesel::table! {
     articles (hashid) {
-        hashid -> Int8,
+        hashid -> Text,
         sourceid -> Int4,
         category -> Text,
         title -> Text,
@@ -34,7 +34,7 @@ diesel::table! {
         id -> Int4,
         sid -> Int8,
         newsoverviewid -> Int4,
-        articleid -> Int8,
+        articleid -> Text,
         sourceid -> Int4,
         osentiment -> Float8,
         sentlabel -> Text,

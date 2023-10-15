@@ -8,7 +8,7 @@ create table sources
 
 create table articles
 (
-    hashid   bigint primary key not null,
+    hashid   Text primary key not null,
     sourceid int references sources (id) not null,
     category text      not null,
     title    text      not null,
@@ -25,7 +25,7 @@ create table feeds
     id             serial primary key,
     sid            bigint not null,
     newsoverviewid integer references newsoverviews (id) not null,
-    articleid      bigint not null references articles (hashid),
+    articleid      text not null references articles (hashid),
     sourceid       int references sources (id) not null,
     osentiment     float  not null,
     sentlabel      text   not null

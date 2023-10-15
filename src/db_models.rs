@@ -329,7 +329,7 @@ pub struct Feed {
     pub id: i32,
     pub sid: i64,
     pub newsoverviewid: i32,
-    pub articleid: i64,
+    pub articleid: String,
     pub sourceid: i32,
     pub osentiment: f64,
     pub sentlabel: String,
@@ -341,7 +341,7 @@ pub struct NewFeed<'a> {
     pub id: &'a i32,
     pub sid: &'a i64,
     pub newsoverviewid: &'a i32,
-    pub articleid: &'a i64,
+    pub articleid: &'a String,
     pub sourceid: &'a i32,
     pub osentiment: &'a f64,
     pub sentlabel: &'a String,
@@ -350,7 +350,7 @@ pub struct NewFeed<'a> {
 
 #[derive(Queryable, Debug)]
 pub struct Article {
-    pub hashid: i64,
+    pub hashid: String,
     pub sourceid: i32,
     pub category: String,
     pub title: String,
@@ -364,7 +364,7 @@ pub struct Article {
 #[derive(Insertable, Debug)]
 #[diesel(table_name = articles)]
 pub struct NewArticle<'a> {
-    pub hashid: &'a i64,
+    pub hashid: &'a String,
     pub sourceid: &'a i32,
     pub category: &'a String,
     pub title: &'a String,
