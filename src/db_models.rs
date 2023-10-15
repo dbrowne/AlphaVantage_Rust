@@ -392,14 +392,14 @@ pub struct NewAuthorMap<'a> {
 #[derive(Queryable, Debug)]
 pub struct Source {
     pub id: i32,
-    pub source: String,
+    pub source_name: String,
     pub domain: String,
 }
 
 #[derive(Insertable, Debug)]
 #[diesel(table_name = sources)]
 pub struct NewSource<'a> {
-    pub source: &'a String,
+    pub source_name: &'a String,
     pub domain: &'a String,
 }
 

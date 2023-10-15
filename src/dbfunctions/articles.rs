@@ -28,12 +28,45 @@
  */
 
 
-pub mod topic_refs;
-pub mod base;
-pub mod author;
-pub mod feed;
-pub mod news_root;
-pub mod sources;
-pub mod articles;
-pub mod common;
 
+use crate::dbfunctions::common::*;
+use crate::db_models::{NewArticle, Article};
+use crate::schema::articles::dsl::articles;
+
+
+pub  fn get_article_hashes(conn:&mut PgConnection) ->Result<Vec<i64>, Box<dyn Error>>{
+     use crate::schema::articles::dsl::hashid;
+     let hashes = articles.select(hashid).load::<i64>(conn);
+     match hashes {
+         Ok(hashes) =>Ok(hashes),
+         Err(err) =>{
+             eprintln!("Error loading Hashes {}",err);
+             Err(Box::new(err))
+         }
+     }
+
+ }
+
+pub  fn get_article_by_hash(conn: &mut PgConnection, hash_id:i64) ->Result<Article, Box<dyn Error>>{
+    use crate::schema::articles::dsl::*;;
+
+    let art = articles.filter(hashid.eq(hash_id))
+        .first::<Article>(conn);
+    match art {
+        Ok(art) => Ok(art),
+        Err(err) => {
+            eprintln!("Error getting hashid {}  {}",hash_id, err);
+            Err(Box::new(err))
+        }
+    }
+
+}
+
+pub  fn insert_article(conn: &mut PgConnection, s_ourceid:i32, c_ategory: String, t_itle: String,
+                   u_rl:String, s_ummary:String, b_anner:String, a_uthor:i32, t_published:String)
+->Result<Article, Box<dyn Error>>{
+    todo!()
+
+
+
+}

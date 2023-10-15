@@ -29,64 +29,65 @@
 
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
-use std::{error::Error, process};
-use crate::db_models::{NewAuthor, Author};
-use crate::schema::authors::dsl::authors;
+use std::{error::Error,process};
+use crate::db_models::{NewSource,Source};
+use crate::schema::sources::dsl::sources;
 
-
-pub fn get_authors(conn: &mut PgConnection) -> Result<Vec<Author>, Box<dyn Error>> {
-    let auths = authors.load::<Author>(conn);
-    match auths {
-        Ok(auths) => Ok(auths),
+pub  fn get_sources(conn:&mut PgConnection)->Result<Vec<Source>, Box<dyn Error>>{
+    let srcs = sources.load::<Source>(conn);
+    match  srcs{
+        Ok(srcs) => Ok(srcs),
         Err(err) => {
-            eprintln!("Error loading authors {}", err);
+            eprintln!("Error loading sources {}",err);
+            Err(Box::new(err))
+        }
+    }
+
+}
+
+
+pub  fn get_source_by_name(conn: &mut PgConnection, auth_name: String) ->Result<Source, Box<dyn Error>> {
+    use crate::schema::sources::dsl::{source_name};
+
+    let source = sources
+        .filter(source_name.eq(auth_name))
+        .first::<Source>(conn);
+    match source {
+        Ok(source) => Ok(source),
+        Err(err) => {
+            eprintln!("Error loading source {}", err);
             Err(Box::new(err))
         }
     }
 }
 
+pub fn get_source_by_id(conn: &mut PgConnection, src_id: i32) -> Result<Source, Box<dyn Error>> {
+    use crate::schema::sources::dsl::{id};
 
-pub  fn get_author_by_name(conn: &mut PgConnection, auth_name: String) ->Result<Author, Box<dyn Error>> {
-    use crate::schema::authors::dsl::{author_name};
-
-    let author = authors
-        .filter(author_name.eq(auth_name))
-        .first::<Author>(conn);
-    match author {
-        Ok(author) => Ok(author),
+    let source = sources
+        .filter(id.eq(src_id))
+        .first::<Source>(conn);
+    match source {
+        Ok(source) => Ok(source),
         Err(err) => {
-            eprintln!("Error loading author {}", err);
+            eprintln!("Error loading source {}", err);
             Err(Box::new(err))
         }
     }
 }
 
-pub fn get_author_by_id(conn: &mut PgConnection, author_id: i32) -> Result<Author, Box<dyn Error>> {
-    use crate::schema::authors::dsl::{id};
-
-    let author = authors
-        .filter(id.eq(author_id))
-        .first::<Author>(conn);
-    match author {
-        Ok(author) => Ok(author),
-        Err(err) => {
-            eprintln!("Error loading author {}", err);
-            Err(Box::new(err))
-        }
-    }
-}
-
-pub fn insert_author(conn: &mut PgConnection, author: String) -> Result<Author, Box<dyn Error>> {
-    let auth = NewAuthor {
-        author_name: &author,
+pub fn insert_source(conn: &mut PgConnection, src_name: String, domain_name:String) -> Result<Source, Box<dyn Error>> {
+    let nsrc = NewSource {
+        source_name: &src_name,
+        domain: &domain_name,
     };
-    let author = diesel::insert_into(authors)
-        .values(&auth)
+    let src = diesel::insert_into(sources)
+        .values(&nsrc)
         .get_result(conn);
-    match author {
-        Ok(author) => Ok(author),
+    match src {
+        Ok(src) => Ok(src),
         Err(err) => {
-            eprintln!("Error inserting author {}", err);
+            eprintln!("Error inserting source {}", err);
             Err(Box::new(err))
         }
     }

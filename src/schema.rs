@@ -3,13 +3,13 @@
 diesel::table! {
     articles (hashid) {
         hashid -> Int8,
-        sourceid -> Nullable<Int4>,
+        sourceid -> Int4,
         category -> Text,
         title -> Text,
         url -> Text,
         summary -> Text,
         banner -> Text,
-        author -> Nullable<Int4>,
+        author -> Int4,
         ct -> Timestamp,
     }
 }
@@ -33,9 +33,9 @@ diesel::table! {
     feeds (id) {
         id -> Int4,
         sid -> Int8,
-        newsoverviewid -> Nullable<Int4>,
+        newsoverviewid -> Int4,
         articleid -> Int8,
-        sourceid -> Nullable<Int4>,
+        sourceid -> Int4,
         osentiment -> Float8,
         sentlabel -> Text,
     }
@@ -130,7 +130,7 @@ diesel::table! {
 diesel::table! {
     sources (id) {
         id -> Int4,
-        source -> Text,
+        source_name -> Text,
         domain -> Text,
     }
 }
@@ -171,7 +171,7 @@ diesel::table! {
 diesel::table! {
     tickersentiments (id) {
         id -> Int4,
-        feedid -> Nullable<Int4>,
+        feedid -> Int4,
         ticker -> Text,
         sid -> Int8,
         relevance -> Float8,
@@ -184,7 +184,7 @@ diesel::table! {
     topicmaps (id) {
         id -> Int4,
         sid -> Int8,
-        feedid -> Nullable<Int4>,
+        feedid -> Int4,
         topic -> Int4,
         relscore -> Float8,
     }

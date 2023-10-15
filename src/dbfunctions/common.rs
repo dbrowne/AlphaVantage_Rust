@@ -27,13 +27,6 @@
  * SOFTWARE.
  */
 
-
-pub mod topic_refs;
-pub mod base;
-pub mod author;
-pub mod feed;
-pub mod news_root;
-pub mod sources;
-pub mod articles;
-pub mod common;
-
+pub  use diesel::pg::PgConnection;
+pub  use diesel::prelude::*;
+pub  use std::{error::Error, process};

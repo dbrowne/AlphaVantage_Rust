@@ -36,6 +36,7 @@ use crate::alpha_lib::news_type::{RawFeed, NewsRoot};
 use crate::dbfunctions::topic_refs::{get_topics, insert_topic};
 use crate::create_url;
 use crate::dbfunctions::author::{get_authors, insert_author};
+use crate::dbfunctions::sources::{get_sources};
 use crate::schema::feeds::sid;
 use crate::schema::tickersentiments::ticker;
 
@@ -71,7 +72,7 @@ fn process_feed(conn: &mut PgConnection, s_id:&i64, tkr:&String, feed: Vec<RawFe
 
     let topics = get_topics(conn)?;
     let authors = get_authors(conn)?;
-
+    let sources = get_sources(conn)?;
 
     for tp in topics {
         params.topics.insert(tp.name, tp.id);
