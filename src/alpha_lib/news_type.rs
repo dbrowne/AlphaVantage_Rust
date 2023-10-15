@@ -41,13 +41,13 @@ pub struct NewsRoot {
     pub sentiment_score_definition: String,
     #[serde(rename = "relevance_score_definition")]
     pub relevance_score_definition: String,
-    pub feed: Vec<Feed>,
+    pub feed: Vec<RawFeed>,
 }
 
 #[serde_as]
 #[derive(Default, Debug, Clone, PartialEq,  Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct Feed {
+pub struct RawFeed {
     pub title: String,
     pub url: String,
     #[serde(rename = "time_published")]

@@ -27,10 +27,24 @@
  * SOFTWARE.
  */
 
+use diesel::pg::PgConnection;
+use diesel::prelude::*;
+use std::{env, process};
+use std::error::Error;
+use dotenvy::dotenv;
+use crate::db_models::{Feed, NewFeed};
 
-pub  mod topic_refs;
-pub mod base;
-pub mod author;
-pub  mod feed;
-pub  mod news_root;
 
+pub  fn ins_n_ret_feed(conn:&mut PgConnection,s_id:&i64, story:Feed) -> Result<Feed, Box<dyn Error>>{
+    todo!();
+    // let nf = NewFeed{
+    //     sid: &feed.sid,
+    //     over
+    //
+    //
+    // }
+
+
+
+
+}

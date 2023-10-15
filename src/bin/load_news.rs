@@ -30,18 +30,29 @@
 use dotenvy::dotenv;
 use std::process;
 use AlphaVantage_Rust::alpha_lib::alpha_io::news_loader::load_news;
+use AlphaVantage_Rust::db_funcs::get_sids_and_names_with_overview;
 use AlphaVantage_Rust::dbfunctions::base::establish_connection_or_exit;
 fn main() {
     dotenv().ok();
     let conn = &mut establish_connection_or_exit();
 
-    let news_status = load_news(conn, "AAPL".to_string());
-    match news_status {
-        Ok(_news) => println!("News loaded"),
-        Err(err) => {
-            eprintln!("Error loading news {}", err);
+    let results: Vec<(i64, String)> = get_sids_and_names_with_overview(conn)
+        .unwrap_or_else(|err| {
+            println!("Cannot load results from database {}", err);
             process::exit(1);
         }
+        );
+
+
+    for (s_id, symb) in results{
+        let news_status = load_news(conn, &s_id,&symb);
+        match news_status {
+            Ok(_news) => println!("News loaded for {}: {}",s_id, symb),
+            Err(err) => {
+                eprintln!("Error loading news {} for {}", err,symb);
+            }
+        }
     }
+
 
 }

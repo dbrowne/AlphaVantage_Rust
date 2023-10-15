@@ -27,13 +27,33 @@
  * SOFTWARE.
  */
 
-use diesel::pg::PgConnection;
 use diesel::prelude::*;
-use std::{error::Error, process};
-use crate::db_models::{NewsOverview, NewNewsOverview};
+use diesel::pg::PgConnection;
+use dotenvy::dotenv;
+use std::{env, process};
+use std::error::Error;
+use chrono::{DateTime, Local};
+use crate::alpha_lib::news_type::RawFeed;
+use crate::db_models::{Feed, NewNewsOverview};
+use crate::schema::newsoverviews::{items, sid, relevance, sentiment,creation};
 
-pub  fn insert_news_summary(conn: &mut PgConnection, news: &NewsOverview) ->Result<(), Box<dyn Error>> {
-    use crate::schema::newsoverviews::dsl::{newsoverviews};
-    todo!("Insert news summary")
+pub fn insert_and_get_news_root(conn: PgConnection, s_id: i64, item_count: i32, s_entiment: String,
+                                r_elevance: String) -> Result<Feed, Box<dyn Error>> {
+
+    let localt: DateTime<Local> = Local::now();
+    let now = localt.naive_local();
+
+    let feed = NewNewsOverview{
+        items: &item_count,
+        sid: s_id,
+        sentiment: &s_entiment,
+        relevance: &r_elevance,
+        creation: &now,
+    };
+
+
+
+    todo!()
+
+
 }
-
