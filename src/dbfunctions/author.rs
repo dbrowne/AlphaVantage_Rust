@@ -27,9 +27,7 @@
  * SOFTWARE.
  */
 
-use diesel::pg::PgConnection;
-use diesel::prelude::*;
-use std::{error::Error, process};
+use crate::dbfunctions::common::*;
 use crate::db_models::{NewAuthor, Author};
 use crate::schema::authors::dsl::authors;
 

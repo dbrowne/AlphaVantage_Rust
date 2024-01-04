@@ -27,33 +27,41 @@
  * SOFTWARE.
  */
 
-use diesel::prelude::*;
-use diesel::pg::PgConnection;
-use dotenvy::dotenv;
-use std::{env, process};
+use crate::dbfunctions::common::*;
 use std::error::Error;
-use chrono::{DateTime, Local};
-use crate::alpha_lib::news_type::RawFeed;
-use crate::db_models::{Feed, NewNewsOverview};
+use chrono::{Datelike, DateTime, Local, NaiveDate, NaiveDateTime, NaiveTime};
+use crate::db_models::{NewNewsOverview, NewsOverview};
 use crate::schema::newsoverviews::{items, sid, relevance, sentiment,creation};
+use crate::schema::newsoverviews::dsl::newsoverviews;
 
-pub fn insert_and_get_news_root(conn: PgConnection, s_id: i64, item_count: i32, s_entiment: String,
-                                r_elevance: String) -> Result<Feed, Box<dyn Error>> {
+pub fn insert_news_root(conn: &mut PgConnection, s_id: i64, item_count: i32, s_entiment: String,
+                                r_elevance: String) -> Result<NewsOverview, Box<dyn Error>> {
 
-    let localt: DateTime<Local> = Local::now();
-    let now = localt.naive_local();
+    let local :DateTime<Local>= Local::now();
+    let date= NaiveDate::from_ymd_opt(local.year(),local.month(),local.day()).unwrap_or(NaiveDate::from_ymd(1900,1,1));
+    let tim = NaiveTime::from_hms(0,0,0);
+    let creattion_date= NaiveDateTime::new(date,tim);
 
-    let feed = NewNewsOverview{
+    let rt = NewNewsOverview{
         items: &item_count,
-        sid: s_id,
+        sid: s_id.clone(),
         sentiment: &s_entiment,
         relevance: &r_elevance,
-        creation: &now,
+        creation: &creattion_date,
     };
 
+    let root = diesel::insert_into(newsoverviews)
+        .values(&rt)
+        .get_result(conn);
 
+    match root {
+        Ok(root) => Ok(root),
+        Err(err) =>{
+            eprintln!("Cannot insert news Root for {}  {}",s_id,err);
+            Err(Box::new(err))
+        }
+    }
 
-    todo!()
 
 
 }

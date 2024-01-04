@@ -185,7 +185,7 @@ diesel::table! {
         id -> Int4,
         sid -> Int8,
         feedid -> Int4,
-        topic -> Int4,
+        topicid -> Int4,
         relscore -> Float8,
     }
 }
@@ -222,6 +222,7 @@ diesel::joinable!(overviewexts -> symbols (sid));
 diesel::joinable!(overviews -> symbols (sid));
 diesel::joinable!(tickersentiments -> feeds (feedid));
 diesel::joinable!(topicmaps -> feeds (feedid));
+diesel::joinable!(topicmaps -> topicrefs (topicid));
 
 diesel::allow_tables_to_appear_in_same_query!(
     articles,

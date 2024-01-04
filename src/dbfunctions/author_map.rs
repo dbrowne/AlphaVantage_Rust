@@ -27,15 +27,27 @@
  * SOFTWARE.
  */
 
+use crate::dbfunctions::common::*;
+use crate::db_models::{AuthorMap,NewAuthorMap};
+use crate::schema::authormaps::dsl::authormaps;
 
-pub mod topic_refs;
-pub mod base;
-pub mod author;
-pub mod feed;
-pub mod news_root;
-pub mod sources;
-pub mod articles;
-pub mod common;
-pub mod author_map;
-pub mod topic_maps;
 
+pub  fn insert_author_map(conn: &mut PgConnection,feed_id:i32,author_id:i32) ->Result<AuthorMap, Box<dyn Error>> {
+    use crate::schema::authormaps::dsl::{feedid,authorid};
+
+    let new_author_map = NewAuthorMap {
+        feedid: &feed_id,
+        authorid: &author_id,
+    };
+
+    let author_map = diesel::insert_into(authormaps)
+        .values(&new_author_map)
+        .get_result::<AuthorMap>(conn);
+    match author_map {
+        Ok(author_map) => Ok(author_map),
+        Err(err) => {
+            eprintln!("Error inserting author_map {}", err);
+            Err(Box::new(err))
+        }
+    }
+}

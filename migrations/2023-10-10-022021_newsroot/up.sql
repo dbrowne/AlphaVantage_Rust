@@ -6,5 +6,6 @@ create table newsoverviews
     items     integer   not null,
     sentiment text      not null,
     relevance text      not null,
-    creation  timestamp not null
+    creation  timestamp not null,
+    constraint unique_creation_sid unique (creation, sid)
 );

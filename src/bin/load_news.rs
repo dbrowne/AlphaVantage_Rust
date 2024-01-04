@@ -29,9 +29,12 @@
 
 use dotenvy::dotenv;
 use std::process;
-use AlphaVantage_Rust::alpha_lib::alpha_io::news_loader::load_news;
+use AlphaVantage_Rust::alpha_lib::alpha_io::news_loader::{load_news,Params};
 use AlphaVantage_Rust::db_funcs::get_sids_and_names_with_overview;
 use AlphaVantage_Rust::dbfunctions::base::establish_connection_or_exit;
+use AlphaVantage_Rust::dbfunctions::sources::get_sources;
+use AlphaVantage_Rust::dbfunctions::topic_refs::get_topics;
+use AlphaVantage_Rust::dbfunctions::author::get_authors;
 fn main() {
     dotenv().ok();
     let conn = &mut establish_connection_or_exit();
@@ -44,8 +47,14 @@ fn main() {
         );
 
 
+    let mut params = Params::default();
+    let mut topics = get_topics(conn)?;
+    let mut authors = get_authors(conn)?;
+    let mut sources = get_sources(conn)?;
+
+
     for (s_id, symb) in results{
-        let news_status = load_news(conn, &s_id,&symb);
+        let news_status = load_news(conn, &s_id,&symb, &mut params);
         match news_status {
             Ok(_news) => println!("News loaded for {}: {}",s_id, symb),
             Err(err) => {

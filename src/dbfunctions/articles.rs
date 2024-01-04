@@ -29,7 +29,6 @@
 
 
 extern crate ring;
-
 use chrono::NaiveDateTime;
 use crate::dbfunctions::common::*;
 use crate::db_models::{NewArticle, Article};

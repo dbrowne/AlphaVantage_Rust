@@ -29,7 +29,7 @@
 
 use crate::schema::{overviewexts, overviews, symbols, intradayprices,
                     topstats, summaryprices, topicrefs, authors, newsoverviews,
-                    feeds, authormaps, tickersentiments,articles, sources};
+                    feeds, authormaps, tickersentiments,articles, sources,topicmaps};
 use chrono::prelude::*;
 use chrono::NaiveDateTime;
 use diesel::prelude::*;
@@ -424,4 +424,23 @@ pub struct NewTickerSentiment<'a> {
     pub relevance: &'a f64,
     pub tsentiment: &'a f64,
     pub sentimentlable: &'a String,
+}
+
+
+#[derive(Queryable, Debug)]
+pub struct TopicMap {
+    pub id: i32,
+    pub sid: i64,
+    pub feedid: i32,
+    pub topicid: i32,
+    pub relscore: f64,
+}
+
+#[derive(Insertable, Debug)]
+#[diesel(table_name = topicmaps)]
+pub  struct NewTopicMap<'a> {
+    pub sid: &'a i64,
+    pub feedid: &'a i32,
+    pub topicid: &'a i32,
+    pub relscore: &'a f64,
 }

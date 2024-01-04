@@ -27,3 +27,25 @@ use the command below with **'psql'** to connect to the database. The default pa
 
 ## IMPORTANT NOTE!
  This is the only supplied **.env** file
+
+
+** To regenerate the database documentation:
+```bash
+   rm -rf ../db_relations/*;
+   java -jar ~/local/bin/schemaspy-6.2.4.jar \
+    -t pgsql11 \
+    -dp ~/local/bin/postgresql-42.6.0.jar \
+    -db d_alpha \
+    -host localhost \
+    -port 6999 \
+    -u devuser \
+    -p devuser_p \
+    -o ../db_relations;
+   ```
+
+```bash
+google-chrome ../db_relations/index.html 
+```
+
+
+

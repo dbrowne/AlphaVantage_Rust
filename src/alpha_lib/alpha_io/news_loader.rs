@@ -28,6 +28,8 @@
  */
 
 
+extern crate chrono;
+
 use std::collections::{HashMap};
 use std::error::Error;
 use diesel::PgConnection;
@@ -35,54 +37,40 @@ use crate::alpha_lib::alpha_io_funcs::{get_api_key, get_news_root};
 use crate::alpha_lib::news_type::{RawFeed, NewsRoot};
 use crate::dbfunctions::topic_refs::{get_topics, insert_topic};
 use crate::create_url;
-use crate::dbfunctions::author::{get_authors, insert_author};
-use crate::dbfunctions::sources::{get_sources};
-use crate::schema::feeds::sid;
-use crate::schema::tickersentiments::ticker;
+use crate::dbfunctions::author::{get_author_by_id, get_authors, insert_author};
+use crate::dbfunctions::sources::{get_sources, insert_source};
+use chrono::prelude::*;
+use crate::dbfunctions::articles::insert_article;
+use crate::dbfunctions::news_root::insert_news_root;
+use crate::schema::authors::author_name;
 
 
 #[derive(Debug, Default)]
-struct Params {
+pub struct Params {
     topics: HashMap<String, i32>,
     authors: HashMap<String, i32>,
+    sources: HashMap<String, i32>,
 }
 
-pub fn load_news(conn: &mut PgConnection, s_id: & i64, tkr: &String) -> Result<(), Box<dyn Error>> {
+pub fn load_news(conn: &mut PgConnection, s_id: &i64, tkr: &String, mut params: &Params) -> Result<(), Box<dyn Error>> {
     let api_key = get_api_key()?;
-
-
     let url = create_url!(FuncType:NewsQuery,tkr,api_key);
     let root = get_news_root(&url)?;
-    process_news(conn, s_id, tkr,root)?;
+    process_news(conn, s_id, tkr, root, &params)?;
     Ok(())
 }
 
-fn process_news(conn: &mut PgConnection,s_id:&i64, tkr:&String, root: NewsRoot) -> Result<(), Box<dyn Error>> {
+fn process_news(conn: &mut PgConnection, s_id: &i64, tkr: &String, root: NewsRoot, mut params: &Params) -> Result<(), Box<dyn Error>> {
     let item_count = root.items.parse::<i32>()?;
     let sentiment_def = root.sentiment_score_definition;
     let relevance_def = root.relevance_score_definition;
+    let overview = insert_news_root(conn, *s_id, item_count, sentiment_def, relevance_def)?;
 
-
-    process_feed(conn, s_id, tkr, root.feed)?;
+    process_feed(conn, s_id, tkr, root.feed, overview.id, &mut params)?;
     Ok(())
 }
 
-fn process_feed(conn: &mut PgConnection, s_id:&i64, tkr:&String, feed: Vec<RawFeed>) -> Result<(), Box<dyn Error>> {
-    let mut params = Params::default();
-
-    let topics = get_topics(conn)?;
-    let authors = get_authors(conn)?;
-    let sources = get_sources(conn)?;
-
-    for tp in topics {
-        params.topics.insert(tp.name, tp.id);
-    }
-
-    for auth in authors {
-        params.authors.insert(auth.author_name, auth.id);
-    }
-
-
+fn process_feed(conn: &mut PgConnection, s_id: &i64, tkr: &String, feed: Vec<RawFeed>, overview_id: i32, mut params: &Params) -> Result<(), Box<dyn Error>> {
     for article in feed {
         process_article(conn, &s_id, &tkr, article, &mut params)?;
     }
@@ -91,30 +79,56 @@ fn process_feed(conn: &mut PgConnection, s_id:&i64, tkr:&String, feed: Vec<RawFe
 }
 
 
-fn process_article(conn: &mut PgConnection, s_id:&i64, tkr:&String, article: RawFeed, params: &mut Params) -> Result<(), Box<dyn Error>> {
+fn process_article(conn: &mut PgConnection, s_id: &i64, tkr: &String, article: RawFeed, params: &mut Params) -> Result<(), Box<dyn Error>> {
+    let mut author_id: i32 = -1;
+    let mut topic_id: i32 = -1;
+    let mut source_id: i32 = -1;
+
+
+    for src in params.sources {
+        if params.sources.contains_key(&article.source) {
+            let s_id: Result<i32, Box<dyn Error>> = match params.sources.get(&src.0) {
+                Some(&source_id) => Ok(source_id),
+                None => Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, "No source id"))),
+            };
+            continue;
+        } else {
+            let src = insert_source(conn, article.source.clone(), article.source_domain.clone())?;
+            params.sources.insert(src.source_name, src.id.clone());
+            source_id = src.id;
+        }
+    }
+
+
+    let art = insert_article(conn, source_id,
+                             article.category_within_source,
+                             article.title, article.url, article.summary,
+                             article.banner_image,
+                             author_id, article.time_published)?;
+
+
     for auth in article.authors {
         if params.authors.contains_key(&auth) {
-            continue;
+            author_id = *params.authors.get(&auth).unwrap_or(&-1);
+        } else {
+            println!("Inserting new author {}", article.authors[0].clone());
+            let auth = insert_author(conn, article.authors[0].clone())?;
+            params.authors.insert(auth.author_name, auth.id.clone());
+            author_id = auth.id;
         }
-        if auth.eq("") {
-            continue;
-        }
-        println!("Inserting new author {}", auth);
-        let auth = insert_author(conn, auth)?;
-        params.authors.insert(auth.author_name, auth.id);
     }
 
 
     for topic in article.topics {
         if params.topics.contains_key(&topic.topic) {
+            topic_id = *params.topics.get(&topic.topic).unwrap_or(&-1);
             continue;
+        } else {
+            println!("Inserting new topic {}", topic.topic);
+            let tp = insert_topic(conn, topic.topic)?;
+            params.topics.insert(tp.name, tp.id.clone());
         }
-        println!("Inserting new topic {}", topic.topic);
-        let tp = insert_topic(conn, topic.topic)?;
-        params.topics.insert(tp.name, tp.id);
     };
-
-    println!("{:?} {:?}", article.title, article.url);
 
 
     Ok(())

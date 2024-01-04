@@ -266,9 +266,6 @@ fn get_top_data(url: &str) -> Result<Root, Box<dyn Error>> {
 pub  fn get_news_root(url: &str) -> Result<NewsRoot, Box<dyn Error>> {
     let response = reqwest::blocking::get(url)?;
     let nr  =NewsRoot::default();
-    // let text = response.text()?;
-    // println!("news root: {:?}", text);
-
     let text =response.json::<NewsRoot>()?;
     Ok(text)
 }

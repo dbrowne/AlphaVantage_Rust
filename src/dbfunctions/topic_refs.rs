@@ -27,9 +27,7 @@
  * SOFTWARE.
  */
 
-use diesel::pg::PgConnection;
-use diesel::prelude::*;
-use std::{error::Error, process};
+use crate::dbfunctions::common::*;
 use crate::db_models::{NewTopicRef, TopicRef};
 use crate::schema::topicrefs::dsl::topicrefs;
 
@@ -41,7 +39,7 @@ pub  fn get_topics(conn: &mut PgConnection) ->Result<Vec<TopicRef>, Box<dyn Erro
         Ok(topics) => Ok(topics),
         Err(err) => {
             eprintln!("Error loading topics {}", err);
-            process::exit(1);
+            Err(Box::new(err))
         }
     }
 }
@@ -56,7 +54,7 @@ pub fn get_topic_by_id(conn: &mut PgConnection, topic_id: i32) -> Result<TopicRe
         Ok(topic) => Ok(topic),
         Err(err) => {
             eprintln!("Error loading topic {}", err);
-            process::exit(1);
+            Err(Box::new(err))
         }
     }
 }
@@ -71,7 +69,7 @@ pub  fn get_id_topic_by_name(conn: &mut PgConnection, topic_name: String) ->Resu
         Ok(topic) => Ok(topic),
         Err(err) => {
             eprintln!("Error loading topic {}", err);
-            process::exit(1);
+                Err(Box::new(err))
         }
     }
 }
@@ -88,7 +86,7 @@ pub fn insert_topic(conn: &mut PgConnection, topic_name:String) ->Result<(TopicR
         Ok(topic) => Ok(topic),
         Err(err) => {
             eprintln!("Error inserting topic {}", err);
-            process::exit(1);
+            Err(Box::new(err))
         }
     }
 

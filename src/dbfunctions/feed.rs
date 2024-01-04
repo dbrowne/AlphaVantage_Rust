@@ -26,11 +26,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-
-use diesel::pg::PgConnection;
-use diesel::prelude::*;
-use std::{env, process};
-use std::error::Error;
+use crate::dbfunctions::common::*;
 use dotenvy::dotenv;
 use crate::db_models::{Feed, NewFeed};
 
