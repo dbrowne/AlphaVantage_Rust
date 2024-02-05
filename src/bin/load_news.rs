@@ -35,7 +35,7 @@ use AlphaVantage_Rust::dbfunctions::base::establish_connection_or_exit;
 use AlphaVantage_Rust::dbfunctions::sources::get_sources;
 use AlphaVantage_Rust::dbfunctions::topic_refs::get_topics;
 use AlphaVantage_Rust::dbfunctions::author::get_authors;
-fn main() {
+fn main()->Result<(),Box<dyn std::error::Error>>{
     dotenv().ok();
     let conn = &mut establish_connection_or_exit();
 
@@ -54,7 +54,7 @@ fn main() {
 
 
     for (s_id, symb) in results{
-        let news_status = load_news(conn, &s_id,&symb, &mut params);
+        let news_status = load_news(conn, &s_id, &symb, &mut params);
         match news_status {
             Ok(_news) => println!("News loaded for {}: {}",s_id, symb),
             Err(err) => {
@@ -63,5 +63,5 @@ fn main() {
         }
     }
 
-
+    Result::Ok(())
 }

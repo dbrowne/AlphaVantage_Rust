@@ -52,27 +52,27 @@ pub struct Params {
     sources: HashMap<String, i32>,
 }
 
-pub fn load_news(conn: &mut PgConnection, s_id: &i64, tkr: &String, mut params: &Params) -> Result<(), Box<dyn Error>> {
+pub fn load_news(conn: &mut PgConnection, s_id: &i64, tkr: &String, params: &mut Params) -> Result<(), Box<dyn Error>> {
     let api_key = get_api_key()?;
     let url = create_url!(FuncType:NewsQuery,tkr,api_key);
     let root = get_news_root(&url)?;
-    process_news(conn, s_id, tkr, root, &params)?;
+    process_news(conn, s_id, tkr, root, params)?;
     Ok(())
 }
 
-fn process_news(conn: &mut PgConnection, s_id: &i64, tkr: &String, root: NewsRoot, mut params: &Params) -> Result<(), Box<dyn Error>> {
+fn process_news(conn: &mut PgConnection, s_id: &i64, tkr: &String, root: NewsRoot, params: &mut Params) -> Result<(), Box<dyn Error>> {
     let item_count = root.items.parse::<i32>()?;
     let sentiment_def = root.sentiment_score_definition;
     let relevance_def = root.relevance_score_definition;
     let overview = insert_news_root(conn, *s_id, item_count, sentiment_def, relevance_def)?;
 
-    process_feed(conn, s_id, tkr, root.feed, overview.id, &mut params)?;
+    process_feed(conn, s_id, tkr, root.feed, overview.id, params)?;
     Ok(())
 }
 
-fn process_feed(conn: &mut PgConnection, s_id: &i64, tkr: &String, feed: Vec<RawFeed>, overview_id: i32, mut params: &Params) -> Result<(), Box<dyn Error>> {
+fn process_feed(conn: &mut PgConnection, s_id: &i64, tkr: &String, feed: Vec<RawFeed>, overview_id: i32, params: &mut Params) -> Result<(), Box<dyn Error>> {
     for article in feed {
-        process_article(conn, &s_id, &tkr, article, &mut params)?;
+        process_article(conn, &s_id, &tkr, article, params)?;
     }
 
     Ok(())
@@ -84,10 +84,11 @@ fn process_article(conn: &mut PgConnection, s_id: &i64, tkr: &String, article: R
     let mut topic_id: i32 = -1;
     let mut source_id: i32 = -1;
 
+    let sources = params.sources.clone();
 
-    for src in params.sources {
+    for (src,_)  in sources {
         if params.sources.contains_key(&article.source) {
-            let s_id: Result<i32, Box<dyn Error>> = match params.sources.get(&src.0) {
+            let s_id: Result<i32, Box<dyn Error>> = match params.sources.get(&src) {
                 Some(&source_id) => Ok(source_id),
                 None => Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, "No source id"))),
             };
@@ -106,10 +107,12 @@ fn process_article(conn: &mut PgConnection, s_id: &i64, tkr: &String, article: R
                              article.banner_image,
                              author_id, article.time_published)?;
 
+    let authors = params.authors.clone();
 
-    for auth in article.authors {
-        if params.authors.contains_key(&auth) {
-            author_id = *params.authors.get(&auth).unwrap_or(&-1);
+
+    for auth in &article.authors {
+        if params.authors.contains_key(auth) {
+            author_id = *params.authors.get(auth).unwrap_or(&-1);
         } else {
             println!("Inserting new author {}", article.authors[0].clone());
             let auth = insert_author(conn, article.authors[0].clone())?;
