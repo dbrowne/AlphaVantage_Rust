@@ -28,6 +28,7 @@
  */
 
 extern crate chrono_tz;
+
 use crate::alpha_lib::alpha_data_types::{AlphaSymbol, Convert, FullOverview, RawDailyPrice, RawIntraDayPrice, Root, TopType};
 use crate::alpha_lib::alpha_funcs::{normalize_alpha_region, top_constants};
 use crate::create_url;
@@ -49,7 +50,7 @@ const SYMBOL: &str = "symbol";
 const MAX_ERRORS: i32 = 50;
 
 
-pub  fn get_api_key() -> Result<String, VarError> {
+pub fn get_api_key() -> Result<String, VarError> {
     std::env::var("ALPHA_VANTAGE_API_KEY")
 }
 
@@ -215,7 +216,7 @@ pub fn get_overview(connection: &mut PgConnection, s_id: i64, symb: String) -> R
     let response = reqwest::blocking::get(&url);
 
     if let Ok(response) = response {
-        println!("Response {:?}", response);
+        println!("Response is: {:?}", response);
         let text = match response.text() {
             Ok(text) => text,
             Err(err) => {
@@ -225,7 +226,7 @@ pub fn get_overview(connection: &mut PgConnection, s_id: i64, symb: String) -> R
         };
 
         if !text.contains(SYMBOL) {
-            println!("Error: for {}: {:?}", symb, text);
+            println!("Missing overview  for Symbol {}: {:?}", symb, text);
             thread::sleep(time::Duration::from_secs(1));
         } else {
             let json = match serde_json::from_str::<Value>(&text) {
@@ -263,10 +264,10 @@ fn get_top_data(url: &str) -> Result<Root, Box<dyn Error>> {
     Ok(text)
 }
 
-pub  fn get_news_root(url: &str) -> Result<NewsRoot, Box<dyn Error>> {
+pub fn get_news_root(url: &str) -> Result<NewsRoot, Box<dyn Error>> {
     let response = reqwest::blocking::get(url)?;
-    let nr  =NewsRoot::default();
-    let text =response.json::<NewsRoot>()?;
+    let nr = NewsRoot::default();
+    let text = response.json::<NewsRoot>()?;
     Ok(text)
 }
 
@@ -421,7 +422,6 @@ fn get_open_close(inp: &str, symb: &String) -> Result<Vec<RawDailyPrice>, Box<dy
 }
 
 
-
 pub fn load_tops(conn: &mut PgConnection) -> Result<(), Box<dyn Error>> {
     let api_key = get_api_key()?;
     let url = create_url!(FuncType:TopQuery," ",api_key);
@@ -465,7 +465,7 @@ fn process_data_for_type(
     conn: &mut PgConnection,
     data: &[impl Convert],
     top_type: TopType,
-    last_update: NaiveDateTime
+    last_update: NaiveDateTime,
 ) -> Result<(), Box<dyn Error>> {
     for item in data {
         let tt = item.make_top_stat()?;
@@ -480,28 +480,24 @@ fn process_data_for_type(
 }
 
 
-fn get_time_stamp(inp :String)->Result<NaiveDateTime, Box<dyn Error>>{
-
+fn get_time_stamp(inp: String) -> Result<NaiveDateTime, Box<dyn Error>> {
     let mut parts = inp.rsplitn(2, ' ');
     let _tz = parts.next().unwrap();
-    let tm= parts.next().unwrap();
-    println!("parts {:?}",tm);
+    let tm = parts.next().unwrap();
+    println!("parts {:?}", tm);
     let naive_dt = NaiveDateTime::parse_from_str(tm, "%Y-%m-%d %H:%M:%S")?;
-    Ok(naive_dt )
+    Ok(naive_dt)
 }
 
 
 #[cfg(test)]
 mod test {
-
     use crate::alpha_lib::alpha_io_funcs::get_time_stamp;
 
     #[test]
-    fn t_001(){
-        let inp ="2023-10-03 16:15:59 US/Eastern";
+    fn t_001() {
+        let inp = "2023-10-03 16:15:59 US/Eastern";
 
         assert!(get_time_stamp(inp.to_string()).is_ok());
-
     }
-
 }

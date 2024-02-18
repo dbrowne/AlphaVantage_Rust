@@ -239,6 +239,7 @@ pub fn create_overview(
         .values(&new_overview)
         .execute(conn) {
         eprintln!("Error {:?}", err);
+        return Err(Box::new(err));
     }
 
 
@@ -279,13 +280,12 @@ pub fn create_overview(
         .execute(conn) {
         eprintln!("{:?}", err);
         eprintln!("cannot insert overviewext");
-    }
-
-
-    if let Err(err) = set_symbol_booleans(conn, full_ov.sid.clone(), SymbolFlag::Overview, true) {
-        eprintln!("{:?}", err);
-        eprintln!("Cannot set symbol flag for overview: fro sid {:?}", full_ov.sid);
+        return Err(Box::new(err));
     };
+
+
+   set_symbol_booleans(conn, full_ov.sid.clone(), SymbolFlag::Overview, true)?;
+
     Ok(())
 }
 
@@ -339,7 +339,8 @@ fn set_symbol_booleans(
     let now = localt.naive_local();
     match flag {
         SymbolFlag::Overview => {
-            diesel::update(symbols.find(sid))
+            diesel::update(symbols)
+                .filter(sid.eq(s_id))
                 .set((overview.eq(value), m_time.eq(now)))
                 .get_result::<Symbol>(conn)
                 .map_err(|e: diesel::result::Error| {
@@ -348,7 +349,8 @@ fn set_symbol_booleans(
                 })?;
         }
         SymbolFlag::Intraday => {
-            diesel::update(symbols.find(sid))
+            diesel::update(symbols)
+                .filter(sid.eq(s_id))
                 .set((intraday.eq(value), m_time.eq(now)))
                 .get_result::<Symbol>(conn)
                 .map_err(|e: diesel::result::Error| {
@@ -357,7 +359,8 @@ fn set_symbol_booleans(
                 })?;
         }
         SymbolFlag::Summary => {
-            diesel::update(symbols.find(sid))
+            diesel::update(symbols)
+                .filter(sid.eq(s_id))
                 .set((summary.eq(value), m_time.eq(now)))
                 .get_result::<Symbol>(conn)
                 .map_err(|e: diesel::result::Error| {

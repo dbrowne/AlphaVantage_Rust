@@ -3,7 +3,10 @@ use std::process;
 
 use AlphaVantage_Rust::alpha_lib::alpha_io_funcs::process_symbols;
 use AlphaVantage_Rust::file_processors::file_proc;
-
+///
+/// This is the first program to be run in the AlphaVantage_Rust project.
+/// It populates the database with the symbols and names of the instruments
+///
 fn main() {
     dotenv().ok();
     let file_list: Vec<(&str, &str)> = vec![("NYSE", "OTHER_LISTED"), ("NASDAQ", "NASDAQ_LISTED")];
