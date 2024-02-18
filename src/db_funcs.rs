@@ -37,9 +37,7 @@ use chrono::{DateTime, Local, NaiveDate, NaiveDateTime, NaiveTime};
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
 use std::error::Error;
-
-
-
+use crate::schema::intradayprices::tstamp;
 
 
 /// Parses a time string into a `NaiveTime` struct.
@@ -284,7 +282,7 @@ pub fn create_overview(
     };
 
 
-   set_symbol_booleans(conn, full_ov.sid.clone(), SymbolFlag::Overview, true)?;
+    set_symbol_booleans(conn, full_ov.sid.clone(), SymbolFlag::Overview, true)?;
 
     Ok(())
 }
@@ -459,7 +457,7 @@ pub fn create_intra_day(conn: &mut PgConnection, tick: IntraDayPrice) -> Result<
         Ok(_) => (),
         Err(err) => {
             println!("{:?}", err);
-            println!("cannot set overfiew flag for sid: {}", new_mkt_price.sid.clone());
+            println!("cannot set Intraday flag for sid: {}", new_mkt_price.sid.clone());
             return Err(err);
         }
     };
@@ -494,8 +492,31 @@ pub fn insert_open_close(conn: &mut PgConnection, symb: String, s_id: i64, open_
     Ok(())
 }
 
+///
+///
+/// todo: get rid of the cut and paste
+pub fn get_intr_day_max_date(conn: &mut PgConnection, s_id: i64) -> NaiveDateTime {
+    use crate::schema::intradayprices::dsl::{intradayprices, tstamp, sid};
 
-pub fn get_max_date(conn: &mut PgConnection, s_id: i64) -> NaiveDate {
+    let xx =
+        intradayprices
+            .filter(sid.eq(s_id))
+            .select(tstamp)
+            .order(tstamp.desc())
+            .first::<NaiveDateTime>(conn);
+
+    let _tt = match xx {
+        Ok(res) => {
+            return res;
+        }
+        Err(_) => {
+            println!("No max date found for security {}", s_id);
+            return NaiveDateTime::from_timestamp_millis(0).unwrap();
+        }
+    };
+}
+
+pub fn get_summary_max_date(conn: &mut PgConnection, s_id: i64) -> NaiveDate {
     use crate::schema::summaryprices::dsl::{summaryprices, date, sid};
 
     let xx =
@@ -528,7 +549,7 @@ pub fn get_sid(conn: &mut PgConnection, ticker: String) -> Result<i64, diesel::r
                 return Ok(res[0]);
             } else {
                 eprintln!("Cannot find sid for ticker {}", ticker);
-                return  Err(diesel::result::Error::NotFound);
+                return Err(diesel::result::Error::NotFound);
             }
         }
         Err(err) => {

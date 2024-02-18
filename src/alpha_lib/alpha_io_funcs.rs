@@ -29,10 +29,12 @@
 
 extern crate chrono_tz;
 
-use crate::alpha_lib::alpha_data_types::{AlphaSymbol, Convert, FullOverview, RawDailyPrice, RawIntraDayPrice, Root, TopType};
+use crate::alpha_lib::alpha_data_types::{AlphaSymbol, Convert, FullOverview, RawDailyPrice,
+                                         RawIntraDayPrice, Root, TopType};
 use crate::alpha_lib::alpha_funcs::{normalize_alpha_region, top_constants};
 use crate::create_url;
-use crate::db_funcs::{create_intra_day, create_overview, create_symbol, get_max_date, get_sid, insert_open_close, insert_top_stat};
+use crate::db_funcs::{create_intra_day, create_overview, create_symbol, get_summary_max_date,
+                      get_intr_day_max_date, get_sid, insert_open_close, insert_top_stat};
 use crate::dbfunctions::base::establish_connection_or_exit;
 use crate::security_types::sec_types::SecurityType;
 use chrono::{DateTime, Duration, Local, NaiveDate, NaiveDateTime};
@@ -279,6 +281,13 @@ fn parse_intraday_from_csv(text: &str) -> Result<Vec<RawIntraDayPrice>, Box<dyn 
 }
 
 fn persist_ticks(connection: &mut PgConnection, s_id: i64, symb: String, ticks: Vec<RawIntraDayPrice>) -> Result<(), Box<dyn Error>> {
+
+    let last_date = get_intr_day_max_date(connection, s_id);
+
+    let mut skipped = 0;
+
+    let mut processed = 0;
+
     for tick in ticks {
         let tmp_tick = IntraDayPrice {
             eventid: 0,
@@ -291,8 +300,14 @@ fn persist_ticks(connection: &mut PgConnection, s_id: i64, symb: String, ticks: 
             close: tick.close,
             volume: tick.volume,
         };
-        _ = create_intra_day(connection, tmp_tick);
+        if tmp_tick.tstamp > last_date {
+            let _ = create_intra_day(connection, tmp_tick);
+            processed += 1;
+        } else{
+            skipped += 1;
+        }
     }
+    println!("Processed: {}, Skipped: {}", processed, skipped);
     Ok(())
 }
 
@@ -350,7 +365,7 @@ pub fn load_summary(conn: &mut PgConnection, symb: String, s_id: i64) -> Result<
     };
 
     let daily_prices = get_open_close(&text, &symb)?;
-    let last_date = get_max_date(conn, s_id);
+    let last_date = get_summary_max_date(conn, s_id);
     println!("last date for sid{} is {:?}", s_id, last_date);
     for oc in daily_prices {
         print!("{:?}", oc.date);
