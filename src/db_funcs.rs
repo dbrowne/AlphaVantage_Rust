@@ -573,6 +573,8 @@ pub fn insert_top_stat(conn: &mut PgConnection, s_id: i64, ts: GTopStat, evt_typ
         volume: &ts.volume,
     };
 
+
+    // todo: refactor this  crap error handling
     let row_cnt = diesel::insert_into(topstats::table)
         .values(&ns)
         .execute(conn)?;
