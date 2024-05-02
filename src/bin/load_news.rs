@@ -52,6 +52,15 @@ fn main()->Result<(),Box<dyn std::error::Error>>{
     let mut authors = get_authors(conn)?;
     let mut sources = get_sources(conn)?;
 
+    for  (sid, name) in results.iter(){
+        params.names_to_sid.insert(name.clone(), *sid);
+    }
+
+    params.topics = topics.iter().map(|t| (t.name.clone(), t.id)).collect();
+    params.authors = authors.iter().map(|a| (a.author_name.clone(), a.id)).collect();
+    params.sources = sources.iter().map(|s| (s.source_name.clone(), s.id)).collect();
+
+
 
     for (s_id, symb) in results{
         let news_status = load_news(conn, &s_id, &symb, &mut params);

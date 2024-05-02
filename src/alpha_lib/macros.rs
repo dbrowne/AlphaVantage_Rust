@@ -91,7 +91,7 @@ macro_rules! create_url {
     };
 }
 
-pub use create_url;
+
 
 #[cfg(test)]
 mod test {
