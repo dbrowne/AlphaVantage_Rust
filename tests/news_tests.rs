@@ -39,11 +39,16 @@ use AlphaVantage_Rust::dbfunctions::sources::get_sources;
 use AlphaVantage_Rust::dbfunctions::topic_refs::get_topics;
 use AlphaVantage_Rust::alpha_lib::news_type::NewsRoot;
 use AlphaVantage_Rust::alpha_lib::alpha_io::news_loader::process_news;
+use gethostname::gethostname;
 #[test]
 fn loader() {
     const GLW_NEWS: &str = "GLW_query.json";
     dotenv().ok();
 
+    if  gethostname != "mega" {
+        println!("This test is only for mega");
+        process::exit(0 );
+    }
     let current_dir = std::env::current_dir().unwrap();
     let mut tests_data_dir = PathBuf::from(&current_dir);
     tests_data_dir.push("tests");
