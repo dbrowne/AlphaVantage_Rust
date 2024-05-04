@@ -45,42 +45,40 @@ fn loader() {
     const GLW_NEWS: &str = "GLW_query.json";
     dotenv().ok();
 
-    if  gethostname().ne("mega") {
-        println!("This test is only for mega");
-        process::exit(0 );
+    if  gethostname().eq("mega") {
+        let current_dir = std::env::current_dir().unwrap();
+        let mut tests_data_dir = PathBuf::from(&current_dir);
+        tests_data_dir.push("tests");
+        let mut file_path = PathBuf::from(&tests_data_dir);
+        file_path.push(GLW_NEWS);
+        let rawdta = fs::read_to_string(file_path).expect("Cannot read data file GLW_query.json");
+        let dt: NewsRoot = serde_json::from_str(&rawdta).expect("Cannot parse JSON data");
+
+        let conn = &mut establish_connection_or_exit();
+
+        let results: Vec<(i64, String)> =
+            get_sids_and_names_with_overview(conn).unwrap_or_else(|err| {
+                println!("Cannot load results from database {}", err);
+                process::exit(1);
+            });
+
+        let mut params = Params::default();
+        let mut topics = get_topics(conn).unwrap();
+        let mut authors = get_authors(conn).unwrap();
+        let mut sources = get_sources(conn).unwrap();
+
+        for (sid, name) in results.iter() {
+            params.names_to_sid.insert(name.clone(), *sid);
+        }
+
+        params.topics = topics.iter().map(|t| (t.name.clone(), t.id)).collect();
+        params.authors = authors.iter().map(|a| (a.author_name.clone(), a.id)).collect();
+        params.sources = sources.iter().map(|s| (s.source_name.clone(), s.id)).collect();
+
+
+        let sid = 5344;
+
+        process_news(conn, &sid, &"GLW".to_string(), dt, &mut params).unwrap();
     }
-    let current_dir = std::env::current_dir().unwrap();
-    let mut tests_data_dir = PathBuf::from(&current_dir);
-    tests_data_dir.push("tests");
-    let mut file_path = PathBuf::from(&tests_data_dir);
-    file_path.push(GLW_NEWS);
-    let rawdta = fs::read_to_string(file_path).expect("Cannot read data file GLW_query.json");
-    let dt: NewsRoot = serde_json::from_str(&rawdta).expect("Cannot parse JSON data");
-
-    let conn = &mut establish_connection_or_exit();
-
-    let results: Vec<(i64, String)> =
-        get_sids_and_names_with_overview(conn).unwrap_or_else(|err| {
-            println!("Cannot load results from database {}", err);
-            process::exit(1);
-        });
-
-    let mut params = Params::default();
-    let mut topics = get_topics(conn).unwrap();
-    let mut authors = get_authors(conn).unwrap();
-    let mut sources = get_sources(conn).unwrap();
-
-    for  (sid, name) in results.iter(){
-        params.names_to_sid.insert(name.clone(), *sid);
-    }
-
-    params.topics = topics.iter().map(|t| (t.name.clone(), t.id)).collect();
-    params.authors = authors.iter().map(|a| (a.author_name.clone(), a.id)).collect();
-    params.sources = sources.iter().map(|s| (s.source_name.clone(), s.id)).collect();
-
-
-
-    let sid = 5344;
-
-    process_news(conn, &sid, &"GLW".to_string(), dt, &mut params).unwrap();
+    assert!(true);
 }
