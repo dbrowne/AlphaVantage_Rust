@@ -33,8 +33,6 @@ use crate::schema::authormaps::dsl::authormaps;
 
 
 pub  fn insert_author_map(conn: &mut PgConnection,feed_id:i32,author_id:i32) ->Result<AuthorMap, Box<dyn Error>> {
-    use crate::schema::authormaps::dsl::{feedid,authorid};
-
     let new_author_map = NewAuthorMap {
         feedid: &feed_id,
         authorid: &author_id,

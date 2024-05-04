@@ -33,13 +33,11 @@ use crate::alpha_lib::alpha_io_funcs::{get_api_key, get_news_root};
 use crate::alpha_lib::news_type::{NewsRoot, RawFeed};
 use crate::create_url;
 use crate::dbfunctions::articles::insert_article;
-use crate::dbfunctions::author::{get_author_by_id, get_authors, insert_author};
+use crate::dbfunctions::author::insert_author;
 use crate::dbfunctions::news_root::insert_news_root;
-use crate::dbfunctions::sources::{get_sources, insert_source};
-use crate::dbfunctions::topic_refs::{get_topics, insert_topic};
-use crate::schema::articles::dsl::articles;
-use crate::schema::authors::author_name;
-use chrono::prelude::*;
+use crate::dbfunctions::sources::insert_source;
+use crate::dbfunctions::topic_refs::insert_topic;
+
 use diesel::PgConnection;
 use std::collections::HashMap;
 use std::error::Error;
@@ -75,7 +73,7 @@ pub fn process_news(
     let item_count = root.items.parse::<i32>()?;
     let sentiment_def = root.sentiment_score_definition;
     let relevance_def = root.relevance_score_definition;
-    if (item_count < 1) {
+    if item_count < 1 {
         println!("No news items for {}", tkr);
         return Ok(());
     }
@@ -94,12 +92,7 @@ fn process_feed(
     overview_id: i32,
     params: &mut Params,
 ) -> Result<(), Box<dyn Error>> {
-    let mut ctr = 0;
     for article in feed {
-        ctr += 1;
-        if ctr > 44 {
-            println!("Hit the point!");
-        }
         process_article(conn, &s_id, &tkr, article, params)?;
     }
 
@@ -133,7 +126,7 @@ fn process_article(
         }
     }
 
-    if (source_id == -1) {
+    if source_id == -1 {
         return Err(Box::new(std::io::Error::new(
             std::io::ErrorKind::Other,
             "No source id",
@@ -176,18 +169,6 @@ fn process_article(
         article.time_published,
     )?;
 
-    let authors = params.authors.clone();
-
-    // for auth in &article.authors {
-    //     if params.authors.contains_key(auth) {
-    //         author_id = *params.authors.get(auth).unwrap_or(&-1);
-    //     } else {
-    //         println!("Inserting new author {}", article.authors[0].clone());
-    //         let auth = insert_author(conn, article.authors[0].clone())?;
-    //         params.authors.insert(auth.author_name, auth.id.clone());
-    //         author_id = auth.id;
-    //     }
-    // }
 
     for topic in article.topics {
         if params.topics.contains_key(&topic.topic) {

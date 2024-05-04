@@ -27,13 +27,12 @@
  * SOFTWARE.
  */
 
-
 extern crate ring;
-use chrono::NaiveDateTime;
+use crate::db_models::{Article, NewArticle};
 use crate::dbfunctions::common::*;
-use crate::db_models::{NewArticle, Article};
 use crate::schema::articles::dsl::articles;
-use ring::digest::{SHA256, digest};
+use chrono::NaiveDateTime;
+use ring::digest::{digest, SHA256};
 
 pub fn get_article_hashes(conn: &mut PgConnection) -> Result<Vec<String>, Box<dyn Error>> {
     use crate::schema::articles::dsl::hashid;
@@ -47,11 +46,14 @@ pub fn get_article_hashes(conn: &mut PgConnection) -> Result<Vec<String>, Box<dy
     }
 }
 
-pub fn get_article_by_hash(conn: &mut PgConnection, hash_id: String) -> Result<Article, Box<dyn Error>> {
+pub fn get_article_by_hash(
+    conn: &mut PgConnection,
+    hash_id: String,
+) -> Result<Article, Box<dyn Error>> {
     use crate::schema::articles::dsl::*;
-    ;
 
-    let art = articles.filter(hashid.eq(hash_id.clone()))
+    let art = articles
+        .filter(hashid.eq(hash_id.clone()))
         .first::<Article>(conn);
     match art {
         Ok(art) => Ok(art),
@@ -62,9 +64,17 @@ pub fn get_article_by_hash(conn: &mut PgConnection, hash_id: String) -> Result<A
     }
 }
 
-pub fn insert_article(conn: &mut PgConnection, s_ourceid: i32, c_ategory: String, t_itle: String,
-                      u_rl: String, s_ummary: String, b_anner: String, a_uthor: i32, t_published: String)
-                      -> Result<Article, Box<dyn Error>> {
+pub fn insert_article(
+    conn: &mut PgConnection,
+    s_ourceid: i32,
+    c_ategory: String,
+    t_itle: String,
+    u_rl: String,
+    s_ummary: String,
+    b_anner: String,
+    a_uthor: i32,
+    t_published: String,
+) -> Result<Article, Box<dyn Error>> {
     let time_format = "%Y%m%dT%H%M%S";
 
     let parsed_date = NaiveDateTime::parse_from_str(&t_published, time_format)?;
@@ -83,9 +93,7 @@ pub fn insert_article(conn: &mut PgConnection, s_ourceid: i32, c_ategory: String
         ct: &parsed_date,
     };
 
-    let art = diesel::insert_into(articles)
-        .values(&n_a)
-        .get_result(conn);
+    let art = diesel::insert_into(articles).values(&n_a).get_result(conn);
     match art {
         Ok(art) => Ok(art),
         Err(err) => {

@@ -37,7 +37,7 @@ use chrono::{DateTime, Local, NaiveDate, NaiveDateTime, NaiveTime};
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
 use std::error::Error;
-use crate::schema::intradayprices::tstamp;
+
 
 
 /// Parses a time string into a `NaiveTime` struct.

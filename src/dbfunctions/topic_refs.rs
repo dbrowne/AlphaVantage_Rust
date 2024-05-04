@@ -74,7 +74,7 @@ pub  fn get_id_topic_by_name(conn: &mut PgConnection, topic_name: String) ->Resu
     }
 }
 
-pub fn insert_topic(conn: &mut PgConnection, topic_name:String) ->Result<(TopicRef), Box<dyn Error>>{
+pub fn insert_topic(conn: &mut PgConnection, topic_name:String) ->Result<TopicRef, Box<dyn Error>>{
 
     let new_topic = NewTopicRef{
         name: &topic_name,

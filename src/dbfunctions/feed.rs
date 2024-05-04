@@ -27,8 +27,8 @@
  * SOFTWARE.
  */
 use crate::dbfunctions::common::*;
-use dotenvy::dotenv;
-use crate::db_models::{Feed, NewFeed};
+
+use crate::db_models::Feed;
 
 
 pub  fn ins_n_ret_feed(conn:&mut PgConnection,s_id:&i64, story:Feed) -> Result<Feed, Box<dyn Error>>{
