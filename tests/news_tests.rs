@@ -45,7 +45,7 @@ fn loader() {
     const GLW_NEWS: &str = "GLW_query.json";
     dotenv().ok();
 
-    if  gethostname != "mega" {
+    if  gethostname().ne("mega") {
         println!("This test is only for mega");
         process::exit(0 );
     }
