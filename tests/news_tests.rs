@@ -80,5 +80,5 @@ fn loader() {
 
         process_news(conn, &sid, &"GLW".to_string(), dt, &mut params).unwrap();
     }
-    assert!(true);
+    assert_eq!()(1,1);
 }
