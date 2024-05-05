@@ -40,6 +40,10 @@ use AlphaVantage_Rust::dbfunctions::base::establish_connection_or_exit;
 use AlphaVantage_Rust::dbfunctions::sources::get_sources;
 use AlphaVantage_Rust::dbfunctions::topic_refs::get_topics;
 
+
+fn main(){
+    loader();
+}
 fn loader() {
     const GLW_NEWS: &str = "GLW_query.json";
     dotenv().ok();
