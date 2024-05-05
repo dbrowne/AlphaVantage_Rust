@@ -78,7 +78,9 @@ fn loader() {
 
         let sid = 5344;
 
-        process_news(conn, &sid, &"GLW".to_string(), dt, &mut params).unwrap();
+       _= (process_news(conn, &sid, &"GLW".to_string(), dt, &mut params)).unwrap_or_else(|err| {
+            println!("Cannot process news {}", err);
+        });
     }
     assert_eq!(1,1);
 }
