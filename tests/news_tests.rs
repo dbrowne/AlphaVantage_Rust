@@ -42,10 +42,11 @@ use AlphaVantage_Rust::alpha_lib::alpha_io::news_loader::process_news;
 use gethostname::gethostname;
 #[test]
 fn loader() {
-    const GLW_NEWS: &str = "GLW_query.json";
-    dotenv().ok();
 
     if  gethostname().eq("mega") {
+        const GLW_NEWS: &str = "GLW_query.json";
+        dotenv().ok();
+
         let current_dir = std::env::current_dir().unwrap();
         let mut tests_data_dir = PathBuf::from(&current_dir);
         tests_data_dir.push("tests");
