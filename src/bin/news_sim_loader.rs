@@ -46,6 +46,7 @@ fn main(){
 }
 fn loader() {
     const GLW_NEWS: &str = "GLW_query.json";
+
     dotenv().ok();
 
     let current_dir = std::env::current_dir().unwrap();
