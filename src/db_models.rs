@@ -307,8 +307,7 @@ pub struct NewsOverview {
     pub id: i32,
     pub sid: i64,
     pub items: i32,
-    pub sentiment: String,
-    pub relevance: String,
+    pub hashid: String,
     pub creation: NaiveDateTime,
 
 }
@@ -316,10 +315,9 @@ pub struct NewsOverview {
 #[derive(Insertable, Debug)]
 #[diesel(table_name = newsoverviews)]
 pub struct NewNewsOverview<'a> {
-    pub items: &'a i32,
     pub sid: i64,
-    pub sentiment: &'a String,
-    pub relevance: &'a String,
+    pub items: &'a i32,
+    pub hashid: &'a String,
     pub creation: &'a NaiveDateTime,
 }
 
@@ -407,7 +405,6 @@ pub struct NewSource<'a> {
 pub struct TickerSentiment {
     pub id: i32,
     pub feedid: i32,
-    pub ticker: String,
     pub sid: i64,
     pub relevance: f64,
     pub tsentiment: f64,
@@ -419,7 +416,6 @@ pub struct TickerSentiment {
 #[diesel(table_name = tickersentiments)]
 pub struct NewTickerSentiment<'a> {
     pub feedid: &'a i32,
-    pub ticker: &'a String,
     pub sid: &'a i64,
     pub relevance: &'a f64,
     pub tsentiment: &'a f64,

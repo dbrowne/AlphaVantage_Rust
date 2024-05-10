@@ -45,7 +45,7 @@ fn main(){
     loader();
 }
 fn loader() {
-    const GLW_NEWS: &str = "GLW_query.json";
+    const GLW_NEWS: &str = "/mnt/source1/djbGR/portfolio/AlphaVantage_Rust/src/bin/GLW_query.json";
 
     dotenv().ok();
 

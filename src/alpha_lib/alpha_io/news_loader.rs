@@ -78,13 +78,18 @@ pub fn process_news(
         return Ok(());
     }
 
-    let overview = insert_news_root(conn, *s_id, item_count, sentiment_def, relevance_def)?;
+    if let Ok(overview) = insert_news_root(conn, *s_id, item_count, root.feed.clone()) {
+        process_feed(conn, s_id, tkr, root.feed, overview.id, params)?;
 
-    process_feed(conn, s_id, tkr, root.feed, overview.id, params)?;
+    }
+    else {
+        println!("Cannot insert news root for {}", tkr);
+
+    }
     Ok(())
 }
 
-fn process_feed(
+fn  process_feed(
     conn: &mut PgConnection,
     s_id: &i64,
     tkr: &String,
