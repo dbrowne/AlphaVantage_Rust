@@ -45,6 +45,7 @@ use crate::schema::topicmaps::feedid;
 use diesel::PgConnection;
 use std::collections::HashMap;
 use std::error::Error;
+use crate::dbfunctions::author_map::insert_author_map;
 use crate::dbfunctions::topic_maps::ins_topic_map;
 
 #[derive(Debug, Default)]
@@ -209,6 +210,11 @@ fn process_article(
                 println!("Inserted topics for {}", art.title);
             } else {
                 println!("Cannot insert topics for {}", art.title);
+            }
+            if let Ok(am) = insert_author_map(conn, feed.id,author_id) {
+                println!("Inserted author map for {}", art.title);
+            } else {
+                println!("Cannot insert author map for {}", art.title);
             }
 
         } else {
