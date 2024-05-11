@@ -30,7 +30,7 @@
 extern crate chrono;
 
 use crate::alpha_lib::alpha_io_funcs::{get_api_key, get_news_root};
-use crate::alpha_lib::news_type::{NewsRoot, RawFeed, TickerSentiment};
+use crate::alpha_lib::news_type::{NewsRoot, RawFeed, TickerSentiment, Topic};
 use crate::create_url;
 use crate::dbfunctions::articles::insert_article;
 use crate::dbfunctions::author::insert_author;
@@ -45,6 +45,7 @@ use crate::schema::topicmaps::feedid;
 use diesel::PgConnection;
 use std::collections::HashMap;
 use std::error::Error;
+use crate::dbfunctions::topic_maps::ins_topic_map;
 
 #[derive(Debug, Default)]
 pub struct Params {
@@ -168,6 +169,17 @@ fn process_article(
         }
     }
 
+    for topic in article.topics.clone() {
+        if params.topics.contains_key(&topic.topic) {
+            topic_id = *params.topics.get(&topic.topic).unwrap_or(&-1);
+            continue;
+        } else {
+            println!("Inserting new topic {}", topic.topic);
+            let tp = insert_topic(conn, topic.topic)?;
+            params.topics.insert(tp.name, tp.id.clone());
+        }
+    }
+
     if let Ok(art) = insert_article(
         conn,
         source_id,
@@ -193,6 +205,12 @@ fn process_article(
             } else {
                 println!("Cannot insert sentiments for {}", art.title);
             }
+            if let Ok(tp) = load_topic_map(conn, s_id, article.topics,feed.id, params) {
+                println!("Inserted topics for {}", art.title);
+            } else {
+                println!("Cannot insert topics for {}", art.title);
+            }
+
         } else {
             println!("Cannot insert feed {} for sid {}", art.title, s_id);
             return Err(Box::new(std::io::Error::new(
@@ -208,16 +226,7 @@ fn process_article(
         )));
     }
 
-    for topic in article.topics {
-        if params.topics.contains_key(&topic.topic) {
-            topic_id = *params.topics.get(&topic.topic).unwrap_or(&-1);
-            continue;
-        } else {
-            println!("Inserting new topic {}", topic.topic);
-            let tp = insert_topic(conn, topic.topic)?;
-            params.topics.insert(tp.name, tp.id.clone());
-        }
-    }
+
 
     Ok(())
 }
@@ -239,6 +248,18 @@ fn load_sentiments(
             continue;
         }
        _ = ins_ticker_sentiment(conn, sid, inp_feed_id, sent_rel, sent_score, sent_label)
+    }
+    Ok(())
+}
+
+fn load_topic_map(conn: &mut PgConnection, inp_sid: &i64, topics: Vec<Topic>, inp_feed_id:i32, params: &mut Params) -> Result<(), Box<dyn Error>> {
+    for topic in topics {
+        let topic_id = *params.topics.get(&topic.topic).unwrap_or(&-1);
+        if topic_id == -1 {
+            println!("Cannot find topic id for {}", topic.topic);
+            continue;
+        }
+        let _ = ins_topic_map(conn, *inp_sid,inp_feed_id, topic_id,topic.relevance_score.parse::<f64>()?)?;
     }
     Ok(())
 }
