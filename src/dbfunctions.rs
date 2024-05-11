@@ -38,4 +38,5 @@ pub mod articles;
 pub mod common;
 pub mod author_map;
 pub mod topic_maps;
+pub mod ticker_sentiments;
 

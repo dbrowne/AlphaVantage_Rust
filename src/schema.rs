@@ -60,8 +60,7 @@ diesel::table! {
         id -> Int4,
         sid -> Int8,
         items -> Int4,
-        sentiment -> Text,
-        relevance -> Text,
+        hashid -> Text,
         creation -> Timestamp,
     }
 }
@@ -172,7 +171,6 @@ diesel::table! {
     tickersentiments (id) {
         id -> Int4,
         feedid -> Int4,
-        ticker -> Text,
         sid -> Int8,
         relevance -> Float8,
         tsentiment -> Float8,

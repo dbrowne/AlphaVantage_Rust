@@ -30,11 +30,16 @@
 use crate::dbfunctions::common::*;
 use std::error::Error;
 use chrono::{Datelike, DateTime, Local, NaiveDate, NaiveDateTime, NaiveTime};
+use serde::Serialize;
+use crate::alpha_lib::news_type::RawFeed;
 use crate::db_models::{NewNewsOverview, NewsOverview};
 use crate::schema::newsoverviews::dsl::newsoverviews;
+use bincode::Options;
 
-pub fn insert_news_root(conn: &mut PgConnection, s_id: i64, item_count: i32, s_entiment: String,
-                                r_elevance: String) -> Result<NewsOverview, Box<dyn Error>> {
+use crc32fast::Hasher;
+pub fn insert_news_root(conn: &mut PgConnection, s_id: i64, item_count: i32,
+                        news: Vec<RawFeed>,
+) -> Result<NewsOverview, Box<dyn Error>> {
 
     let local :DateTime<Local>= Local::now();
     let date= NaiveDate::from_ymd_opt(local.year(),local.month(),local.day()).unwrap_or(NaiveDate::from_ymd_opt(1900,1,1).unwrap());
@@ -44,8 +49,7 @@ pub fn insert_news_root(conn: &mut PgConnection, s_id: i64, item_count: i32, s_e
     let rt = NewNewsOverview{
         items: &item_count,
         sid: s_id.clone(),
-        sentiment: &s_entiment,
-        relevance: &r_elevance,
+        hashid: &get_hash_id(news),
         creation: &creattion_date,
     };
 
@@ -62,5 +66,29 @@ pub fn insert_news_root(conn: &mut PgConnection, s_id: i64, item_count: i32, s_e
     }
 
 
+
+}
+
+fn get_hash_id(news:Vec<RawFeed>) -> String {
+    let bytes = convert_to_bytes(news);
+    calculate_checksum(&bytes)
+}
+fn convert_to_bytes<T>(vec: Vec<T>) -> Vec<u8>
+    where
+        T: Serialize,
+{
+    let mut bytes = Vec::new();
+    for item in vec {
+        // Correct usage with the default options
+        let serialized = bincode::options().serialize(&item).unwrap();
+        bytes.extend(serialized);
+    }
+    bytes
+}
+
+fn calculate_checksum(bytes: &[u8]) -> String {
+    let mut hasher = Hasher::new();
+    hasher.update(bytes);
+    hasher.finalize().to_string()
 
 }

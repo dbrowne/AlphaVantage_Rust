@@ -4,7 +4,7 @@
  *
  *
  * MIT License
- * Copyright (c) 2023. Dwight J. Browne
+ * Copyright (c) 2024. Dwight J. Browne
  * dwight[-dot-]browne[-at-]dwightjbrowne[-dot-]com
  *
  *
@@ -27,4 +27,35 @@
  * SOFTWARE.
  */
 
-pub  mod news_loader;
+use std::error::Error;
+use diesel::PgConnection;
+use crate::db_models::{NewTickerSentiment, TickerSentiment};
+use crate::schema::tickersentiments::dsl::tickersentiments;
+use crate::dbfunctions::common::*;
+pub fn ins_ticker_sentiment(
+    conn: &mut PgConnection,
+    s_id: &i64,
+    inp_feedid: i32,
+    inp_relevance: f64,
+    inp_sentiment: f64,
+    inp_sentlabel: String,
+) -> Result<TickerSentiment, Box<dyn Error>> {
+    let rt = NewTickerSentiment {
+        sid: &s_id.clone(),
+        feedid: &inp_feedid,
+        relevance: &inp_relevance,
+        tsentiment: &inp_sentiment,
+        sentimentlable: &&inp_sentlabel,
+    };
+
+    let root = diesel::insert_into(tickersentiments)
+        .values(&rt)
+        .get_result(conn);
+    match root {
+        Ok(root) => Ok(root),
+        Err(err) => {
+            eprintln!("Error inserting Ticker Sentiment {}", err);
+            Err(Box::new(err))
+        }
+    }
+}

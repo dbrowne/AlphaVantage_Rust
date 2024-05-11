@@ -30,7 +30,7 @@
 extern crate chrono;
 
 use crate::alpha_lib::alpha_io_funcs::{get_api_key, get_news_root};
-use crate::alpha_lib::news_type::{NewsRoot, RawFeed};
+use crate::alpha_lib::news_type::{NewsRoot, RawFeed, TickerSentiment, Topic};
 use crate::create_url;
 use crate::dbfunctions::articles::insert_article;
 use crate::dbfunctions::author::insert_author;
@@ -38,9 +38,15 @@ use crate::dbfunctions::news_root::insert_news_root;
 use crate::dbfunctions::sources::insert_source;
 use crate::dbfunctions::topic_refs::insert_topic;
 
+use crate::dbfunctions::feed::ins_n_ret_feed;
+use crate::dbfunctions::ticker_sentiments::ins_ticker_sentiment;
+use crate::schema::tickersentiments::sentimentlable;
+use crate::schema::topicmaps::feedid;
 use diesel::PgConnection;
 use std::collections::HashMap;
 use std::error::Error;
+use crate::dbfunctions::author_map::insert_author_map;
+use crate::dbfunctions::topic_maps::ins_topic_map;
 
 #[derive(Debug, Default)]
 pub struct Params {
@@ -78,9 +84,11 @@ pub fn process_news(
         return Ok(());
     }
 
-    let overview = insert_news_root(conn, *s_id, item_count, sentiment_def, relevance_def)?;
-
-    process_feed(conn, s_id, tkr, root.feed, overview.id, params)?;
+    if let Ok(overview) = insert_news_root(conn, *s_id, item_count, root.feed.clone()) {
+        process_feed(conn, s_id, tkr, root.feed, overview.id, params)?;
+    } else {
+        println!("Cannot insert news root for {}", tkr);
+    }
     Ok(())
 }
 
@@ -93,7 +101,7 @@ fn process_feed(
     params: &mut Params,
 ) -> Result<(), Box<dyn Error>> {
     for article in feed {
-        process_article(conn, &s_id, &tkr, article, params)?;
+        process_article(conn, &s_id, &tkr, article, overview_id, params)?;
     }
 
     Ok(())
@@ -104,6 +112,7 @@ fn process_article(
     s_id: &i64,
     tkr: &String,
     article: RawFeed,
+    overview_id: i32,
     params: &mut Params,
 ) -> Result<(), Box<dyn Error>> {
     let mut author_id: i32 = -1;
@@ -118,7 +127,11 @@ fn process_article(
         source_id = src.id;
     } else {
         if params.sources.contains_key(&article.source.to_string()) {
-            source_id = params.sources.get(&article.source.to_string()).unwrap().clone();
+            source_id = params
+                .sources
+                .get(&article.source.to_string())
+                .unwrap()
+                .clone();
         } else {
             let src = insert_source(conn, article.source.clone(), article.source_domain.clone())?;
             params.sources.insert(src.source_name, src.id.clone());
@@ -157,20 +170,7 @@ fn process_article(
         }
     }
 
-    let art = insert_article(
-        conn,
-        source_id,
-        article.category_within_source,
-        article.title,
-        article.url,
-        article.summary,
-        article.banner_image,
-        author_id,
-        article.time_published,
-    )?;
-
-
-    for topic in article.topics {
+    for topic in article.topics.clone() {
         if params.topics.contains_key(&topic.topic) {
             topic_id = *params.topics.get(&topic.topic).unwrap_or(&-1);
             continue;
@@ -181,5 +181,91 @@ fn process_article(
         }
     }
 
+    if let Ok(art) = insert_article(
+        conn,
+        source_id,
+        article.category_within_source,
+        article.title,
+        article.url,
+        article.summary,
+        article.banner_image,
+        author_id,
+        article.time_published,
+    ) {
+        if let Ok(feed) = ins_n_ret_feed(
+            conn,
+            &s_id.clone(),
+            overview_id,
+            art.hashid,
+            source_id,
+            article.overall_sentiment_score,
+            article.overall_sentiment_label,
+        ) {
+            if let Ok(ts) = load_sentiments(conn, article.ticker_sentiment, params, feed.id) {
+                println!("Inserted sentiments for {}", art.title);
+            } else {
+                println!("Cannot insert sentiments for {}", art.title);
+            }
+            if let Ok(tp) = load_topic_map(conn, s_id, article.topics,feed.id, params) {
+                println!("Inserted topics for {}", art.title);
+            } else {
+                println!("Cannot insert topics for {}", art.title);
+            }
+            if let Ok(am) = insert_author_map(conn, feed.id,author_id) {
+                println!("Inserted author map for {}", art.title);
+            } else {
+                println!("Cannot insert author map for {}", art.title);
+            }
+
+        } else {
+            println!("Cannot insert feed {} for sid {}", art.title, s_id);
+            return Err(Box::new(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                "Cannot insert article",
+            )));
+        }
+    } else {
+        println!("Cannot insert  for sid {}", s_id);
+        return Err(Box::new(std::io::Error::new(
+            std::io::ErrorKind::Other,
+            "Cannot insert article",
+        )));
+    }
+
+
+
+    Ok(())
+}
+
+fn load_sentiments(
+    conn: &mut PgConnection,
+    sentiments: Vec<TickerSentiment>,
+    params: &mut Params,
+    inp_feed_id: i32,
+) -> Result<(), Box<dyn Error>> {
+    for sent in sentiments {
+        let sent_label =sent.ticker_sentiment_label;
+        let sent_score = sent.ticker_sentiment_score.parse::<f64>()?;
+        let sent_rel = sent.relevance_score.parse::<f64>()?;
+        let sent_tkr = sent.ticker.clone();
+        let sid = params.names_to_sid.get(&sent_tkr).unwrap_or(&-1);
+        if *sid == -1 {
+            println!("Cannot find sid for {}", sent_tkr);
+            continue;
+        }
+       _ = ins_ticker_sentiment(conn, sid, inp_feed_id, sent_rel, sent_score, sent_label)
+    }
+    Ok(())
+}
+
+fn load_topic_map(conn: &mut PgConnection, inp_sid: &i64, topics: Vec<Topic>, inp_feed_id:i32, params: &mut Params) -> Result<(), Box<dyn Error>> {
+    for topic in topics {
+        let topic_id = *params.topics.get(&topic.topic).unwrap_or(&-1);
+        if topic_id == -1 {
+            println!("Cannot find topic id for {}", topic.topic);
+            continue;
+        }
+        let _ = ins_topic_map(conn, *inp_sid,inp_feed_id, topic_id,topic.relevance_score.parse::<f64>()?)?;
+    }
     Ok(())
 }
