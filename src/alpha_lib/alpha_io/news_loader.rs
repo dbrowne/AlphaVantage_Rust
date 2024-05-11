@@ -38,6 +38,7 @@ use crate::dbfunctions::news_root::insert_news_root;
 use crate::dbfunctions::sources::insert_source;
 use crate::dbfunctions::topic_refs::insert_topic;
 
+use crate::dbfunctions::feed::ins_n_ret_feed;
 use diesel::PgConnection;
 use std::collections::HashMap;
 use std::error::Error;
@@ -80,16 +81,13 @@ pub fn process_news(
 
     if let Ok(overview) = insert_news_root(conn, *s_id, item_count, root.feed.clone()) {
         process_feed(conn, s_id, tkr, root.feed, overview.id, params)?;
-
-    }
-    else {
+    } else {
         println!("Cannot insert news root for {}", tkr);
-
     }
     Ok(())
 }
 
-fn  process_feed(
+fn process_feed(
     conn: &mut PgConnection,
     s_id: &i64,
     tkr: &String,
@@ -98,7 +96,7 @@ fn  process_feed(
     params: &mut Params,
 ) -> Result<(), Box<dyn Error>> {
     for article in feed {
-        process_article(conn, &s_id, &tkr, article, params)?;
+        process_article(conn, &s_id, &tkr, article, overview_id, params)?;
     }
 
     Ok(())
@@ -109,6 +107,7 @@ fn process_article(
     s_id: &i64,
     tkr: &String,
     article: RawFeed,
+    overview_id: i32,
     params: &mut Params,
 ) -> Result<(), Box<dyn Error>> {
     let mut author_id: i32 = -1;
@@ -123,7 +122,11 @@ fn process_article(
         source_id = src.id;
     } else {
         if params.sources.contains_key(&article.source.to_string()) {
-            source_id = params.sources.get(&article.source.to_string()).unwrap().clone();
+            source_id = params
+                .sources
+                .get(&article.source.to_string())
+                .unwrap()
+                .clone();
         } else {
             let src = insert_source(conn, article.source.clone(), article.source_domain.clone())?;
             params.sources.insert(src.source_name, src.id.clone());
@@ -162,7 +165,8 @@ fn process_article(
         }
     }
 
-    let art = insert_article(
+
+    if let Ok(art) = insert_article(
         conn,
         source_id,
         article.category_within_source,
@@ -172,8 +176,31 @@ fn process_article(
         article.banner_image,
         author_id,
         article.time_published,
-    )?;
-
+    ) {
+        if let Ok(ret) = ins_n_ret_feed(
+            conn,
+            &s_id.clone(),
+            overview_id ,
+            art.hashid,
+            source_id,
+            article.overall_sentiment_score,
+            article.overall_sentiment_label,
+        ) {
+            println!("Inserted article {} for sid {}", art.title, s_id);
+        } else {
+            println!("Cannot insert feed {} for sid {}", art.title, s_id);
+            return Err(Box::new(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                "Cannot insert article",
+            )));
+        }
+    } else {
+        println!("Cannot insert  for sid {}",  s_id);
+        return Err(Box::new(std::io::Error::new(
+            std::io::ErrorKind::Other,
+            "Cannot insert article",
+        )));
+    }
 
     for topic in article.topics {
         if params.topics.contains_key(&topic.topic) {

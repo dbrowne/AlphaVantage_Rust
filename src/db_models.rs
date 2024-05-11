@@ -336,7 +336,7 @@ pub struct Feed {
 #[derive(Insertable, Debug)]
 #[diesel(table_name = feeds)]
 pub struct NewFeed<'a> {
-    pub id: &'a i32,
+
     pub sid: &'a i64,
     pub newsoverviewid: &'a i32,
     pub articleid: &'a String,
