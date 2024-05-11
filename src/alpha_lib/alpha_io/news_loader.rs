@@ -30,7 +30,7 @@
 extern crate chrono;
 
 use crate::alpha_lib::alpha_io_funcs::{get_api_key, get_news_root};
-use crate::alpha_lib::news_type::{NewsRoot, RawFeed};
+use crate::alpha_lib::news_type::{NewsRoot, RawFeed, TickerSentiment};
 use crate::create_url;
 use crate::dbfunctions::articles::insert_article;
 use crate::dbfunctions::author::insert_author;
@@ -39,6 +39,9 @@ use crate::dbfunctions::sources::insert_source;
 use crate::dbfunctions::topic_refs::insert_topic;
 
 use crate::dbfunctions::feed::ins_n_ret_feed;
+use crate::dbfunctions::ticker_sentiments::ins_ticker_sentiment;
+use crate::schema::tickersentiments::sentimentlable;
+use crate::schema::topicmaps::feedid;
 use diesel::PgConnection;
 use std::collections::HashMap;
 use std::error::Error;
@@ -165,7 +168,6 @@ fn process_article(
         }
     }
 
-
     if let Ok(art) = insert_article(
         conn,
         source_id,
@@ -177,16 +179,20 @@ fn process_article(
         author_id,
         article.time_published,
     ) {
-        if let Ok(ret) = ins_n_ret_feed(
+        if let Ok(feed) = ins_n_ret_feed(
             conn,
             &s_id.clone(),
-            overview_id ,
+            overview_id,
             art.hashid,
             source_id,
             article.overall_sentiment_score,
             article.overall_sentiment_label,
         ) {
-            println!("Inserted article {} for sid {}", art.title, s_id);
+            if let Ok(ts) = load_sentiments(conn, article.ticker_sentiment, params, feed.id) {
+                println!("Inserted sentiments for {}", art.title);
+            } else {
+                println!("Cannot insert sentiments for {}", art.title);
+            }
         } else {
             println!("Cannot insert feed {} for sid {}", art.title, s_id);
             return Err(Box::new(std::io::Error::new(
@@ -195,7 +201,7 @@ fn process_article(
             )));
         }
     } else {
-        println!("Cannot insert  for sid {}",  s_id);
+        println!("Cannot insert  for sid {}", s_id);
         return Err(Box::new(std::io::Error::new(
             std::io::ErrorKind::Other,
             "Cannot insert article",
@@ -213,5 +219,26 @@ fn process_article(
         }
     }
 
+    Ok(())
+}
+
+fn load_sentiments(
+    conn: &mut PgConnection,
+    sentiments: Vec<TickerSentiment>,
+    params: &mut Params,
+    inp_feed_id: i32,
+) -> Result<(), Box<dyn Error>> {
+    for sent in sentiments {
+        let sent_label =sent.ticker_sentiment_label;
+        let sent_score = sent.ticker_sentiment_score.parse::<f64>()?;
+        let sent_rel = sent.relevance_score.parse::<f64>()?;
+        let sent_tkr = sent.ticker.clone();
+        let sid = params.names_to_sid.get(&sent_tkr).unwrap_or(&-1);
+        if *sid == -1 {
+            println!("Cannot find sid for {}", sent_tkr);
+            continue;
+        }
+       _ = ins_ticker_sentiment(conn, sid, inp_feed_id, sent_rel, sent_score, sent_label)
+    }
     Ok(())
 }
