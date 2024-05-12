@@ -36,7 +36,7 @@ fn main() {
     let  conn = &mut establish_connection_or_exit();
     dotenv().ok();
 
-    if  let  Err(_err) = loa    d_tops(conn) {
+    if  let  Err(_err) = load_tops(conn) {
         eprintln!("Error loading Top statistics");
         process::exit(1);
     }
