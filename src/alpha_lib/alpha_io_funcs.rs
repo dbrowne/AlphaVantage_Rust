@@ -351,7 +351,47 @@ fn gen_new_summary_price(json_inp: (&String, &Value), sym: String) -> Option<Raw
         volume,
     })
 }
-
+/// Loads and updates the daily stock price summaries for a given symbol.
+///
+/// This function retrieves the daily stock prices from an external API and updates
+/// the database with the new information that has not yet been recorded up to the
+/// latest date known in the database for the given stock symbol and source ID.
+///
+/// # Parameters
+/// - `conn`: A mutable reference to a PostgreSQL connection to perform database operations.
+/// - `symb`: The stock symbol for which the daily summary is being loaded.
+/// - `s_id`: A unique identifier for the source of the stock data.
+///
+/// # Returns
+/// - `Ok(())` if the daily summaries were successfully loaded and updated in the database.
+/// - `Err(e)` where `e` is a boxed error if any operation within the function fails, including
+///   API data retrieval, data parsing, or database operations.
+///
+/// # Errors
+/// - Returns an error if the API key retrieval fails.
+/// - Returns an error if there is a failure in fetching or parsing the API data.
+/// - Database related errors are propagated if any insert operation fails.
+///
+/// # Example
+/// ```no_run
+/// use your_crate::db_operations::{PgConnection, load_summary};
+///
+/// let mut conn = PgConnection::establish("connection_string").unwrap();
+/// let symbol = "AAPL".to_string();
+/// let source_id = 1;
+///
+/// match load_summary(&mut conn, symbol, source_id) {
+///     Ok(_) => println!("Summary loaded successfully."),
+///     Err(e) => eprintln!("Failed to load summary: {}", e),
+/// }
+/// ```
+///
+/// # Remarks
+/// - The function checks if the returned data from the API contains a specific header ("Meta Data").
+///   If this header is not present, it assumes that there was an error with the provided symbol
+///   (such as missing price data) and will not perform any database updates for this symbol.
+/// - It logs the latest date for which data is available in the database and only inserts new
+///   records for dates that are after this last known date.
 pub fn load_summary(conn: &mut PgConnection, symb: String, s_id: i64) -> Result<(), Box<dyn Error>> {
     let api_key = get_api_key()?;
     let url = create_url!(FuncType:TsDaily,symb.clone(),api_key);
@@ -435,7 +475,45 @@ fn get_open_close(inp: &str, symb: &String) -> Result<Vec<RawDailyPrice>, Box<dy
     Ok(daily_prices)
 }
 
-
+/// Loads the top stock performers from an API and updates the database with the current information.
+///
+/// This function fetches data for top gainers, top losers, and most actively traded stocks from
+/// The AlphaVantage API and updates the database with these details, organizing the data by category
+/// and tagging each entry with the timestamp of the last update.
+///
+/// # Parameters
+/// - `conn`: A mutable reference to a PostgreSQL connection to perform database operations.
+///
+/// # Returns
+/// - `Ok(())` if the data is successfully fetched and processed into the database.
+/// - `Err(e)` where `e` is a boxed error if there is a failure in any part of the process, including
+///   retrieving or processing the API data, or any database operations.
+///
+/// # Errors
+/// - The function propagates errors from the underlying API call, data parsing, or database operations.
+/// - Errors from obtaining the API key or constructing the URL are also propagated.
+///
+/// # Example
+/// ```no_run
+/// use your_crate::db_operations::{PgConnection, load_tops};
+///
+/// let mut conn = PgConnection::establish("connection_string").unwrap();
+///
+/// match load_tops(&mut conn) {
+///     Ok(_) => println!("Top stocks data updated successfully."),
+///     Err(e) => eprintln!("Failed to update top stocks data: {}", e),
+/// }
+/// ```
+///
+/// # Remarks
+/// - The function first retrieves an API key and constructs a URL for the API request.
+/// - The data for top gainers, top losers, and most actively traded stocks is retrieved as a `Root` object.
+/// - Each category of data (top gainers, losers, and active trades) is processed separately.
+/// - All entries are tagged with a timestamp indicating the last update from the API, ensuring that
+///   the database contains the most current information available.
+///
+/// This function is designed to be run at regular intervals to keep the database up to date with
+/// the latest market movements.
 pub fn load_tops(conn: &mut PgConnection) -> Result<(), Box<dyn Error>> {
     let api_key = get_api_key()?;
     let url = create_url!(FuncType:TopQuery," ",api_key);
@@ -493,12 +571,43 @@ fn process_data_for_type(
     Ok(())
 }
 
-
+/// Parses a string to extract a date and time, ignoring the timezone.
+///
+/// This function takes a string input that contains a date, time, and timezone,
+/// parses it to extract the datetime component, and returns a `NaiveDateTime` object.
+/// The timezone part of the string is ignored during parsing.
+///
+/// # Parameters
+/// - `inp`: A string in the format "YYYY-MM-DD HH:MM:SS TZ" where TZ is the timezone.
+///
+/// # Returns
+/// - `Ok(NaiveDateTime)` if the datetime string is successfully parsed.
+/// - `Err(e)` where `e` is a boxed error if parsing fails.
+///
+/// # Errors
+/// - The function will return an error if the input string does not contain exactly two parts
+///   separated by a space, or if the datetime part of the string is not in the expected format.
+///
+/// # Example
+/// ```no_run
+/// use your_crate::time_functions::get_time_stamp;
+/// use chrono::NaiveDateTime;
+///
+/// let input = "2023-04-01 15:30:00 UTC";
+/// match get_time_stamp(input.to_string()) {
+///     Ok(datetime) => println!("Parsed datetime: {}", datetime),
+///     Err(e) => eprintln!("Error parsing datetime: {}", e),
+/// }
+/// ```
+///
+/// # Remarks
+/// - This function assumes that the input string will always follow the format with a space
+///   separating the datetime and timezone components. It uses `rsplitn` with a limit of 2
+///   to split the string from the end, ensuring that the last part (timezone) is separated first.
 fn get_time_stamp(inp: String) -> Result<NaiveDateTime, Box<dyn Error>> {
     let mut parts = inp.rsplitn(2, ' ');
     let _tz = parts.next().unwrap();
     let tm = parts.next().unwrap();
-    println!("parts {:?}", tm);
     let naive_dt = NaiveDateTime::parse_from_str(tm, "%Y-%m-%d %H:%M:%S")?;
     Ok(naive_dt)
 }
