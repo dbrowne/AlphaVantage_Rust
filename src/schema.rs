@@ -216,11 +216,18 @@ diesel::joinable!(authormaps -> feeds (feedid));
 diesel::joinable!(feeds -> articles (articleid));
 diesel::joinable!(feeds -> newsoverviews (newsoverviewid));
 diesel::joinable!(feeds -> sources (sourceid));
+diesel::joinable!(feeds -> symbols (sid));
+diesel::joinable!(intradayprices -> symbols (sid));
+diesel::joinable!(newsoverviews -> symbols (sid));
 diesel::joinable!(overviewexts -> symbols (sid));
 diesel::joinable!(overviews -> symbols (sid));
+diesel::joinable!(summaryprices -> symbols (sid));
 diesel::joinable!(tickersentiments -> feeds (feedid));
+diesel::joinable!(tickersentiments -> symbols (sid));
 diesel::joinable!(topicmaps -> feeds (feedid));
+diesel::joinable!(topicmaps -> symbols (sid));
 diesel::joinable!(topicmaps -> topicrefs (topicid));
+diesel::joinable!(topstats -> symbols (sid));
 
 diesel::allow_tables_to_appear_in_same_query!(
     articles,
