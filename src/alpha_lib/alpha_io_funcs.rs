@@ -374,7 +374,7 @@ fn gen_new_summary_price(json_inp: (&String, &Value), sym: String) -> Option<Raw
 /// - Database related errors are propagated if any insert operation fails.
 ///
 /// # Example
-/// ```no_run
+/// ```ignore
 /// use your_crate::db_operations::{PgConnection, load_summary};
 ///
 /// let mut conn = PgConnection::establish("connection_string").unwrap();
@@ -495,7 +495,7 @@ fn get_open_close(inp: &str, symb: &String) -> Result<Vec<RawDailyPrice>, Box<dy
 /// - Errors from obtaining the API key or constructing the URL are also propagated.
 ///
 /// # Example
-/// ```no_run
+/// ```ignore
 /// use your_crate::db_operations::{PgConnection, load_tops};
 ///
 /// let mut conn = PgConnection::establish("connection_string").unwrap();
@@ -590,8 +590,8 @@ fn process_data_for_type(
 ///   separated by a space, or if the datetime part of the string is not in the expected format.
 ///
 /// # Example
-/// ```no_run
-/// use your_crate::time_functions::get_time_stamp;
+/// ```ignore
+/// use AlphaVantage_Rust::time_functions::get_time_stamp;
 /// use chrono::NaiveDateTime;
 ///
 /// let input = "2023-04-01 15:30:00 UTC";
