@@ -59,7 +59,8 @@ pub fn get_api_key() -> Result<String, VarError> {
 
 /// # process_symbols Function
 ///
-/// This function makes HTTP requests to the Alpha Vantage API to retrieve financial data.
+/// This function makes HTTP requests to the Alpha Vantage API to retrieve the basic symbol data
+///for the symbol table.
 /// It reads symbols from an array of strings and makes requests at a maximum rate of 75 reqs/min.
 /// This function checks for duplicate symbols and writes unique records into the sec database.
 ///

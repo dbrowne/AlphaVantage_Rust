@@ -49,6 +49,10 @@ This section will provide guidance on how to utilize the API client. (Expand upo
 - [x] News loader
 - [ ] Refactor code for production use 
 - [ ] Front end
+
+## DB Schema
+![plot](schema.png)
+
 ## Contributing
 
 1. Fork the repository.
