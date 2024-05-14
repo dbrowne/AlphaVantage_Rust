@@ -4,7 +4,7 @@
  *
  *
  * MIT License
- * Copyright (c) 2023. Dwight J. Browne
+ * Copyright (c) 2024. Dwight J. Browne
  * dwight[-dot-]browne[-at-]dwightjbrowne[-dot-]com
  *
  *
@@ -27,10 +27,43 @@
  * SOFTWARE.
  */
 
-pub(crate) mod alpha_data_types;
-mod alpha_funcs;
-pub mod alpha_io_funcs;
-mod macros;
-pub  mod news_type;
-pub  mod alpha_io;
-mod misc_functions;
+
+use std::io::{self, Write, BufWriter};
+
+
+pub fn log_missed_symbol(buf_writer: &mut BufWriter<impl Write>, data: &str) -> io::Result<()> {
+    let newln = format!("{}\n", data);
+    buf_writer.write_all(newln.as_bytes()) // Convert string to bytes and write
+}
+
+//SHOP
+// GLBE
+// RBLX
+// RXRX
+// VERV
+// SQ
+// CRYPTO:BTC
+// RDDT
+// WBD
+// MRX
+// SHAK
+// AWON
+// CAVA
+// XPEV
+// LI
+// SQNXF
+// NTDOF
+// CEJOF
+// FOREX:JPY
+// FOREX:USD
+// MJNA
+// SZKMF
+// FOREX:JPY
+// CRYPTO:BTC
+// CRYPTO:DOGE
+// CRYPTO:BTC
+// MDNDF
+// LKNCY
+// DNZOF
+// SAEOF
+// VLEEF

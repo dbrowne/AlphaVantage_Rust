@@ -1,3 +1,5 @@
+extern crate core;
+
 pub mod alpha_lib;
 pub mod datatypes;
 pub mod db_funcs;

@@ -45,27 +45,34 @@ use crate::schema::topicmaps::feedid;
 use diesel::PgConnection;
 use std::collections::HashMap;
 use std::error::Error;
+use std::io::{BufWriter, Write};
 use crate::dbfunctions::author_map::insert_author_map;
 use crate::dbfunctions::topic_maps::ins_topic_map;
+use std::fs::File;
+use crate::alpha_lib::misc_functions::log_missed_symbol;
 
 #[derive(Debug, Default)]
 pub struct Params {
     pub topics: HashMap<String, i32>,
     pub authors: HashMap<String, i32>,
     pub sources: HashMap<String, i32>,
-    pub names_to_sid: HashMap<String, i64>,
+    pub names_to_sid: HashMap<String, i64>
 }
+
+
 
 pub fn load_news(
     conn: &mut PgConnection,
     s_id: &i64,
     tkr: &String,
     params: &mut Params,
+    symbol_log: &mut BufWriter<File>,
 ) -> Result<(), Box<dyn Error>> {
     let api_key = get_api_key()?;
     let url = create_url!(FuncType:NewsQuery,tkr,api_key);
     let root = get_news_root(&url)?;
-    process_news(conn, s_id, tkr, root, params)?;
+
+    process_news(conn, s_id, tkr, root, params, symbol_log)?;
     Ok(())
 }
 
@@ -75,6 +82,7 @@ pub fn process_news(
     tkr: &String,
     root: NewsRoot,
     params: &mut Params,
+    symbol_log: &mut BufWriter<File>
 ) -> Result<(), Box<dyn Error>> {
     let item_count = root.items.parse::<i32>()?;
     let sentiment_def = root.sentiment_score_definition;
@@ -85,7 +93,7 @@ pub fn process_news(
     }
 
     if let Ok(overview) = insert_news_root(conn, *s_id, item_count, root.feed.clone()) {
-        process_feed(conn, s_id, tkr, root.feed, overview.id, params)?;
+        process_feed(conn, s_id, tkr, root.feed, overview.id, params,  symbol_log)?;
     } else {
         println!("Cannot insert news root for {}", tkr);
     }
@@ -99,9 +107,10 @@ fn process_feed(
     feed: Vec<RawFeed>,
     overview_id: i32,
     params: &mut Params,
+    symbol_log: &mut BufWriter<File>,
 ) -> Result<(), Box<dyn Error>> {
     for article in feed {
-        process_article(conn, &s_id, &tkr, article, overview_id, params)?;
+        process_article(conn, &s_id, &tkr, article, overview_id, params, symbol_log)?;
     }
 
     Ok(())
@@ -114,6 +123,7 @@ fn process_article(
     article: RawFeed,
     overview_id: i32,
     params: &mut Params,
+    symbol_log: &mut BufWriter<File>
 ) -> Result<(), Box<dyn Error>> {
     let mut author_id: i32 = -1;
     let mut topic_id: i32 = -1;
@@ -201,7 +211,7 @@ fn process_article(
             article.overall_sentiment_score,
             article.overall_sentiment_label,
         ) {
-            if let Ok(ts) = load_sentiments(conn, article.ticker_sentiment, params, feed.id) {
+            if let Ok(ts) = load_sentiments(conn, article.ticker_sentiment, params, feed.id,  symbol_log) {
                 println!("Inserted sentiments for {}", art.title);
             } else {
                 println!("Cannot insert sentiments for {}", art.title);
@@ -242,6 +252,7 @@ fn load_sentiments(
     sentiments: Vec<TickerSentiment>,
     params: &mut Params,
     inp_feed_id: i32,
+    symbol_log: &mut BufWriter<File>
 ) -> Result<(), Box<dyn Error>> {
     for sent in sentiments {
         let sent_label =sent.ticker_sentiment_label;
@@ -251,6 +262,7 @@ fn load_sentiments(
         let sid = params.names_to_sid.get(&sent_tkr).unwrap_or(&-1);
         if *sid == -1 {
             println!("Cannot find sid for {}", sent_tkr);
+            log_missed_symbol(symbol_log, &sent_tkr)?;
             continue;
         }
        _ = ins_ticker_sentiment(conn, sid, inp_feed_id, sent_rel, sent_score, sent_label)

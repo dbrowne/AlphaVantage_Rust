@@ -27,6 +27,8 @@
  * SOFTWARE.
  */
 
+use std::fs::File;
+use std::io::{BufWriter, Write};
 use dotenvy::dotenv;
 use std::process;
 use AlphaVantage_Rust::alpha_lib::alpha_io::news_loader::{load_news,Params};
@@ -59,11 +61,11 @@ fn main()->Result<(),Box<dyn std::error::Error>>{
     params.topics = topics.iter().map(|t| (t.name.clone(), t.id)).collect();
     params.authors = authors.iter().map(|a| (a.author_name.clone(), a.id)).collect();
     params.sources = sources.iter().map(|s| (s.source_name.clone(), s.id)).collect();
-
+    let mut symbol_log: BufWriter<File> = BufWriter::new(File::create("/tmp/symbol_log.txt")?);
 
 
     for (s_id, symb) in results{
-        let news_status = load_news(conn, &s_id, &symb, &mut params);
+        let news_status = load_news(conn, &s_id, &symb, &mut params, &mut  symbol_log);
         match news_status {
             Ok(_news) => println!("News loaded for {}: {}",s_id, symb),
             Err(err) => {
@@ -71,6 +73,6 @@ fn main()->Result<(),Box<dyn std::error::Error>>{
             }
         }
     }
-
+    symbol_log.flush()?;
     Result::Ok(())
 }

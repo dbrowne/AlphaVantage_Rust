@@ -31,6 +31,8 @@ use dotenvy::dotenv;
 use serde_json;
 use std::path::PathBuf;
 use std::{fs, process};
+use std::fs::File;
+use std::io::{BufWriter, Write};
 use AlphaVantage_Rust::alpha_lib::alpha_io::news_loader::process_news;
 use AlphaVantage_Rust::alpha_lib::alpha_io::news_loader::Params;
 use AlphaVantage_Rust::alpha_lib::news_type::NewsRoot;
@@ -85,8 +87,9 @@ fn loader() {
         .collect();
 
     let sid = 5344;
-
-    _ = (process_news(conn, &sid, &"GLW".to_string(), dt, &mut params)).unwrap_or_else(|err| {
+    let mut symbol_log: BufWriter<File> = BufWriter::new(File::create("/tmp/symbol_log.txt").unwrap());
+    _ = (process_news(conn, &sid, &"GLW".to_string(), dt, &mut params, &mut  symbol_log)).unwrap_or_else(|err| {
         println!("Cannot process news {}", err);
     });
+    symbol_log.flush().unwrap();
 }
