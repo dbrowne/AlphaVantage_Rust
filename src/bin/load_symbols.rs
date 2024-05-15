@@ -21,7 +21,7 @@ fn main() {
         }
     };
 
-    let res = process_symbols(sec_vec);
+    let res = process_symbols(sec_vec,false);
     let _ = match res {
         Ok(_) => println!("Operation completed successfully."),
         Err(e) => println!("An error occurred: {}", e),

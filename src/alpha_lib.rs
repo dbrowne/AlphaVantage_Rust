@@ -33,4 +33,4 @@ pub mod alpha_io_funcs;
 mod macros;
 pub  mod news_type;
 pub  mod alpha_io;
-mod misc_functions;
+pub  mod misc_functions;

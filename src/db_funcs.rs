@@ -32,12 +32,13 @@
 // NOTE!!! THIS WILL BE BROKEN INTO SEPARATE FILES INTO dbfunctions
 use crate::alpha_lib::alpha_data_types::{AlphaSymbol, FullOverview, RawDailyPrice, GTopStat};
 use crate::db_models::{IntraDayPrice, NewIntraDayPrice, NewOverview, NewOverviewext, NewSummaryPrice, NewSymbol, NewTopStat, Symbol};
-use crate::security_types::sec_types::SymbolFlag;
+use crate::security_types::sec_types::{SecurityType, SymbolFlag};
 use chrono::{DateTime, Local, NaiveDate, NaiveDateTime, NaiveTime};
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
 use std::error::Error;
-
+use diesel::dsl::max;
+use crate::schema::symbols::sec_type;
 
 
 /// Parses a time string into a `NaiveTime` struct.
@@ -557,6 +558,27 @@ pub fn get_sid(conn: &mut PgConnection, ticker: String) -> Result<i64, diesel::r
             return Err(err);
         }
     };
+}
+
+pub fn get_next_sid(conn: &mut PgConnection, s_type: String) -> Result<i64, diesel::result::Error> {
+    use crate::schema::symbols::dsl::{symbols, sid, sec_type};
+
+    let result = symbols
+        .filter(sec_type.eq(s_type.clone()))
+        .select(max(sid))
+        .first::<Option<i64>>(conn);
+
+    match result {
+        Ok(Some(max_sid)) => Ok(max_sid + 1),
+        Ok(None) => {
+            eprintln!("No entries found for sec_type, assigning default start sid of 1");
+            Ok(1)  // Assuming SID starts at 1 if no existing records are found
+        },
+        Err(err) => {
+            eprintln!("Cannot find next sid for sec_type {:?}", s_type);
+            Err(err)
+        }
+    }
 }
 
 

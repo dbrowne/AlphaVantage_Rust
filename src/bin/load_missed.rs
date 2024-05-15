@@ -27,23 +27,21 @@
  * SOFTWARE.
  */
 
+use dotenvy::dotenv;
+use AlphaVantage_Rust::alpha_lib::alpha_io_funcs::process_symbols;
+use AlphaVantage_Rust::alpha_lib::misc_functions::read_missed_symbols;
 
-use std::io::{self, Write, BufWriter, BufRead};
-
-
-pub fn log_missed_symbol(buf_writer: &mut BufWriter<impl Write>, data: &str) -> io::Result<()> {
-    let newln = format!("{}\n", data);
-    buf_writer.write_all(newln.as_bytes()) // Convert string to bytes and write
-}
-
-pub fn read_missed_symbols(file_name:String) -> io::Result<Vec<String>> {
-    let mut missed_symbols = Vec::new();
-    let file = std::fs::File::open(file_name)?;
-    let reader = io::BufReader::new(file);
-    for line in reader.lines() {
-        missed_symbols.push(line?);
+fn main() {
+    dotenv().ok();
+    if let Ok(secs) = read_missed_symbols("/tmp/symbol_log.txt".to_string()) {
+        let mut symbs: Vec<Vec<String>> = Vec::new();
+        symbs.push(secs);
+        let res = process_symbols(symbs,true);
+        let _ = match res {
+            Ok(_) => println!("Operation completed successfully."),
+            Err(e) => println!("An error occurred: {}", e),
+        };
+    } else {
+        println!("Error reading missed symbols");
     }
-    Ok(missed_symbols)
 }
-
-
