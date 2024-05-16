@@ -47,6 +47,8 @@ This section will provide guidance on how to utilize the API client. (Expand upo
 - [x] open/close price loader
 - [x] Symbol activity loader
 - [x] News loader
+- [x] db refactoring
+- [ ] Add logging and enhance error handling
 - [ ] Refactor code for production use 
 - [ ] Front end
 

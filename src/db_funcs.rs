@@ -32,7 +32,7 @@
 // NOTE!!! THIS WILL BE BROKEN INTO SEPARATE FILES INTO dbfunctions
 use crate::alpha_lib::alpha_data_types::{AlphaSymbol, FullOverview, RawDailyPrice, GTopStat};
 use crate::db_models::{IntraDayPrice, NewIntraDayPrice, NewOverview, NewOverviewext, NewSummaryPrice, NewSymbol, NewTopStat, Symbol};
-use crate::security_types::sec_types::{SecurityType, SymbolFlag};
+use crate::security_types::sec_types::{SEC_TYPES, SecurityType, SymbolFlag};
 use chrono::{DateTime, Local, NaiveDate, NaiveDateTime, NaiveTime};
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
@@ -427,6 +427,136 @@ pub fn get_sids_and_names_for(
 }
 
 
+
+/// Retrieves a list of symbols and their corresponding sids from the database for a specified region,
+/// security type, and after a specified date.
+///
+/// # Arguments
+///
+/// * `conn` - A mutable reference to the PostgreSQL connection.
+/// * `region` - A string specifying the region to filter by.
+/// * `sec_typ` - A string specifying the security type to filter by.
+/// * `after_date` - A string representing the date in the format "yyyy-mm-dd". Only symbols with a
+///                 `c_time` greater than this date will be retrieved.
+///
+/// # Returns
+///
+/// A `Result` containing a vector of tuples, where each tuple consists of a symbol (String) and its
+/// corresponding sid (i64), or a `diesel::result::Error` if an error occurs.
+///
+/// # Errors
+///
+/// Returns a `diesel::result::Error` if there is an issue with the database query or if the date
+/// string cannot be parsed.
+///
+/// # Example
+///
+/// ```ignore
+/// let connection = establish_connection();
+/// let region = "US".to_string();
+/// let sec_typ = "Equity".to_string();
+/// let after_date = "2023-01-01".to_string();
+/// let result = get_sids_and_names_after(&mut connection, region, sec_typ, after_date);
+/// match result {
+///     Ok(data) => println!("Retrieved data: {:?}", data),
+///     Err(e) => println!("Error occurred: {:?}", e),
+/// }
+/// ```
+pub fn get_sids_and_names_after(
+    conn: &mut PgConnection,
+    region: String,
+    sec_typ: String,
+    after_date: String
+) -> Result<Vec<(String, i64)>, diesel::result::Error> {
+    use crate::schema::symbols::dsl::{symbols, region as db_region, sec_type, sid, symbol, c_time};
+
+    // Parse the after_date string into a NaiveDate
+    let after_date = NaiveDate::parse_from_str(&after_date, "%Y-%m-%d")
+        .map_err(|_| diesel::result::Error::NotFound)?; // Handle parsing error
+
+    // Convert NaiveDate to NaiveDateTime to compare with the c_time timestamp
+    let after_date_time = after_date.and_hms(0, 0, 0); // Set the time to the start of the day
+
+    symbols
+        .filter(
+            db_region.eq(region)
+                .and(sec_type.eq(sec_typ))
+                .and(c_time.gt(after_date_time))
+        )
+        .select((symbol, sid))
+        .load::<(String, i64)>(conn)
+}
+
+
+/// Retrieves a list of symbols and their corresponding sids from the database for a specified region
+/// and security type.
+///
+/// # Arguments
+///
+/// * `conn` - A mutable reference to the PostgreSQL connection.
+/// * `reg` - A string specifying the region to filter by.
+/// * `s_typ` - A string specifying the security type to filter by.
+///
+/// # Returns
+///
+/// A `Result` containing a vector of tuples, where each tuple consists of a symbol (String) and its
+/// corresponding sid (i64), or a `diesel::result::Error` if an error occurs.
+///
+/// # Errors
+///
+/// Returns a `diesel::result::Error` if there is an issue with the database query.
+///
+/// # Example
+///
+/// ```ignore
+/// let connection = establish_connection();
+/// let reg = "US".to_string();
+/// let s_typ = "Equity".to_string();
+/// let result = get_symbols_and_sids_for(&mut connection, reg, s_typ);
+/// match result {
+///     Ok(data) => println!("Retrieved data: {:?}", data),
+///     Err(e) => println!("Error occurred: {:?}", e),
+/// }
+/// ```
+pub fn get_symbols_and_sids_for(
+    conn: &mut PgConnection,
+    reg: String,
+    s_typ: String,
+) -> Result<Vec<(String, i64)>, diesel::result::Error> {
+    use crate::schema::symbols::dsl::{region, sec_type, sid, symbol, symbols};
+
+    symbols
+        .filter(region.eq(reg).and(sec_type.eq(s_typ)))
+        .select(( symbol,sid))
+        .load::<(String,i64)>(conn)
+}
+
+/// Retrieves a list of sids and their corresponding symbols from the database where the overview
+/// flag is set to true.
+///
+/// # Arguments
+///
+/// * `conn` - A mutable reference to the PostgreSQL connection.
+///
+/// # Returns
+///
+/// A `Result` containing a vector of tuples, where each tuple consists of a sid (i64) and its
+/// corresponding symbol (String), or a `diesel::result::Error` if an error occurs.
+///
+/// # Errors
+///
+/// Returns a `diesel::result::Error` if there is an issue with the database query.
+///
+/// # Example
+///
+/// ```ignore
+/// let connection = establish_connection();
+/// let result = get_sids_and_names_with_overview(&mut connection);
+/// match result {
+///     Ok(data) => println!("Retrieved data: {:?}", data),
+///     Err(e) => println!("Error occurred: {:?}", e),
+/// }
+/// ```
 pub fn get_sids_and_names_with_overview(
     conn: &mut PgConnection) -> Result<Vec<(i64, String)>, diesel::result::Error> {
     use crate::schema::symbols::dsl::{sid, symbol, symbols, overview};

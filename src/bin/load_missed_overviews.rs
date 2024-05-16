@@ -27,27 +27,49 @@
  * SOFTWARE.
  */
 
+use chrono::{prelude::*, Duration};
 use dotenvy::dotenv;
 use std::process;
-use AlphaVantage_Rust::alpha_lib::alpha_io_funcs::load_intraday;
-use AlphaVantage_Rust::db_funcs::get_sids_and_names_with_overview;
+use AlphaVantage_Rust::alpha_lib::alpha_io_funcs::get_overview;
+use AlphaVantage_Rust::db_funcs::get_sids_and_names_after;
 use AlphaVantage_Rust::dbfunctions::base::establish_connection_or_exit;
 
+extern crate lazy_static;
+use lazy_static::lazy_static;
+
+//We can't make MIN_TIME a constant because it is not a primitive type
+lazy_static! {
+    static ref MIN_TIME: Duration = Duration::milliseconds(350);
+}
+const COUNTRY: &str = "USA";
+const TYPE: &str = "Eqty";
+
 fn main() {
+    dotenv().ok();
+    let mut resp_time: DateTime<Local>;
+    let mut dur_time: DateTime<Local>;
     let conn = &mut establish_connection_or_exit();
 
-    dotenv().ok();
-    let results: Vec<(i64, String)> =
-        get_sids_and_names_with_overview(conn).unwrap_or_else(|err| {
-            println!("Cannot load results from database {}", err);
+    let res = get_sids_and_names_after(conn, COUNTRY.to_string(), TYPE.to_string(),"2024-05-14".to_string());
+    let results = match res {
+        Ok(results) => results,
+        Err(err) => {
+            println!("Error running reader: {}", err);
             process::exit(1);
-        });
+        }
+    };
 
-    for (sid, symbol) in results {
-        println!("{}:{}", sid, symbol);
-        if let Err(err) = load_intraday(conn, symbol, sid) {
-            println!("Error getting intraday prices {} for sid {}", err, sid);
+    for (symbol,sid) in results {
+        println!("{}: {}", sid, symbol);
+        dur_time = Local::now();
+        if let Err(err) = get_overview(conn,sid, symbol) {
+            println!("Error running reader: {}", err);
             continue;
+        }
+
+        resp_time = Local::now();
+        if resp_time - dur_time < *MIN_TIME {
+            std::thread::sleep(std::time::Duration::from_secs(1));
         }
     }
 }

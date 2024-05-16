@@ -33,7 +33,7 @@ use crate::alpha_lib::alpha_data_types::{AlphaSymbol, Convert, FullOverview, Raw
                                          RawIntraDayPrice, Root, TopType};
 use crate::alpha_lib::alpha_funcs::{normalize_alpha_region, top_constants};
 use crate::create_url;
-use crate::db_funcs::{create_intra_day, create_overview, create_symbol, get_summary_max_date, get_intr_day_max_date, get_sid, insert_open_close, insert_top_stat, get_next_sid};
+use crate::db_funcs::{create_intra_day, create_overview, create_symbol, get_summary_max_date, get_intr_day_max_date, get_sid, insert_open_close, insert_top_stat, get_next_sid, get_symbols_and_sids_for};
 use crate::dbfunctions::base::establish_connection_or_exit;
 use crate::security_types::sec_types::SecurityType;
 use chrono::{DateTime, Duration, Local, NaiveDate, NaiveDateTime};
@@ -105,6 +105,14 @@ pub fn process_symbols(sec_vec: Vec<Vec<String>>,load_missed:bool) -> Result<(),
     let mut resp_time: DateTime<Local>;
     let min_time = Duration::milliseconds(350); //We cant make MIN_TIME a constant because it is not a primitive type
 
+
+    if load_missed {
+        let symbs = get_symbols_and_sids_for(conn,"USA".to_string(), "Eqty".to_string()).expect("Can't get symbols");
+        for (symb, sid) in symbs {
+            symbol_map.insert(symb, 1);
+        }
+    }
+
     for sym_vec in sec_vec {
         for symb in sym_vec {
             let url = create_url!(FuncType:SymSearch,symb,api_key);
@@ -149,6 +157,10 @@ pub fn process_symbols(sec_vec: Vec<Vec<String>>,load_missed:bool) -> Result<(),
                     );
                     record.s_type = sec_type_string.clone();
                     record.region = normalize_alpha_region(record.region.as_str());
+
+                    if load_missed && record.region.ne("USA") {
+                        continue;
+                    }
                     if !type_map.contains_key(&sec_type) {
                         type_map.insert(sec_type, 1);
                     } else {
