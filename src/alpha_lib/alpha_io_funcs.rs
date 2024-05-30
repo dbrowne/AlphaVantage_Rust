@@ -166,7 +166,7 @@ pub fn process_symbols(sec_vec: Vec<Vec<String>>,load_missed:bool) -> Result<(),
                     } else {
                         type_map.entry(sec_type).and_modify(|e| *e += 1);
                     }
-                    let mut s_id:i64 = 0;
+                    let mut s_id:i64;
                     if load_missed {
                         s_id = get_next_sid(conn,sec_type_string).expect("Can't get next sid");
                     }else {

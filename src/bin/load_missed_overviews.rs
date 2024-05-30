@@ -50,7 +50,7 @@ fn main() {
     let mut dur_time: DateTime<Local>;
     let conn = &mut establish_connection_or_exit();
 
-    let res = get_sids_and_names_after(conn, COUNTRY.to_string(), TYPE.to_string(),"2024-05-14".to_string());
+    let res = get_sids_and_names_after(conn, COUNTRY.to_string(), TYPE.to_string(),"2024-05-16".to_string());
     let results = match res {
         Ok(results) => results,
         Err(err) => {

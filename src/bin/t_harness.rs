@@ -27,31 +27,21 @@
  * SOFTWARE.
  */
 
+use dotenvy::dotenv;
+use AlphaVantage_Rust::alpha_lib::misc_functions::get_exe_name;
+use AlphaVantage_Rust::db_funcs::{get_proc_id_or_insert,log_proc_start, log_proc_end};
+use AlphaVantage_Rust::dbfunctions::base:: establish_connection_or_exit;
 
-use std::io::{self, Write, BufWriter, BufRead};
-use std::env;
+fn main() {
+    let conn = &mut establish_connection_or_exit();
 
-pub fn log_missed_symbol(buf_writer: &mut BufWriter<impl Write>, data: &str) -> io::Result<()> {
-    let newln = format!("{}\n", data);
-    buf_writer.write_all(newln.as_bytes()) // Convert string to bytes and write
-}
+    dotenv().ok();
+    let proc_name = get_exe_name();
 
-pub fn read_missed_symbols(file_name:String) -> io::Result<Vec<String>> {
-    let mut missed_symbols = Vec::new();
-    let file = std::fs::File::open(file_name)?;
-    let reader = io::BufReader::new(file);
-    for line in reader.lines() {
-        missed_symbols.push(line?);
-    }
-    Ok(missed_symbols)
-}
+    let pid =get_proc_id_or_insert(conn,&proc_name).unwrap();
 
+    let p_pid = log_proc_start(conn,pid).unwrap();
 
+    let xx = log_proc_end(conn,p_pid).unwrap();
 
-    pub  fn get_exe_name() -> String {
-    let exe_name = env::current_exe().unwrap();
-     exe_name.to_str().unwrap().to_string()
-    // let exe_name = exe_name.file_name().unwrap();
-    // let exe_name = exe_name.to_str().unwrap();
-    // exe_name.to_string()
 }

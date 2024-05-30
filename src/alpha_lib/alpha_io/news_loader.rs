@@ -85,8 +85,6 @@ pub fn process_news(
     symbol_log: &mut BufWriter<File>
 ) -> Result<(), Box<dyn Error>> {
     let item_count = root.items.parse::<i32>()?;
-    let sentiment_def = root.sentiment_score_definition;
-    let relevance_def = root.relevance_score_definition;
     if item_count < 1 {
         println!("No news items for {}", tkr);
         return Ok(());
@@ -127,7 +125,7 @@ fn process_article(
 ) -> Result<(), Box<dyn Error>> {
     let mut author_id: i32 = -1;
     let mut topic_id: i32 = -1;
-    let mut source_id: i32 = -1;
+    let mut source_id: i32 ;
 
     let sources = params.sources.clone();
     // bad logic here need to fix
@@ -149,7 +147,7 @@ fn process_article(
         }
     }
 
-    if source_id == -1 {
+    if source_id == 0 {
         return Err(Box::new(std::io::Error::new(
             std::io::ErrorKind::Other,
             "No source id",

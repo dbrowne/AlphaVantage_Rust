@@ -29,17 +29,20 @@
 
 
 
-// NOTE!!! THIS WILL BE BROKEN INTO SEPARATE FILES INTO dbfunctions
-use crate::alpha_lib::alpha_data_types::{AlphaSymbol, FullOverview, RawDailyPrice, GTopStat};
-use crate::db_models::{IntraDayPrice, NewIntraDayPrice, NewOverview, NewOverviewext, NewSummaryPrice, NewSymbol, NewTopStat, Symbol};
-use crate::security_types::sec_types::{SEC_TYPES, SecurityType, SymbolFlag};
+use std::error::Error;
+
 use chrono::{DateTime, Local, NaiveDate, NaiveDateTime, NaiveTime};
+use diesel::dsl::max;
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
-use std::error::Error;
-use diesel::dsl::max;
-use crate::schema::symbols::sec_type;
 
+// NOTE!!! THIS WILL BE BROKEN INTO SEPARATE FILES INTO dbfunctions
+use crate::alpha_lib::alpha_data_types::{AlphaSymbol, FullOverview, GTopStat, RawDailyPrice};
+use crate::db_models::{IntraDayPrice, NewIntraDayPrice, NewOverview, NewOverviewext, NewProcState, NewProcType, NewSummaryPrice, NewSymbol, NewTopStat, Symbol};
+use crate::schema::procstates::dsl::procstates;
+use crate::schema::procstates::end_state;
+use crate::schema::symbols::sec_type;
+use crate::security_types::sec_types::SymbolFlag;
 
 /// Parses a time string into a `NaiveTime` struct.
 ///
@@ -333,7 +336,7 @@ fn set_symbol_booleans(
     flag: SymbolFlag,
     value: bool,
 ) -> Result<(), Box<dyn Error>> {
-    use crate::schema::symbols::dsl::{intraday, m_time, sid, overview, summary, symbols};
+    use crate::schema::symbols::dsl::{intraday, m_time, overview, sid, summary, symbols};
     let localt: DateTime<Local> = Local::now();
     let now = localt.naive_local();
     match flag {
@@ -468,7 +471,7 @@ pub fn get_sids_and_names_after(
     sec_typ: String,
     after_date: String
 ) -> Result<Vec<(String, i64)>, diesel::result::Error> {
-    use crate::schema::symbols::dsl::{symbols, region as db_region, sec_type, sid, symbol, c_time};
+    use crate::schema::symbols::dsl::{c_time, region as db_region, sec_type, sid, symbol, symbols};
 
     // Parse the after_date string into a NaiveDate
     let after_date = NaiveDate::parse_from_str(&after_date, "%Y-%m-%d")
@@ -559,7 +562,7 @@ pub fn get_symbols_and_sids_for(
 /// ```
 pub fn get_sids_and_names_with_overview(
     conn: &mut PgConnection) -> Result<Vec<(i64, String)>, diesel::result::Error> {
-    use crate::schema::symbols::dsl::{sid, symbol, symbols, overview};
+    use crate::schema::symbols::dsl::{overview, sid, symbol, symbols};
     symbols
         .filter(overview.eq(true))
         .select((sid, symbol))
@@ -627,7 +630,7 @@ pub fn insert_open_close(conn: &mut PgConnection, symb: String, s_id: i64, open_
 ///
 /// todo: get rid of the cut and paste
 pub fn get_intr_day_max_date(conn: &mut PgConnection, s_id: i64) -> NaiveDateTime {
-    use crate::schema::intradayprices::dsl::{intradayprices, tstamp, sid};
+    use crate::schema::intradayprices::dsl::{intradayprices, sid, tstamp};
 
     let xx =
         intradayprices
@@ -648,7 +651,7 @@ pub fn get_intr_day_max_date(conn: &mut PgConnection, s_id: i64) -> NaiveDateTim
 }
 
 pub fn get_summary_max_date(conn: &mut PgConnection, s_id: i64) -> NaiveDate {
-    use crate::schema::summaryprices::dsl::{summaryprices, date, sid};
+    use crate::schema::summaryprices::dsl::{date, sid, summaryprices};
 
     let xx =
         summaryprices
@@ -669,7 +672,7 @@ pub fn get_summary_max_date(conn: &mut PgConnection, s_id: i64) -> NaiveDate {
 }
 
 pub fn get_sid(conn: &mut PgConnection, ticker: String) -> Result<i64, diesel::result::Error> {
-    use crate::schema::symbols::dsl::{symbols, symbol, sid};
+    use crate::schema::symbols::dsl::{sid, symbol, symbols};
     let res = symbols
         .filter(symbol.eq(ticker.clone()))
         .select(sid)
@@ -691,7 +694,7 @@ pub fn get_sid(conn: &mut PgConnection, ticker: String) -> Result<i64, diesel::r
 }
 
 pub fn get_next_sid(conn: &mut PgConnection, s_type: String) -> Result<i64, diesel::result::Error> {
-    use crate::schema::symbols::dsl::{symbols, sid, sec_type};
+    use crate::schema::symbols::dsl::{sec_type, sid, symbols};
 
     let result = symbols
         .filter(sec_type.eq(s_type.clone()))
@@ -740,4 +743,78 @@ pub fn insert_top_stat(conn: &mut PgConnection, s_id: i64, ts: GTopStat, evt_typ
     Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, "db insert problem")))
 }
 
+pub  fn get_proc_id(conn: &mut PgConnection, proc_name:&str) ->Result<i32, diesel::result::Error> {
+    use crate::schema::proctypes;
 
+    let result = proctypes::table
+        .filter(proctypes::name.eq(proc_name))
+        .select(proctypes::id)
+        .first::<i32>(conn);
+    result
+}
+
+pub fn get_proc_name(conn: &mut PgConnection, p_id:i32) ->Result<String, diesel::result::Error> {
+    use crate::schema::proctypes;
+
+    let result = proctypes::table
+        .filter(proctypes::id.eq(p_id))
+        .select(proctypes::name)
+        .first::<String>(conn);
+    result
+}
+
+pub fn get_proc_id_or_insert(conn: &mut PgConnection, proc_name:&str) ->Result<i32, diesel::result::Error> {
+    use crate::schema::proctypes;
+
+    let result = proctypes::table
+        .filter(proctypes::name.eq(proc_name))
+        .select(proctypes::id)
+        .first::<i32>(conn);
+    match result {
+        Ok(res) => Ok(res),
+        Err(_) => {
+            let new_proc = NewProcType {
+                name: &proc_name.to_string(),
+            };
+            let res = diesel::insert_into(proctypes::table)
+                .values(&new_proc)
+                .returning(proctypes::id)
+                .get_result::<i32>(conn);
+            res
+        }
+    }
+}
+
+pub  fn log_proc_start(conn: &mut PgConnection, pid: i32) -> Result<i32, diesel::result::Error>{
+
+    use crate::schema::procstates;
+    let localt: DateTime<Local> = Local::now();
+    let now = localt.naive_local();
+
+    let st = NewProcState{
+        proc_id: &pid,
+        start_time: &now,
+        end_state: &1,
+        end_time: &now,
+    };
+
+    let res = diesel::insert_into(procstates::table)
+        .values(&st)
+        .returning(procstates::spid)
+        .get_result::<i32>(conn);
+
+    res
+
+}
+
+pub fn log_proc_end(conn: &mut PgConnection, pid: i32) -> Result<usize, diesel::result::Error> {
+    use crate::schema::procstates::dsl::{spid,end_time,end_state};
+
+    let localt: NaiveDateTime = Local::now().naive_local();
+    diesel::update(procstates.filter(spid.eq(pid)))
+        .set((
+        end_time.eq(localt),
+        end_state.eq(2)
+        ))
+        .execute(conn)
+}

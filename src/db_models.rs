@@ -27,9 +27,11 @@
  * SOFTWARE.
  */
 
-use crate::schema::{overviewexts, overviews, symbols, intradayprices,
-                    topstats, summaryprices, topicrefs, authors, newsoverviews,
-                    feeds, authormaps, tickersentiments,articles, sources,topicmaps};
+use crate::schema::{
+    articles, authormaps, authors, feeds, intradayprices, newsoverviews, overviewexts, overviews,
+    procstates, proctypes, sources, summaryprices, symbols, tickersentiments, topicmaps, topicrefs,
+    topstats,
+};
 use chrono::prelude::*;
 use chrono::NaiveDateTime;
 use diesel::prelude::*;
@@ -193,7 +195,6 @@ pub struct NewOverviewext<'a> {
     pub mod_time: &'a NaiveDateTime,
 }
 
-
 #[derive(Queryable, Debug)]
 pub struct IntraDayPrice {
     pub eventid: i32,
@@ -205,7 +206,6 @@ pub struct IntraDayPrice {
     pub low: f32,
     pub close: f32,
     pub volume: i32,
-
 }
 
 #[derive(Insertable, Debug)]
@@ -232,7 +232,6 @@ pub struct SummaryPrice {
     pub low: f32,
     pub close: f32,
     pub volume: i32,
-
 }
 
 #[derive(Insertable, Debug)]
@@ -248,7 +247,6 @@ pub struct NewSummaryPrice<'a> {
     pub volume: &'a i32,
 }
 
-
 #[derive(Queryable, Debug)]
 pub struct TopStat {
     pub eventid: i32,
@@ -261,7 +259,6 @@ pub struct TopStat {
     pub change_pct: f32,
     pub volume: i32,
 }
-
 
 #[derive(Insertable, Debug)]
 #[diesel(table_name = topstats)]
@@ -280,7 +277,6 @@ pub struct NewTopStat<'a> {
 pub struct TopicRef {
     pub id: i32,
     pub name: String,
-
 }
 
 #[derive(Insertable, Debug)]
@@ -293,7 +289,6 @@ pub struct NewTopicRef<'a> {
 pub struct Author {
     pub id: i32,
     pub author_name: String,
-
 }
 
 #[derive(Insertable, Debug)]
@@ -309,7 +304,6 @@ pub struct NewsOverview {
     pub items: i32,
     pub hashid: String,
     pub creation: NaiveDateTime,
-
 }
 
 #[derive(Insertable, Debug)]
@@ -320,7 +314,6 @@ pub struct NewNewsOverview<'a> {
     pub hashid: &'a String,
     pub creation: &'a NaiveDateTime,
 }
-
 
 #[derive(Queryable, Debug)]
 pub struct Feed {
@@ -336,7 +329,6 @@ pub struct Feed {
 #[derive(Insertable, Debug)]
 #[diesel(table_name = feeds)]
 pub struct NewFeed<'a> {
-
     pub sid: &'a i64,
     pub newsoverviewid: &'a i32,
     pub articleid: &'a String,
@@ -344,7 +336,6 @@ pub struct NewFeed<'a> {
     pub osentiment: &'a f64,
     pub sentlabel: &'a String,
 }
-
 
 #[derive(Queryable, Debug)]
 pub struct Article {
@@ -411,7 +402,6 @@ pub struct TickerSentiment {
     pub sentimentlable: String,
 }
 
-
 #[derive(Insertable, Debug)]
 #[diesel(table_name = tickersentiments)]
 pub struct NewTickerSentiment<'a> {
@@ -421,7 +411,6 @@ pub struct NewTickerSentiment<'a> {
     pub tsentiment: &'a f64,
     pub sentimentlable: &'a String,
 }
-
 
 #[derive(Queryable, Debug)]
 pub struct TopicMap {
@@ -434,9 +423,39 @@ pub struct TopicMap {
 
 #[derive(Insertable, Debug)]
 #[diesel(table_name = topicmaps)]
-pub  struct NewTopicMap<'a> {
+pub struct NewTopicMap<'a> {
     pub sid: &'a i64,
     pub feedid: &'a i32,
     pub topicid: &'a i32,
     pub relscore: &'a f64,
+}
+
+#[derive(Queryable, Debug)]
+pub struct ProcType {
+    pub id: i32,
+    pub name: String,
+}
+
+#[derive(Insertable, Debug)]
+#[diesel(table_name = proctypes)]
+pub struct NewProcType<'a> {
+    pub name: &'a String,
+}
+
+#[derive(Queryable, Debug)]
+pub struct ProcState {
+    pub spid: i32,
+    pub proc_id: i32,
+    pub start_time: NaiveDateTime,
+    pub end_state: i32,
+    pub end_time: NaiveDateTime,
+}
+
+#[derive(Insertable, Debug)]
+#[diesel(table_name = procstates)]
+pub struct NewProcState<'a> {
+    pub proc_id: &'a i32,
+    pub start_time: &'a NaiveDateTime,
+    pub end_state: &'a i32,
+    pub end_time: &'a NaiveDateTime,
 }
