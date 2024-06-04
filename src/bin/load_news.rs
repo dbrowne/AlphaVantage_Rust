@@ -31,8 +31,9 @@ use std::fs::File;
 use std::io::{BufWriter, Write};
 use dotenvy::dotenv;
 use std::process;
+use AlphaVantage_Rust::alpha_lib::misc_functions::get_exe_name;
 use AlphaVantage_Rust::alpha_lib::alpha_io::news_loader::{load_news,Params};
-use AlphaVantage_Rust::db_funcs::get_sids_and_names_with_overview;
+use AlphaVantage_Rust::db_funcs::{get_proc_id_or_insert, get_sids_and_names_with_overview, log_proc_end, log_proc_start};
 use AlphaVantage_Rust::dbfunctions::base::establish_connection_or_exit;
 use AlphaVantage_Rust::dbfunctions::sources::get_sources;
 use AlphaVantage_Rust::dbfunctions::topic_refs::get_topics;
@@ -41,6 +42,9 @@ fn main()->Result<(),Box<dyn std::error::Error>>{
     dotenv().ok();
     let conn = &mut establish_connection_or_exit();
 
+    let id_val = get_proc_id_or_insert(conn,&get_exe_name()).unwrap();
+
+    let pid = log_proc_start(conn, id_val).unwrap();
     let results: Vec<(i64, String)> = get_sids_and_names_with_overview(conn)
         .unwrap_or_else(|err| {
             println!("Cannot load results from database {}", err);
@@ -74,5 +78,7 @@ fn main()->Result<(),Box<dyn std::error::Error>>{
         }
     }
     symbol_log.flush()?;
+    _= log_proc_end(conn, pid).unwrap();
     Result::Ok(())
 }
+

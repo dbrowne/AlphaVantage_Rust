@@ -30,13 +30,17 @@
 use dotenvy::dotenv;
 use std::process;
 use AlphaVantage_Rust::alpha_lib::alpha_io_funcs::load_intraday;
-use AlphaVantage_Rust::db_funcs::get_sids_and_names_with_overview;
+use AlphaVantage_Rust::alpha_lib::misc_functions::get_exe_name;
+use AlphaVantage_Rust::db_funcs::{get_proc_id_or_insert, get_sids_and_names_with_overview, log_proc_end, log_proc_start};
 use AlphaVantage_Rust::dbfunctions::base::establish_connection_or_exit;
 
 fn main() {
     let conn = &mut establish_connection_or_exit();
 
     dotenv().ok();
+
+    let id_val = get_proc_id_or_insert(conn,&get_exe_name()).unwrap();
+    let pid = log_proc_start(conn, id_val).unwrap();
     let results: Vec<(i64, String)> =
         get_sids_and_names_with_overview(conn).unwrap_or_else(|err| {
             println!("Cannot load results from database {}", err);
@@ -50,4 +54,5 @@ fn main() {
             continue;
         }
     }
+    _= log_proc_end(conn, pid).unwrap();
 }
