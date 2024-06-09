@@ -27,14 +27,14 @@
  * SOFTWARE.
  */
 
-#[macro_use]
+
 extern crate diesel;
 extern crate serde;
 
 
 use diesel::pg::data_types::PgNumeric;
 use dotenvy::dotenv;
-use std::process;
+
 use AlphaVantage_Rust::dbfunctions::base::establish_connection_or_exit;
 use diesel::prelude::*;
 use diesel::sql_query;
@@ -46,7 +46,7 @@ pub struct ArticleCount {
     #[sql_type = "diesel::sql_types::Varchar"]
     pub source_name: String,
     #[sql_type = "diesel::sql_types::Numeric"]
-    pub article_count: diesel::pg::data_types::PgNumeric,
+    pub article_count: PgNumeric,
 }
 fn pg_numeric_to_decimal(weight: i16, scale: u16, digits: Vec<i16>) -> f64 {
     let mut value = 0.0;
@@ -57,11 +57,9 @@ fn pg_numeric_to_decimal(weight: i16, scale: u16, digits: Vec<i16>) -> f64 {
         value += (digit as f64) * base_multiplier;
         base_multiplier /= base;
     }
-
     value / base.powi(scale.into())
 }
 fn main() {
-
 
     let conn = &mut establish_connection_or_exit();
 

@@ -40,12 +40,10 @@ use crate::dbfunctions::topic_refs::insert_topic;
 
 use crate::dbfunctions::feed::ins_n_ret_feed;
 use crate::dbfunctions::ticker_sentiments::ins_ticker_sentiment;
-use crate::schema::tickersentiments::sentimentlable;
-use crate::schema::topicmaps::feedid;
 use diesel::PgConnection;
 use std::collections::HashMap;
 use std::error::Error;
-use std::io::{BufWriter, Write};
+use std::io::BufWriter;
 use crate::dbfunctions::author_map::insert_author_map;
 use crate::dbfunctions::topic_maps::ins_topic_map;
 use std::fs::File;
@@ -125,7 +123,7 @@ fn process_article(
 ) -> Result<(), Box<dyn Error>> {
     let mut author_id: i32 = -1;
     let mut topic_id: i32 = -1;
-    let mut source_id: i32 ;
+    let source_id: i32 ;
 
     let sources = params.sources.clone();
     // bad logic here need to fix
