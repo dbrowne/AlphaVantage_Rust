@@ -44,6 +44,7 @@ fn main() {
     let results: Vec<(i64, String)> =
         get_sids_and_names_with_overview(conn).unwrap_or_else(|err| {
             println!("Cannot load results from database {}", err);
+            _= log_proc_end(conn, pid,3).unwrap();
             process::exit(1);
         });
 
@@ -54,5 +55,5 @@ fn main() {
             continue;
         }
     }
-    _= log_proc_end(conn, pid).unwrap();
+    _= log_proc_end(conn, pid,2).unwrap();
 }

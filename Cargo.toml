@@ -14,9 +14,11 @@ categories = ["database", "finance"]
 
 [dependencies]
 diesel = { version = "2.0.4", features = ["postgres", "chrono", "uuid"] }
+bigdecimal = "0.4.3"
 dotenvy = "0.15.7"
 lazy_static = "1.4.0"
 serde = {version =  "1.0.159", features = ["derive"]}
+serde_derive = "1.0.159"
 csv = "1.2.1"
 chrono = {version="0.4.19", features = ["serde"]}
 reqwest = { version = "0.11.6", features = ["blocking","json"] }

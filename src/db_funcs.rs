@@ -807,14 +807,14 @@ pub  fn log_proc_start(conn: &mut PgConnection, pid: i32) -> Result<i32, diesel:
 
 }
 
-pub fn log_proc_end(conn: &mut PgConnection, pid: i32) -> Result<usize, diesel::result::Error> {
+pub fn log_proc_end(conn: &mut PgConnection, pid: i32,e_state:i32) -> Result<usize, diesel::result::Error> {
     use crate::schema::procstates::dsl::{spid,end_time,end_state};
 
     let localt: NaiveDateTime = Local::now().naive_local();
     diesel::update(procstates.filter(spid.eq(pid)))
         .set((
         end_time.eq(localt),
-        end_state.eq(2)
+        end_state.eq(&e_state)
         ))
         .execute(conn)
 }

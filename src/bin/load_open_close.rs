@@ -43,6 +43,8 @@ fn main() {
     let  results: Vec<(i64,String)> = get_sids_and_names_with_overview(conn)
         .unwrap_or_else(|err| {
             eprintln!("Cannot load results from database {}",err);
+            _= log_proc_end(conn, pid,3).unwrap();
+
             process::exit(1);
         });
 
@@ -50,10 +52,12 @@ fn main() {
         println!("{}:{}",sid, symbol);
         if  let  Err(err) = load_summary(conn,symbol,sid) {
             println!("Error loading open close prices {} for sid {}",err, sid );
+            _= log_proc_end(conn, pid,3).unwrap();
+
             process::exit(1);
         }
 
     }
-    _= log_proc_end(conn, pid).unwrap();
+    _= log_proc_end(conn, pid,2).unwrap();
 
 }
