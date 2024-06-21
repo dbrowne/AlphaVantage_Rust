@@ -70,8 +70,7 @@ pub fn load_news(
     let url = create_url!(FuncType:NewsQuery,tkr,api_key);
     let root = get_news_root(&url)?;
 
-    process_news(conn, s_id, tkr, root, params, symbol_log)?;
-    Ok(())
+    process_news(conn, s_id, tkr, root, params, symbol_log)
 }
 
 pub fn process_news(
@@ -207,17 +206,17 @@ fn process_article(
             article.overall_sentiment_score,
             article.overall_sentiment_label,
         ) {
-            if let Ok(ts) = load_sentiments(conn, article.ticker_sentiment, params, feed.id,  symbol_log) {
+            if let Ok(_ts) = load_sentiments(conn, article.ticker_sentiment, params, feed.id,  symbol_log) {
                 println!("Inserted sentiments for {}", art.title);
             } else {
                 println!("Cannot insert sentiments for {}", art.title);
             }
-            if let Ok(tp) = load_topic_map(conn, s_id, article.topics,feed.id, params) {
+            if let Ok(_tp) = load_topic_map(conn, s_id, article.topics,feed.id, params) {
                 println!("Inserted topics for {}", art.title);
             } else {
                 println!("Cannot insert topics for {}", art.title);
             }
-            if let Ok(am) = insert_author_map(conn, feed.id,author_id) {
+            if let Ok(_am) = insert_author_map(conn, feed.id,author_id) {
                 println!("Inserted author map for {}", art.title);
             } else {
                 println!("Cannot insert author map for {}", art.title);
