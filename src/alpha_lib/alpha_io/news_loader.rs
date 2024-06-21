@@ -40,33 +40,37 @@ use crate::dbfunctions::topic_refs::insert_topic;
 
 use crate::dbfunctions::feed::ins_n_ret_feed;
 use crate::dbfunctions::ticker_sentiments::ins_ticker_sentiment;
-use crate::schema::tickersentiments::sentimentlable;
-use crate::schema::topicmaps::feedid;
 use diesel::PgConnection;
 use std::collections::HashMap;
 use std::error::Error;
+use std::io::BufWriter;
 use crate::dbfunctions::author_map::insert_author_map;
 use crate::dbfunctions::topic_maps::ins_topic_map;
+use std::fs::File;
+use crate::alpha_lib::misc_functions::log_missed_symbol;
 
 #[derive(Debug, Default)]
 pub struct Params {
     pub topics: HashMap<String, i32>,
     pub authors: HashMap<String, i32>,
     pub sources: HashMap<String, i32>,
-    pub names_to_sid: HashMap<String, i64>,
+    pub names_to_sid: HashMap<String, i64>
 }
+
+
 
 pub fn load_news(
     conn: &mut PgConnection,
     s_id: &i64,
     tkr: &String,
     params: &mut Params,
+    symbol_log: &mut BufWriter<File>,
 ) -> Result<(), Box<dyn Error>> {
     let api_key = get_api_key()?;
     let url = create_url!(FuncType:NewsQuery,tkr,api_key);
     let root = get_news_root(&url)?;
-    process_news(conn, s_id, tkr, root, params)?;
-    Ok(())
+
+    process_news(conn, s_id, tkr, root, params, symbol_log)
 }
 
 pub fn process_news(
@@ -75,17 +79,16 @@ pub fn process_news(
     tkr: &String,
     root: NewsRoot,
     params: &mut Params,
+    symbol_log: &mut BufWriter<File>
 ) -> Result<(), Box<dyn Error>> {
     let item_count = root.items.parse::<i32>()?;
-    let sentiment_def = root.sentiment_score_definition;
-    let relevance_def = root.relevance_score_definition;
     if item_count < 1 {
         println!("No news items for {}", tkr);
         return Ok(());
     }
 
     if let Ok(overview) = insert_news_root(conn, *s_id, item_count, root.feed.clone()) {
-        process_feed(conn, s_id, tkr, root.feed, overview.id, params)?;
+        process_feed(conn, s_id, tkr, root.feed, overview.id, params,  symbol_log)?;
     } else {
         println!("Cannot insert news root for {}", tkr);
     }
@@ -99,9 +102,10 @@ fn process_feed(
     feed: Vec<RawFeed>,
     overview_id: i32,
     params: &mut Params,
+    symbol_log: &mut BufWriter<File>,
 ) -> Result<(), Box<dyn Error>> {
     for article in feed {
-        process_article(conn, &s_id, &tkr, article, overview_id, params)?;
+        process_article(conn, &s_id, &tkr, article, overview_id, params, symbol_log)?;
     }
 
     Ok(())
@@ -114,10 +118,11 @@ fn process_article(
     article: RawFeed,
     overview_id: i32,
     params: &mut Params,
+    symbol_log: &mut BufWriter<File>
 ) -> Result<(), Box<dyn Error>> {
     let mut author_id: i32 = -1;
     let mut topic_id: i32 = -1;
-    let mut source_id: i32 = -1;
+    let source_id: i32 ;
 
     let sources = params.sources.clone();
     // bad logic here need to fix
@@ -139,7 +144,7 @@ fn process_article(
         }
     }
 
-    if source_id == -1 {
+    if source_id == 0 {
         return Err(Box::new(std::io::Error::new(
             std::io::ErrorKind::Other,
             "No source id",
@@ -201,17 +206,17 @@ fn process_article(
             article.overall_sentiment_score,
             article.overall_sentiment_label,
         ) {
-            if let Ok(ts) = load_sentiments(conn, article.ticker_sentiment, params, feed.id) {
+            if let Ok(_ts) = load_sentiments(conn, article.ticker_sentiment, params, feed.id,  symbol_log) {
                 println!("Inserted sentiments for {}", art.title);
             } else {
                 println!("Cannot insert sentiments for {}", art.title);
             }
-            if let Ok(tp) = load_topic_map(conn, s_id, article.topics,feed.id, params) {
+            if let Ok(_tp) = load_topic_map(conn, s_id, article.topics,feed.id, params) {
                 println!("Inserted topics for {}", art.title);
             } else {
                 println!("Cannot insert topics for {}", art.title);
             }
-            if let Ok(am) = insert_author_map(conn, feed.id,author_id) {
+            if let Ok(_am) = insert_author_map(conn, feed.id,author_id) {
                 println!("Inserted author map for {}", art.title);
             } else {
                 println!("Cannot insert author map for {}", art.title);
@@ -242,6 +247,7 @@ fn load_sentiments(
     sentiments: Vec<TickerSentiment>,
     params: &mut Params,
     inp_feed_id: i32,
+    symbol_log: &mut BufWriter<File>
 ) -> Result<(), Box<dyn Error>> {
     for sent in sentiments {
         let sent_label =sent.ticker_sentiment_label;
@@ -251,6 +257,7 @@ fn load_sentiments(
         let sid = params.names_to_sid.get(&sent_tkr).unwrap_or(&-1);
         if *sid == -1 {
             println!("Cannot find sid for {}", sent_tkr);
+            log_missed_symbol(symbol_log, &sent_tkr)?;
             continue;
         }
        _ = ins_ticker_sentiment(conn, sid, inp_feed_id, sent_rel, sent_score, sent_label)

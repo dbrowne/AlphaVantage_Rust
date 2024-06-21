@@ -33,8 +33,7 @@ use crate::alpha_lib::alpha_data_types::{AlphaSymbol, Convert, FullOverview, Raw
                                          RawIntraDayPrice, Root, TopType};
 use crate::alpha_lib::alpha_funcs::{normalize_alpha_region, top_constants};
 use crate::create_url;
-use crate::db_funcs::{create_intra_day, create_overview, create_symbol, get_summary_max_date,
-                      get_intr_day_max_date, get_sid, insert_open_close, insert_top_stat};
+use crate::db_funcs::{create_intra_day, create_overview, create_symbol, get_summary_max_date, get_intr_day_max_date, get_sid, insert_open_close, insert_top_stat, get_next_sid, get_symbols_and_sids_for};
 use crate::dbfunctions::base::establish_connection_or_exit;
 use crate::security_types::sec_types::SecurityType;
 use chrono::{DateTime, Duration, Local, NaiveDate, NaiveDateTime};
@@ -94,7 +93,7 @@ pub fn get_api_key() -> Result<String, VarError> {
 ///
 /// TODO:  Refactor as this is a bit of a mess
 ///
-pub fn process_symbols(sec_vec: Vec<Vec<String>>) -> Result<(), Box<dyn Error>> {
+pub fn process_symbols(sec_vec: Vec<Vec<String>>,load_missed:bool) -> Result<(), Box<dyn Error>> {
     let api_key = get_api_key()?;
 
     let mut type_map: HashMap<SecurityType, i32> = HashMap::new();
@@ -105,6 +104,14 @@ pub fn process_symbols(sec_vec: Vec<Vec<String>>) -> Result<(), Box<dyn Error>> 
     let mut dur_time: DateTime<Local>;
     let mut resp_time: DateTime<Local>;
     let min_time = Duration::milliseconds(350); //We cant make MIN_TIME a constant because it is not a primitive type
+
+
+    if load_missed {
+        let symbs = get_symbols_and_sids_for(conn,"USA".to_string(), "Eqty".to_string()).expect("Can't get symbols");
+        for (symb, sid) in symbs {
+            symbol_map.insert(symb, 1);
+        }
+    }
 
     for sym_vec in sec_vec {
         for symb in sym_vec {
@@ -148,19 +155,28 @@ pub fn process_symbols(sec_vec: Vec<Vec<String>>) -> Result<(), Box<dyn Error>> 
                         record.s_type.as_str(),
                         record.name.as_str(),
                     );
-                    record.s_type = sec_type_string;
+                    record.s_type = sec_type_string.clone();
                     record.region = normalize_alpha_region(record.region.as_str());
+
+                    if load_missed && record.region.ne("USA") {
+                        continue;
+                    }
                     if !type_map.contains_key(&sec_type) {
                         type_map.insert(sec_type, 1);
                     } else {
                         type_map.entry(sec_type).and_modify(|e| *e += 1);
                     }
-                    let s_id: i64 = SecurityType::encode(
-                        sec_type,
-                        type_map.get(&sec_type).unwrap().clone() as u32,
-                    );
-
+                    let mut s_id:i64;
+                    if load_missed {
+                        s_id = get_next_sid(conn,sec_type_string).expect("Can't get next sid");
+                    }else {
+                        s_id = SecurityType::encode(
+                            sec_type,
+                            type_map.get(&sec_type).unwrap().clone() as u32,
+                        );
+                    }
                     create_symbol(conn, s_id, record).expect("Can't write to DB fatal error");
+
                     dur_time = Local::now();
 
                     if dur_time - resp_time < min_time {

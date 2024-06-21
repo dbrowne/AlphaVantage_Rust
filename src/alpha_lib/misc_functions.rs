@@ -4,7 +4,7 @@
  *
  *
  * MIT License
- * Copyright (c) 2023. Dwight J. Browne
+ * Copyright (c) 2024. Dwight J. Browne
  * dwight[-dot-]browne[-at-]dwightjbrowne[-dot-]com
  *
  *
@@ -28,16 +28,30 @@
  */
 
 
-pub mod topic_refs;
-pub mod base;
-pub mod author;
-pub mod feed;
-pub mod news_root;
-pub mod sources;
-pub mod articles;
-pub mod common;
-pub mod author_map;
-pub mod topic_maps;
-pub mod ticker_sentiments;
-pub mod raw_queries;
+use std::io::{self, Write, BufWriter, BufRead};
+use std::env;
 
+pub fn log_missed_symbol(buf_writer: &mut BufWriter<impl Write>, data: &str) -> io::Result<()> {
+    let newln = format!("{}\n", data);
+    buf_writer.write_all(newln.as_bytes()) // Convert string to bytes and write
+}
+
+pub fn read_missed_symbols(file_name:String) -> io::Result<Vec<String>> {
+    let mut missed_symbols = Vec::new();
+    let file = std::fs::File::open(file_name)?;
+    let reader = io::BufReader::new(file);
+    for line in reader.lines() {
+        missed_symbols.push(line?);
+    }
+    Ok(missed_symbols)
+}
+
+
+
+    pub  fn get_exe_name() -> String {
+    let exe_name = env::current_exe().unwrap();
+     exe_name.to_str().unwrap().to_string()
+    // let exe_name = exe_name.file_name().unwrap();
+    // let exe_name = exe_name.to_str().unwrap();
+    // exe_name.to_string()
+}

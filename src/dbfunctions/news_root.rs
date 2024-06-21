@@ -60,7 +60,7 @@ pub fn insert_news_root(conn: &mut PgConnection, s_id: i64, item_count: i32,
     match root {
         Ok(root) => Ok(root),
         Err(err) =>{
-            eprintln!("Cannot insert news Root for {}  {}",s_id,err);
+            eprintln!("Cannot insert news Root for sid {}  err=->{}",s_id,err);
             Err(Box::new(err))
         }
     }
