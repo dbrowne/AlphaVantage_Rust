@@ -30,7 +30,6 @@
 extern crate chrono_tz;
 
 use std::{collections::HashMap, env::VarError, error::Error, thread, time};
-
 use chrono::{DateTime, Duration, Local, NaiveDate, NaiveDateTime};
 use diesel::PgConnection;
 use serde_json::Value;
@@ -130,6 +129,7 @@ pub fn process_symbols(sec_vec: Vec<Vec<String>>, load_missed: bool) -> Result<(
             if err_ct > MAX_ERRORS {
               println!("Too many errors: {}", err_ct);
               return Err(e.into());
+
             }
             continue;
           }

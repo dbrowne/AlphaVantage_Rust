@@ -28,6 +28,7 @@
  */
 
 use chrono::{prelude::*, NaiveDateTime};
+
 use diesel::prelude::*;
 
 use crate::schema::{
@@ -458,4 +459,34 @@ pub struct NewProcState<'a> {
   pub start_time: &'a NaiveDateTime,
   pub end_state: &'a i32,
   pub end_time: &'a NaiveDateTime,
+}
+
+#[derive(Queryable, Debug)]
+pub struct ProcType {
+    pub id: i32,
+    pub name: String,
+}
+
+#[derive(Insertable, Debug)]
+#[diesel(table_name = proctypes)]
+pub struct NewProcType<'a> {
+    pub name: &'a String,
+}
+
+#[derive(Queryable, Debug)]
+pub struct ProcState {
+    pub spid: i32,
+    pub proc_id: i32,
+    pub start_time: NaiveDateTime,
+    pub end_state: i32,
+    pub end_time: NaiveDateTime,
+}
+
+#[derive(Insertable, Debug)]
+#[diesel(table_name = procstates)]
+pub struct NewProcState<'a> {
+    pub proc_id: &'a i32,
+    pub start_time: &'a NaiveDateTime,
+    pub end_state: &'a i32,
+    pub end_time: &'a NaiveDateTime,
 }

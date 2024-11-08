@@ -617,6 +617,7 @@ pub fn get_symbols_and_sids_for(
     .load::<(String, i64)>(conn)
 }
 
+
 /// Retrieves a list of sids and their corresponding symbols from the database where the overview
 /// flag is set to true.
 ///
@@ -851,9 +852,9 @@ pub fn insert_top_stat(
   return Ok(());
 }
 
+
 pub fn get_proc_id(conn: &mut PgConnection, proc_name: &str) -> Result<i32, diesel::result::Error> {
   use crate::schema::proctypes;
-
   let result = proctypes::table
     .filter(proctypes::name.eq(proc_name))
     .select(proctypes::id)

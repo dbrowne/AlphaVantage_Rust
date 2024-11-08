@@ -29,7 +29,6 @@
 
 #[cfg(not(tarpaulin_include))]
 use std::process;
-
 use alpha_vantage_rust::{
   alpha_lib::{alpha_io_funcs::load_intraday, misc_functions::get_exe_name},
   db_funcs::{

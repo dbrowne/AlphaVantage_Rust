@@ -55,6 +55,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
   let id_val = get_proc_id_or_insert(conn, &get_exe_name()).unwrap();
 
+
   let pid = log_proc_start(conn, id_val).unwrap();
   let results: Vec<(i64, String)> = get_sids_and_names_with_overview(conn).unwrap_or_else(|err| {
     println!("Cannot load results from database {}", err);
@@ -84,6 +85,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     .collect();
   let mut symbol_log: BufWriter<File> = BufWriter::new(File::create("/tmp/symbol_log.txt")?);
 
+
   let progress = ProgressBar::new(count_of_sids as u64);
   progress.set_style(
     indicatif::ProgressStyle::default_bar()
@@ -102,3 +104,4 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
   _ = log_proc_end(conn, pid, 2).unwrap();
   Result::Ok(())
 }
+

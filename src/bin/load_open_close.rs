@@ -44,6 +44,7 @@ use alpha_vantage_rust::{
 use dotenvy::dotenv;
 use indicatif::ProgressBar;
 
+
 fn main() {
   let conn = &mut establish_connection_or_exit();
   dotenv().ok();
@@ -71,7 +72,6 @@ fn main() {
     if let Err(err) = load_summary(conn, &symbol, sid) {
       println!("Error loading open close prices {} for sid {}", err, sid);
       _ = log_proc_end(conn, pid, 3).unwrap();
-
       process::exit(1);
     }
   }

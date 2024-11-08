@@ -31,6 +31,7 @@ extern crate chrono;
 
 use std::{collections::HashMap, error::Error, fs::File, io::BufWriter};
 
+
 use diesel::PgConnection;
 
 use crate::{
@@ -54,6 +55,8 @@ pub struct Params {
   pub sources: HashMap<String, i32>,
   pub names_to_sid: HashMap<String, i64>,
 }
+
+
 
 pub fn load_news(
   conn: &mut PgConnection,
@@ -106,7 +109,6 @@ fn process_feed(
   for article in feed {
     process_article(conn, &s_id, &tkr, article, overview_id, params, symbol_log)?;
   }
-
   Ok(())
 }
 
@@ -205,6 +207,7 @@ fn process_article(
       article.overall_sentiment_score,
       article.overall_sentiment_label,
     ) {
+
       if let Ok(_ts) = load_sentiments(conn, article.ticker_sentiment, params, feed.id, symbol_log)
       {
         // todo: Improve logging
@@ -218,7 +221,6 @@ fn process_article(
         // println!("Inserted topics for {}", art.title);
       } else {
         // todo: Improve logging
-
         // println!("Cannot insert topics for {}", art.title);
       }
       if let Ok(_am) = insert_author_map(conn, feed.id, author_id) {

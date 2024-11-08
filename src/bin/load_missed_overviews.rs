@@ -26,6 +26,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
+
 #[cfg(not(tarpaulin_include))]
 use std::process;
 
@@ -41,12 +42,14 @@ use lazy_static::lazy_static;
 
 //We can't make MIN_TIME a constant because it is not a primitive type
 lazy_static! {
+
   static ref MIN_TIME: Duration = Duration::milliseconds(350);
 }
 const COUNTRY: &str = "USA";
 const TYPE: &str = "Eqty";
 
 fn main() {
+
   dotenv().ok();
   let mut resp_time: DateTime<Local>;
   let mut dur_time: DateTime<Local>;

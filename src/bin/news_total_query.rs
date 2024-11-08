@@ -106,6 +106,7 @@ fn main() {
 
 fn get_article_counts(conn: &mut PgConnection) -> QueryResult<Vec<ArticleCount>> {
   let query = r#"
+
         WITH article_counts AS (
             SELECT s.source_name, COUNT(a.hashid) AS article_count
             FROM sources s
