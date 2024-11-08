@@ -27,19 +27,17 @@
  * SOFTWARE.
  */
 
-
 extern crate diesel;
 extern crate serde;
-
 
 use diesel::pg::data_types::PgNumeric;
 use dotenvy::dotenv;
 
-use AlphaVantage_Rust::dbfunctions::base::establish_connection_or_exit;
 use diesel::prelude::*;
 use diesel::sql_query;
 use AlphaVantage_Rust::alpha_lib::misc_functions::get_exe_name;
 use AlphaVantage_Rust::db_funcs::{get_proc_id_or_insert, log_proc_end, log_proc_start};
+use AlphaVantage_Rust::dbfunctions::base::establish_connection_or_exit;
 
 #[derive(QueryableByName, Debug)]
 pub struct ArticleCount {
@@ -60,40 +58,45 @@ fn pg_numeric_to_decimal(weight: i16, scale: u16, digits: Vec<i16>) -> f64 {
     value / base.powi(scale.into())
 }
 fn main() {
-
     let conn = &mut establish_connection_or_exit();
 
     dotenv().ok();
-    let id_val = get_proc_id_or_insert(conn,&get_exe_name()).unwrap();
+    let id_val = get_proc_id_or_insert(conn, &get_exe_name()).unwrap();
     let pid = log_proc_start(conn, id_val).unwrap();
 
     match get_article_counts(conn) {
         Ok(results) => {
             println!("Source Name | Article Count");
             for result in results {
-
                 match result.article_count {
-                    PgNumeric::Positive { weight, scale, digits } => {
+                    PgNumeric::Positive {
+                        weight,
+                        scale,
+                        digits,
+                    } => {
                         let value = pg_numeric_to_decimal(weight, scale, digits);
                         println!("{}     |{}", result.source_name, value);
-                    },
-                    PgNumeric::Negative { weight, scale, digits } => {
+                    }
+                    PgNumeric::Negative {
+                        weight,
+                        scale,
+                        digits,
+                    } => {
                         let value = pg_numeric_to_decimal(weight, scale, digits);
                         println!("{}     |{}", result.source_name, -value);
-                    },
+                    }
                     PgNumeric::NaN => {
                         println!("{}     |NaN", result.source_name);
-                    },
+                    }
                 }
-
             }
         }
         Err(error) => {
-            _= log_proc_end(conn, pid,3).unwrap();
+            _ = log_proc_end(conn, pid, 3).unwrap();
             eprintln!("Error executing query: {}", error);
         }
     }
-    _= log_proc_end(conn, pid,2).unwrap();
+    _ = log_proc_end(conn, pid, 2).unwrap();
 }
 
 fn get_article_counts(conn: &mut PgConnection) -> QueryResult<Vec<ArticleCount>> {

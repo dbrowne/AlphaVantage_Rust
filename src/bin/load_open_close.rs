@@ -27,37 +27,36 @@
  * SOFTWARE.
  */
 
-use  dotenvy::dotenv;
-use  std::process;
+use dotenvy::dotenv;
+use std::process;
 use AlphaVantage_Rust::alpha_lib::alpha_io_funcs::load_summary;
 use AlphaVantage_Rust::alpha_lib::misc_functions::get_exe_name;
-use AlphaVantage_Rust::db_funcs::{get_proc_id_or_insert, get_sids_and_names_with_overview, log_proc_end, log_proc_start};
+use AlphaVantage_Rust::db_funcs::{
+    get_proc_id_or_insert, get_sids_and_names_with_overview, log_proc_end, log_proc_start,
+};
 use AlphaVantage_Rust::dbfunctions::base::establish_connection_or_exit;
 
 fn main() {
-
-    let  conn = &mut establish_connection_or_exit();
+    let conn = &mut establish_connection_or_exit();
     dotenv().ok();
-    let id_val = get_proc_id_or_insert(conn,&get_exe_name()).unwrap();
+    let id_val = get_proc_id_or_insert(conn, &get_exe_name()).unwrap();
     let pid = log_proc_start(conn, id_val).unwrap();
-    let  results: Vec<(i64,String)> = get_sids_and_names_with_overview(conn)
-        .unwrap_or_else(|err| {
-            eprintln!("Cannot load results from database {}",err);
-            _= log_proc_end(conn, pid,3).unwrap();
+    let results: Vec<(i64, String)> =
+        get_sids_and_names_with_overview(conn).unwrap_or_else(|err| {
+            eprintln!("Cannot load results from database {}", err);
+            _ = log_proc_end(conn, pid, 3).unwrap();
 
             process::exit(1);
         });
 
     for (sid, symbol) in results {
-        println!("{}:{}",sid, symbol);
-        if  let  Err(err) = load_summary(conn,symbol,sid) {
-            println!("Error loading open close prices {} for sid {}",err, sid );
-            _= log_proc_end(conn, pid,3).unwrap();
+        println!("{}:{}", sid, symbol);
+        if let Err(err) = load_summary(conn, symbol, sid) {
+            println!("Error loading open close prices {} for sid {}", err, sid);
+            _ = log_proc_end(conn, pid, 3).unwrap();
 
             process::exit(1);
         }
-
     }
-    _= log_proc_end(conn, pid,2).unwrap();
-
+    _ = log_proc_end(conn, pid, 2).unwrap();
 }

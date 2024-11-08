@@ -27,12 +27,15 @@
  * SOFTWARE.
  */
 
+use crate::db_models::{AuthorMap, NewAuthorMap};
 use crate::dbfunctions::common::*;
-use crate::db_models::{AuthorMap,NewAuthorMap};
 use crate::schema::authormaps::dsl::authormaps;
 
-
-pub  fn insert_author_map(conn: &mut PgConnection,feed_id:i32,author_id:i32) ->Result<AuthorMap, Box<dyn Error>> {
+pub fn insert_author_map(
+    conn: &mut PgConnection,
+    feed_id: i32,
+    author_id: i32,
+) -> Result<AuthorMap, Box<dyn Error>> {
     let new_author_map = NewAuthorMap {
         feedid: &feed_id,
         authorid: &author_id,

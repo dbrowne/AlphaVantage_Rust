@@ -29,11 +29,10 @@
 
 // NEWS based on https://www.alphavantage.co/query?function=NEWS_SENTIMENT&tickers=AAPL&apikey=demo
 
-
 use serde::{Deserialize, Serialize};
-use serde_with::{serde_as,DefaultOnNull};
+use serde_with::{serde_as, DefaultOnNull};
 
-#[derive(Default, Debug, Clone, PartialEq,  Deserialize)]
+#[derive(Default, Debug, Clone, PartialEq, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct NewsRoot {
     pub items: String,
@@ -45,7 +44,7 @@ pub struct NewsRoot {
 }
 
 #[serde_as]
-#[derive(Default, Debug, Clone, PartialEq,  Deserialize, Serialize)]
+#[derive(Default, Debug, Clone, PartialEq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RawFeed {
     pub title: String,
@@ -71,7 +70,7 @@ pub struct RawFeed {
     pub ticker_sentiment: Vec<TickerSentiment>,
 }
 
-#[derive(Default, Debug, Clone, PartialEq,  Deserialize, Serialize)]
+#[derive(Default, Debug, Clone, PartialEq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Topic {
     pub topic: String,
@@ -79,7 +78,7 @@ pub struct Topic {
     pub relevance_score: String,
 }
 
-#[derive(Default, Debug, Clone, PartialEq,  Deserialize,Serialize)]
+#[derive(Default, Debug, Clone, PartialEq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TickerSentiment {
     pub ticker: String,

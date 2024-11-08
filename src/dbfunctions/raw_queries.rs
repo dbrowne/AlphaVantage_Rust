@@ -27,7 +27,6 @@
  * SOFTWARE.
  */
 
-
 #[macro_export]
 macro_rules! m_get_news_stories {
     ($string1:expr) => {
@@ -43,7 +42,7 @@ macro_rules! m_get_news_stories {
 }
 
 #[macro_export]
-macro_rules! m_get_news_count{
+macro_rules! m_get_news_count {
     ($string1:expr) => {
         format!(
             r#"SELECT COUNT(a.title)
@@ -56,13 +55,13 @@ macro_rules! m_get_news_count{
     };
 }
 
-
 #[cfg(test)]
 mod test {
     #[test]
-    fn t_01(){
-        assert_eq!(m_get_news_stories!("AAPL"),
-                   r#"SELECT a.title, a.url
+    fn t_01() {
+        assert_eq!(
+            m_get_news_stories!("AAPL"),
+            r#"SELECT a.title, a.url
                FROM articles a
                INNER JOIN feeds f ON a.hashid = f.articleid
                INNER JOIN symbols s ON f.sid = s.sid
@@ -71,9 +70,10 @@ mod test {
     }
 
     #[test]
-    fn t_02(){
-        assert_eq!(m_get_news_count!("AAPL"),
-                   r#"SELECT COUNT(a.title)
+    fn t_02() {
+        assert_eq!(
+            m_get_news_count!("AAPL"),
+            r#"SELECT COUNT(a.title)
                FROM articles a
                INNER JOIN feeds f ON a.hashid = f.articleid
                INNER JOIN symbols s ON f.sid = s.sid
@@ -81,5 +81,3 @@ mod test {
         );
     }
 }
-
-

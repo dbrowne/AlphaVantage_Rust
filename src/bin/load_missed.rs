@@ -36,7 +36,7 @@ fn main() {
     if let Ok(secs) = read_missed_symbols("/tmp/symbol_log.txt".to_string()) {
         let mut symbs: Vec<Vec<String>> = Vec::new();
         symbs.push(secs);
-        let res = process_symbols(symbs,true);
+        let res = process_symbols(symbs, true);
         let _ = match res {
             Ok(_) => println!("Operation completed successfully."),
             Err(e) => println!("An error occurred: {}", e),

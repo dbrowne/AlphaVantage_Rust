@@ -27,15 +27,13 @@
  * SOFTWARE.
  */
 
-
 use diesel::serialize::ToSql;
 use AlphaVantage_Rust::m_get_news_stories;
 extern crate diesel;
 extern crate serde;
-use AlphaVantage_Rust::dbfunctions::base::establish_connection_or_exit;
 use diesel::prelude::*;
 use diesel::sql_query;
-
+use AlphaVantage_Rust::dbfunctions::base::establish_connection_or_exit;
 
 #[derive(QueryableByName, Debug)]
 pub struct NewsStories {
@@ -45,12 +43,10 @@ pub struct NewsStories {
     pub url: String,
 }
 
-
-
-fn main(){
+fn main() {
     let symbol = "TSLA";
     let query = m_get_news_stories!(symbol);
-    let connection =&mut  establish_connection_or_exit();
+    let connection = &mut establish_connection_or_exit();
     let news_stories: Vec<NewsStories> = sql_query(query)
         .get_results(connection)
         .expect("Error loading news stories");
@@ -62,7 +58,3 @@ fn main(){
         println!("");
     }
 }
-
-
-
-

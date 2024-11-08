@@ -91,8 +91,6 @@ macro_rules! create_url {
     };
 }
 
-
-
 #[cfg(test)]
 mod test {
     #[test]
@@ -128,19 +126,21 @@ mod test {
 
     #[test]
     fn t_05() {
-        let url = create_url!(55,"AAPL",  "123456789");
+        let url = create_url!(55, "AAPL", "123456789");
         assert_eq!(url, "Unknown function type received 55");
     }
-
 
     #[test]
     fn t_06() {
         let url = create_url!(FuncType:TopQuery,"NONE","12345678");
-        assert_eq!(url, "https://www.alphavantage.co/query?function=TOP_GAINERS_LOSERS&apikey=12345678");
+        assert_eq!(
+            url,
+            "https://www.alphavantage.co/query?function=TOP_GAINERS_LOSERS&apikey=12345678"
+        );
     }
 
     #[test]
-    fn t_09(){
+    fn t_09() {
         let url = create_url!(FuncType:NewsQuery,"AAPL","12345678");
         assert_eq!(url,"https://www.alphavantage.co/query?function=NEWS_SENTIMENT&tickers=AAPL&apikey=12345678");
     }

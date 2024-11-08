@@ -29,32 +29,34 @@
 
 extern crate chrono_tz;
 
-use crate::alpha_lib::alpha_data_types::{AlphaSymbol, Convert, FullOverview, RawDailyPrice,
-                                         RawIntraDayPrice, Root, TopType};
+use crate::alpha_lib::alpha_data_types::{
+    AlphaSymbol, Convert, FullOverview, RawDailyPrice, RawIntraDayPrice, Root, TopType,
+};
 use crate::alpha_lib::alpha_funcs::{normalize_alpha_region, top_constants};
 use crate::create_url;
-use crate::db_funcs::{create_intra_day, create_overview, create_symbol, get_summary_max_date, get_intr_day_max_date, get_sid, insert_open_close, insert_top_stat, get_next_sid, get_symbols_and_sids_for};
+use crate::db_funcs::{
+    create_intra_day, create_overview, create_symbol, get_intr_day_max_date, get_next_sid, get_sid,
+    get_summary_max_date, get_symbols_and_sids_for, insert_open_close, insert_top_stat,
+};
 use crate::dbfunctions::base::establish_connection_or_exit;
 use crate::security_types::sec_types::SecurityType;
 use chrono::{DateTime, Duration, Local, NaiveDate, NaiveDateTime};
 use serde_json::Value;
 use std::collections::HashMap;
+use std::env::VarError;
 use std::error::Error;
 use std::{thread, time};
-use std::env::VarError;
 
-use diesel::PgConnection;
 use crate::alpha_lib::news_type::NewsRoot;
 use crate::db_models::IntraDayPrice;
+use diesel::PgConnection;
 
 const SYMBOL: &str = "symbol";
 const MAX_ERRORS: i32 = 50;
 
-
 pub fn get_api_key() -> Result<String, VarError> {
     std::env::var("ALPHA_VANTAGE_API_KEY")
 }
-
 
 /// # process_symbols Function
 ///
@@ -93,7 +95,7 @@ pub fn get_api_key() -> Result<String, VarError> {
 ///
 /// TODO:  Refactor as this is a bit of a mess
 ///
-pub fn process_symbols(sec_vec: Vec<Vec<String>>,load_missed:bool) -> Result<(), Box<dyn Error>> {
+pub fn process_symbols(sec_vec: Vec<Vec<String>>, load_missed: bool) -> Result<(), Box<dyn Error>> {
     let api_key = get_api_key()?;
 
     let mut type_map: HashMap<SecurityType, i32> = HashMap::new();
@@ -105,9 +107,9 @@ pub fn process_symbols(sec_vec: Vec<Vec<String>>,load_missed:bool) -> Result<(),
     let mut resp_time: DateTime<Local>;
     let min_time = Duration::milliseconds(350); //We cant make MIN_TIME a constant because it is not a primitive type
 
-
     if load_missed {
-        let symbs = get_symbols_and_sids_for(conn,"USA".to_string(), "Eqty".to_string()).expect("Can't get symbols");
+        let symbs = get_symbols_and_sids_for(conn, "USA".to_string(), "Eqty".to_string())
+            .expect("Can't get symbols");
         for (symb, sid) in symbs {
             symbol_map.insert(symb, 1);
         }
@@ -166,10 +168,10 @@ pub fn process_symbols(sec_vec: Vec<Vec<String>>,load_missed:bool) -> Result<(),
                     } else {
                         type_map.entry(sec_type).and_modify(|e| *e += 1);
                     }
-                    let mut s_id:i64;
+                    let mut s_id: i64;
                     if load_missed {
-                        s_id = get_next_sid(conn,sec_type_string).expect("Can't get next sid");
-                    }else {
+                        s_id = get_next_sid(conn, sec_type_string).expect("Can't get next sid");
+                    } else {
                         s_id = SecurityType::encode(
                             sec_type,
                             type_map.get(&sec_type).unwrap().clone() as u32,
@@ -228,7 +230,11 @@ pub fn process_symbols(sec_vec: Vec<Vec<String>>,load_missed:bool) -> Result<(),
 /// # Errors
 ///
 /// * It might return an error if there's a problem establishing a database connection, making the external API request, or processing the response.
-pub fn get_overview(connection: &mut PgConnection, s_id: i64, symb: String) -> Result<(), Box<dyn Error>> {
+pub fn get_overview(
+    connection: &mut PgConnection,
+    s_id: i64,
+    symb: String,
+) -> Result<(), Box<dyn Error>> {
     const SYMBOL: &str = "Symbol";
     let api_key = get_api_key()?;
     let url = create_url!(FuncType:Overview,symb,api_key);
@@ -270,7 +276,6 @@ pub fn get_overview(connection: &mut PgConnection, s_id: i64, symb: String) -> R
     Ok(())
 }
 
-
 fn get_api_data(url: &str) -> Result<String, Box<dyn Error>> {
     let response = reqwest::blocking::get(url)?;
     let text = response.text()?;
@@ -296,8 +301,12 @@ fn parse_intraday_from_csv(text: &str) -> Result<Vec<RawIntraDayPrice>, Box<dyn 
         .map_err(|e| e.into())
 }
 
-fn persist_ticks(connection: &mut PgConnection, s_id: i64, symb: String, ticks: Vec<RawIntraDayPrice>) -> Result<(), Box<dyn Error>> {
-
+fn persist_ticks(
+    connection: &mut PgConnection,
+    s_id: i64,
+    symb: String,
+    ticks: Vec<RawIntraDayPrice>,
+) -> Result<(), Box<dyn Error>> {
     let last_date = get_intr_day_max_date(connection, s_id);
 
     let mut skipped = 0;
@@ -319,7 +328,7 @@ fn persist_ticks(connection: &mut PgConnection, s_id: i64, symb: String, ticks: 
         if tmp_tick.tstamp > last_date {
             let _ = create_intra_day(connection, tmp_tick);
             processed += 1;
-        } else{
+        } else {
             skipped += 1;
         }
     }
@@ -327,7 +336,11 @@ fn persist_ticks(connection: &mut PgConnection, s_id: i64, symb: String, ticks: 
     Ok(())
 }
 
-pub fn load_intraday(conn: &mut PgConnection, symb: String, s_id: i64) -> Result<(), Box<dyn Error>> {
+pub fn load_intraday(
+    conn: &mut PgConnection,
+    symb: String,
+    s_id: i64,
+) -> Result<(), Box<dyn Error>> {
     const HEADER: &str = "timestamp,open,high,low,close,volume";
     let api_key = get_api_key()?;
     let url = create_url!(FuncType:TsIntra,symb,api_key);
@@ -344,19 +357,36 @@ pub fn load_intraday(conn: &mut PgConnection, symb: String, s_id: i64) -> Result
     Ok(())
 }
 
-
 fn gen_new_summary_price(json_inp: (&String, &Value), sym: String) -> Option<RawDailyPrice> {
     //todo   Refactor
-    let dt = NaiveDate::parse_from_str(json_inp.0, "%Y-%m-%d").map_err(|e| {
-        println!("Error parsing date: {:?}", e);
-        e
-    }).ok()?;
+    let dt = NaiveDate::parse_from_str(json_inp.0, "%Y-%m-%d")
+        .map_err(|e| {
+            println!("Error parsing date: {:?}", e);
+            e
+        })
+        .ok()?;
 
-    let open = json_inp.1["1. open"].as_str().unwrap().parse::<f32>().ok()?;
-    let high = json_inp.1["2. high"].as_str().unwrap().parse::<f32>().ok()?;
+    let open = json_inp.1["1. open"]
+        .as_str()
+        .unwrap()
+        .parse::<f32>()
+        .ok()?;
+    let high = json_inp.1["2. high"]
+        .as_str()
+        .unwrap()
+        .parse::<f32>()
+        .ok()?;
     let low = json_inp.1["3. low"].as_str().unwrap().parse::<f32>().ok()?;
-    let close = json_inp.1["4. close"].as_str().unwrap().parse::<f32>().ok()?;
-    let volume = json_inp.1["5. volume"].as_str().unwrap().parse::<i32>().ok()?;
+    let close = json_inp.1["4. close"]
+        .as_str()
+        .unwrap()
+        .parse::<f32>()
+        .ok()?;
+    let volume = json_inp.1["5. volume"]
+        .as_str()
+        .unwrap()
+        .parse::<i32>()
+        .ok()?;
 
     Some(RawDailyPrice {
         date: dt,
@@ -409,7 +439,11 @@ fn gen_new_summary_price(json_inp: (&String, &Value), sym: String) -> Option<Raw
 ///   (such as missing price data) and will not perform any database updates for this symbol.
 /// - It logs the latest date for which data is available in the database and only inserts new
 ///   records for dates that are after this last known date.
-pub fn load_summary(conn: &mut PgConnection, symb: String, s_id: i64) -> Result<(), Box<dyn Error>> {
+pub fn load_summary(
+    conn: &mut PgConnection,
+    symb: String,
+    s_id: i64,
+) -> Result<(), Box<dyn Error>> {
     let api_key = get_api_key()?;
     let url = create_url!(FuncType:TsDaily,symb.clone(),api_key);
     let text = get_api_data(&url)?;
@@ -432,7 +466,6 @@ pub fn load_summary(conn: &mut PgConnection, symb: String, s_id: i64) -> Result<
 
     Ok(())
 }
-
 
 /// Retrieves the opening and closing prices for a given financial symbol from a JSON string.
 ///
@@ -475,13 +508,11 @@ fn get_open_close(inp: &str, symb: &String) -> Result<Vec<RawDailyPrice>, Box<dy
     let mut daily_prices: Vec<RawDailyPrice> = Vec::new();
     let json_data: Value = serde_json::from_str(inp)?;
 
-    let json_prices = json_data[HEADER]
-        .as_object()
-        .ok_or_else(|| {
-            let err_msg = format!("Error getting {} from json data", HEADER);
-            eprintln!("{}", err_msg);
-            err_msg
-        })?;
+    let json_prices = json_data[HEADER].as_object().ok_or_else(|| {
+        let err_msg = format!("Error getting {} from json data", HEADER);
+        eprintln!("{}", err_msg);
+        err_msg
+    })?;
 
     for (date, data) in json_prices.iter() {
         if let Some(open_close) = gen_new_summary_price((date, data), symb.clone()) {
@@ -541,7 +572,12 @@ pub fn load_tops(conn: &mut PgConnection) -> Result<(), Box<dyn Error>> {
 
     process_data_for_type(conn, &root.top_gainers, TopType::TopGainer, last_update)?;
     process_data_for_type(conn, &root.top_losers, TopType::TopLoser, last_update)?;
-    process_data_for_type(conn, &root.most_actively_traded, TopType::TopActive, last_update)?;
+    process_data_for_type(
+        conn,
+        &root.most_actively_traded,
+        TopType::TopActive,
+        last_update,
+    )?;
 
     Ok(())
 }
@@ -628,7 +664,6 @@ fn get_time_stamp(inp: String) -> Result<NaiveDateTime, Box<dyn Error>> {
     let naive_dt = NaiveDateTime::parse_from_str(tm, "%Y-%m-%d %H:%M:%S")?;
     Ok(naive_dt)
 }
-
 
 #[cfg(test)]
 mod test {

@@ -29,9 +29,8 @@
 
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
-use std::{env, process};
 use dotenvy::dotenv;
-
+use std::{env, process};
 
 /// Establishes a connection to a Postgres database using Diesel.
 ///
@@ -78,9 +77,7 @@ pub fn establish_connection_or_exit() -> PgConnection {
     let conn = PgConnection::establish(&database_url).unwrap_or_else(|_| {
         eprintln!("Can't establish db connection");
         process::exit(1);
-    }
-    );
-
+    });
 
     conn
 }
