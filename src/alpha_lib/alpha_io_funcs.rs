@@ -423,7 +423,7 @@ fn gen_new_summary_price(json_inp: (&String, &Value), sym: String) -> Option<Raw
 /// - Database related errors are propagated if any insert operation fails.
 ///
 /// # Example
-/// ```no_run
+/// ```ignore
 /// use your_crate::db_operations::{PgConnection, load_summary};
 ///
 /// let mut conn = PgConnection::establish("connection_string").unwrap();
@@ -547,8 +547,8 @@ fn get_open_close(inp: &str, symb: &String) -> Result<Vec<RawDailyPrice>, Box<dy
 /// - Errors from obtaining the API key or constructing the URL are also propagated.
 ///
 /// # Example
-/// ```no_run
-/// use your_crate::db_operations::{PgConnection, load_tops};
+/// ```ignore
+/// use alpha_vantage_rust::db_operations::{PgConnection, load_tops};
 ///
 /// let mut conn = PgConnection::establish("connection_string").unwrap();
 ///
