@@ -27,65 +27,67 @@
  * SOFTWARE.
  */
 
-use crate::db_models::{NewTopicRef, TopicRef};
-use crate::dbfunctions::common::*;
-use crate::schema::topicrefs::dsl::topicrefs;
+use crate::{
+  db_models::{NewTopicRef, TopicRef},
+  dbfunctions::common::*,
+  schema::topicrefs::dsl::topicrefs,
+};
 
 pub fn get_topics(conn: &mut PgConnection) -> Result<Vec<TopicRef>, Box<dyn Error>> {
-    let topics = topicrefs.load::<TopicRef>(conn);
-    match topics {
-        Ok(topics) => Ok(topics),
-        Err(err) => {
-            eprintln!("Error loading topics {}", err);
-            Err(Box::new(err))
-        }
+  let topics = topicrefs.load::<TopicRef>(conn);
+  match topics {
+    Ok(topics) => Ok(topics),
+    Err(err) => {
+      eprintln!("Error loading topics {}", err);
+      Err(Box::new(err))
     }
+  }
 }
 
 pub fn get_topic_by_id(conn: &mut PgConnection, topic_id: i32) -> Result<TopicRef, Box<dyn Error>> {
-    use crate::schema::topicrefs::dsl::id;
+  use crate::schema::topicrefs::dsl::id;
 
-    let topic = topicrefs.filter(id.eq(topic_id)).first::<TopicRef>(conn);
-    match topic {
-        Ok(topic) => Ok(topic),
-        Err(err) => {
-            eprintln!("Error loading topic {}", err);
-            Err(Box::new(err))
-        }
+  let topic = topicrefs.filter(id.eq(topic_id)).first::<TopicRef>(conn);
+  match topic {
+    Ok(topic) => Ok(topic),
+    Err(err) => {
+      eprintln!("Error loading topic {}", err);
+      Err(Box::new(err))
     }
+  }
 }
 
 pub fn get_id_topic_by_name(
-    conn: &mut PgConnection,
-    topic_name: String,
+  conn: &mut PgConnection,
+  topic_name: String,
 ) -> Result<TopicRef, Box<dyn Error>> {
-    use crate::schema::topicrefs::dsl::name;
+  use crate::schema::topicrefs::dsl::name;
 
-    let topic = topicrefs
-        .filter(name.eq(topic_name))
-        .first::<TopicRef>(conn);
-    match topic {
-        Ok(topic) => Ok(topic),
-        Err(err) => {
-            eprintln!("Error loading topic {}", err);
-            Err(Box::new(err))
-        }
+  let topic = topicrefs
+    .filter(name.eq(topic_name))
+    .first::<TopicRef>(conn);
+  match topic {
+    Ok(topic) => Ok(topic),
+    Err(err) => {
+      eprintln!("Error loading topic {}", err);
+      Err(Box::new(err))
     }
+  }
 }
 
 pub fn insert_topic(
-    conn: &mut PgConnection,
-    topic_name: String,
+  conn: &mut PgConnection,
+  topic_name: String,
 ) -> Result<TopicRef, Box<dyn Error>> {
-    let new_topic = NewTopicRef { name: &topic_name };
-    let row_cnt = diesel::insert_into(topicrefs)
-        .values(&new_topic)
-        .get_result::<TopicRef>(conn);
-    match row_cnt {
-        Ok(topic) => Ok(topic),
-        Err(err) => {
-            eprintln!("Error inserting topic {}", err);
-            Err(Box::new(err))
-        }
+  let new_topic = NewTopicRef { name: &topic_name };
+  let row_cnt = diesel::insert_into(topicrefs)
+    .values(&new_topic)
+    .get_result::<TopicRef>(conn);
+  match row_cnt {
+    Ok(topic) => Ok(topic),
+    Err(err) => {
+      eprintln!("Error inserting topic {}", err);
+      Err(Box::new(err))
     }
+  }
 }

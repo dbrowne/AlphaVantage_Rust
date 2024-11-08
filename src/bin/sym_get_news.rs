@@ -27,34 +27,30 @@
  * SOFTWARE.
  */
 
-use diesel::serialize::ToSql;
-use AlphaVantage_Rust::m_get_news_stories;
+#[cfg(not(tarpaulin_include))]
+use alpha_vantage_rust::m_get_news_stories;
 extern crate diesel;
 extern crate serde;
-use diesel::prelude::*;
-use diesel::sql_query;
-use AlphaVantage_Rust::dbfunctions::base::establish_connection_or_exit;
+use alpha_vantage_rust::dbfunctions::base::establish_connection_or_exit;
+use diesel::{prelude::*, sql_query};
+use serde_derive::Serialize;
 
-#[derive(QueryableByName, Debug)]
+#[derive(QueryableByName, Debug, Serialize)]
 pub struct NewsStories {
-    #[sql_type = "diesel::sql_types::Varchar"]
-    pub title: String,
-    #[sql_type = "diesel::sql_types::Varchar"]
-    pub url: String,
+  #[diesel(sql_type = diesel::sql_types::Varchar)]
+  pub title: String,
+  #[diesel(sql_type = diesel::sql_types::Varchar)]
+  pub url: String,
 }
 
 fn main() {
-    let symbol = "TSLA";
-    let query = m_get_news_stories!(symbol);
-    let connection = &mut establish_connection_or_exit();
-    let news_stories: Vec<NewsStories> = sql_query(query)
-        .get_results(connection)
-        .expect("Error loading news stories");
+  let symbol = "MC";
+  let query = m_get_news_stories!(symbol);
+  let connection = &mut establish_connection_or_exit();
+  let news_stories: Vec<NewsStories> = sql_query(query)
+    .get_results(connection)
+    .expect("Error loading news stories");
 
-    println!("{} News Stories for {}", news_stories.len(), symbol);
-    for news_story in news_stories {
-        println!("Title: {}", news_story.title);
-        println!("URL: {}", news_story.url);
-        println!("");
-    }
+  println!("{} News Stories for {}", news_stories.len(), symbol);
+  println!("{:#?}", news_stories);
 }
