@@ -39,7 +39,7 @@ A Rust API client and demonstration for the [Alpha Vantage](https://www.alphavan
 
 This section will provide guidance on how to utilize the API client. (Expand upon this with examples, commands, etc.)
 
-## Status Update
+## Status Update:
 ### Finally getting back to this will have more updates and improved code coverage. 
 ### Current code coverage state: 8.92% coverage, 127/1424 lines covered.
 
