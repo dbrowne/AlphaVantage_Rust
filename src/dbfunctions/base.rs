@@ -27,11 +27,10 @@
  * SOFTWARE.
  */
 
-use diesel::pg::PgConnection;
-use diesel::prelude::*;
 use std::{env, process};
-use dotenvy::dotenv;
 
+use diesel::{pg::PgConnection, prelude::*};
+use dotenvy::dotenv;
 
 /// Establishes a connection to a Postgres database using Diesel.
 ///
@@ -45,8 +44,8 @@ use dotenvy::dotenv;
 ///
 /// If a connection to the database cannot be established,
 /// the function will print an error message and also exit the program with a status code of `1`.
-/// A database connection is crucial for program functionality; without it, the program should not proceed.
-/// The choice to exit instead of panicking is made because this function is ideally
+/// A database connection is crucial for program functionality; without it, the program should not
+/// proceed. The choice to exit instead of panicking is made because this function is ideally
 /// one of the first operations executed in the program.
 ///
 /// # Returns
@@ -63,24 +62,21 @@ use dotenvy::dotenv;
 ///     // Operations continue with `conn` or the program will have already exited.
 /// }
 /// ```
-///
 pub fn establish_connection_or_exit() -> PgConnection {
-    dotenv().ok();
+  dotenv().ok();
 
-    let database_url = match env::var("DATABASE_URL") {
-        Ok(db) => db,
-        Err(_) => {
-            eprintln!("No Database url set");
-            process::exit(1);
-        }
-    };
-
-    let conn = PgConnection::establish(&database_url).unwrap_or_else(|_| {
-        eprintln!("Can't establish db connection");
-        process::exit(1);
+  let database_url = match env::var("DATABASE_URL") {
+    Ok(db) => db,
+    Err(_) => {
+      eprintln!("No Database url set");
+      process::exit(1);
     }
-    );
+  };
 
+  let conn = PgConnection::establish(&database_url).unwrap_or_else(|_| {
+    eprintln!("Can't establish db connection");
+    process::exit(1);
+  });
 
-    conn
+  conn
 }

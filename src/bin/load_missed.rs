@@ -4,7 +4,7 @@
  *
  *
  * MIT License
- * Copyright (c) 2023. Dwight J. Browne
+ * Copyright (c) 2024. Dwight J. Browne
  * dwight[-dot-]browne[-at-]dwightjbrowne[-dot-]com
  *
  *
@@ -26,16 +26,23 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
+#[cfg(not(tarpaulin_include))]
+use alpha_vantage_rust::alpha_lib::{
+  alpha_io_funcs::process_symbols, misc_functions::read_missed_symbols,
+};
+use dotenvy::dotenv;
 
-pub mod articles;
-pub mod author;
-pub mod author_map;
-pub mod base;
-pub mod common;
-pub mod feed;
-pub mod news_root;
-pub mod raw_queries;
-pub mod sources;
-pub mod ticker_sentiments;
-pub mod topic_maps;
-pub mod topic_refs;
+fn main() {
+  dotenv().ok();
+  if let Ok(secs) = read_missed_symbols("/tmp/symbol_log.txt".to_string()) {
+    let mut symbs: Vec<Vec<String>> = Vec::new();
+    symbs.push(secs);
+    let res = process_symbols(symbs, true);
+    let _ = match res {
+      Ok(_) => println!("Operation completed successfully."),
+      Err(e) => println!("An error occurred: {}", e),
+    };
+  } else {
+    println!("Error reading missed symbols");
+  }
+}

@@ -28,32 +28,34 @@
  */
 
 use std::error::Error;
+
 use diesel::{PgConnection, RunQueryDsl};
-use crate::db_models::{TopicMap, NewTopicMap};
-use crate::schema::topicmaps::dsl::topicmaps;
+
+use crate::{
+  db_models::{NewTopicMap, TopicMap},
+  schema::topicmaps::dsl::topicmaps,
+};
 
 pub fn ins_topic_map(
-    conn: &mut PgConnection,
-   inp_sid: i64,
-    inp_feedid: i32,
-    inp_topicid:i32,
-    inp_relscore:f64
+  conn: &mut PgConnection,
+  inp_sid: i64,
+  inp_feedid: i32,
+  inp_topicid: i32,
+  inp_relscore: f64,
 ) -> Result<TopicMap, Box<dyn Error>> {
-    let rt = NewTopicMap {
-          sid:&inp_sid,
-            feedid:&inp_feedid,
-            topicid:&inp_topicid,
-            relscore:&inp_relscore
-    };
+  let rt = NewTopicMap {
+    sid: &inp_sid,
+    feedid: &inp_feedid,
+    topicid: &inp_topicid,
+    relscore: &inp_relscore,
+  };
 
-    let root = diesel::insert_into(topicmaps)
-        .values(&rt)
-        .get_result(conn);
-    match root {
-        Ok(root) => Ok(root),
-        Err(err) => {
-            eprintln!("Error inserting Topic Map {}", err);
-            Err(Box::new(err))
-        }
+  let root = diesel::insert_into(topicmaps).values(&rt).get_result(conn);
+  match root {
+    Ok(root) => Ok(root),
+    Err(err) => {
+      eprintln!("Error inserting Topic Map {}", err);
+      Err(Box::new(err))
     }
+  }
 }

@@ -30,16 +30,53 @@
 use std::process;
 
 use alpha_vantage_rust::{
-  alpha_lib::alpha_io_funcs::load_tops, dbfunctions::base::establish_connection_or_exit,
+  alpha_lib::alpha_io_funcs::get_overview, db_funcs::get_sids_and_names_after,
+  dbfunctions::base::establish_connection_or_exit,
 };
+use chrono::{prelude::*, Duration};
 use dotenvy::dotenv;
 
-fn main() {
-  let conn = &mut establish_connection_or_exit();
-  dotenv().ok();
+extern crate lazy_static;
+use lazy_static::lazy_static;
 
-  if let Err(_err) = load_tops(conn) {
-    eprintln!("Error loading Top statistics");
-    process::exit(1);
+//We can't make MIN_TIME a constant because it is not a primitive type
+lazy_static! {
+  static ref MIN_TIME: Duration = Duration::milliseconds(350);
+}
+const COUNTRY: &str = "USA";
+const TYPE: &str = "Eqty";
+
+fn main() {
+  dotenv().ok();
+  let mut resp_time: DateTime<Local>;
+  let mut dur_time: DateTime<Local>;
+  let conn = &mut establish_connection_or_exit();
+
+  let res = get_sids_and_names_after(
+    conn,
+    COUNTRY.to_string(),
+    TYPE.to_string(),
+    "2024-05-16".to_string(),
+  );
+  let results = match res {
+    Ok(results) => results,
+    Err(err) => {
+      println!("Error running reader: {}", err);
+      process::exit(1);
+    }
+  };
+
+  for (symbol, sid) in results {
+    println!("{}: {}", sid, symbol);
+    dur_time = Local::now();
+    if let Err(err) = get_overview(conn, sid, symbol) {
+      println!("Error running reader: {}", err);
+      continue;
+    }
+
+    resp_time = Local::now();
+    if resp_time - dur_time < *MIN_TIME {
+      std::thread::sleep(std::time::Duration::from_secs(1));
+    }
   }
 }

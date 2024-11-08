@@ -4,7 +4,7 @@
  *
  *
  * MIT License
- * Copyright (c) 2023. Dwight J. Browne
+ * Copyright (c) 2024. Dwight J. Browne
  * dwight[-dot-]browne[-at-]dwightjbrowne[-dot-]com
  *
  *
@@ -27,15 +27,30 @@
  * SOFTWARE.
  */
 
-pub mod articles;
-pub mod author;
-pub mod author_map;
-pub mod base;
-pub mod common;
-pub mod feed;
-pub mod news_root;
-pub mod raw_queries;
-pub mod sources;
-pub mod ticker_sentiments;
-pub mod topic_maps;
-pub mod topic_refs;
+#[cfg(not(tarpaulin_include))]
+use alpha_vantage_rust::m_get_news_stories;
+extern crate diesel;
+extern crate serde;
+use alpha_vantage_rust::dbfunctions::base::establish_connection_or_exit;
+use diesel::{prelude::*, sql_query};
+use serde_derive::Serialize;
+
+#[derive(QueryableByName, Debug, Serialize)]
+pub struct NewsStories {
+  #[diesel(sql_type = diesel::sql_types::Varchar)]
+  pub title: String,
+  #[diesel(sql_type = diesel::sql_types::Varchar)]
+  pub url: String,
+}
+
+fn main() {
+  let symbol = "MC";
+  let query = m_get_news_stories!(symbol);
+  let connection = &mut establish_connection_or_exit();
+  let news_stories: Vec<NewsStories> = sql_query(query)
+    .get_results(connection)
+    .expect("Error loading news stories");
+
+  println!("{} News Stories for {}", news_stories.len(), symbol);
+  println!("{:#?}", news_stories);
+}

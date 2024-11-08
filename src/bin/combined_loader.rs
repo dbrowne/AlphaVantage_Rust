@@ -29,54 +29,47 @@
 
 #[cfg(not(tarpaulin_include))]
 use std::{
-  fs,
+  env::var,
   fs::File,
   io::{BufWriter, Write},
-  path::PathBuf,
   process,
 };
 
 use alpha_vantage_rust::{
   alpha_lib::{
-    alpha_io::news_loader::{process_news, Params},
-    news_type::NewsRoot,
+    alpha_io::news_loader::{load_news, Params},
+    alpha_io_funcs::{load_intraday, load_summary},
+    misc_functions::get_exe_name,
   },
-  db_funcs::get_sids_and_names_with_overview,
+  db_funcs::{
+    get_proc_id_or_insert, get_sids_and_names_with_overview, log_proc_end, log_proc_start,
+  },
   dbfunctions::{
     author::get_authors, base::establish_connection_or_exit, sources::get_sources,
     topic_refs::get_topics,
   },
 };
 use dotenvy::dotenv;
-use serde_json;
-
-fn main() {
-  loader();
-}
-fn loader() {
-  const GLW_NEWS: &str = "/mnt/source1/djbGR/portfolio/alpha_vantage_rust/src/bin/GLW_query.json";
-
+use indicatif::ProgressBar;
+fn main() -> Result<(), Box<dyn std::error::Error>> {
   dotenv().ok();
-
-  let current_dir = std::env::current_dir().unwrap();
-  let mut tests_data_dir = PathBuf::from(&current_dir);
-  tests_data_dir.push("tests");
-  let mut file_path = PathBuf::from(&tests_data_dir);
-  file_path.push(GLW_NEWS);
-  let rawdta = fs::read_to_string(file_path).expect("Cannot read data file GLW_query.json");
-  let dt: NewsRoot = serde_json::from_str(&rawdta).expect("Cannot parse JSON data");
-
   let conn = &mut establish_connection_or_exit();
 
+  let id_val = get_proc_id_or_insert(conn, &get_exe_name()).unwrap();
+
+  let pid = log_proc_start(conn, id_val).unwrap();
   let results: Vec<(i64, String)> = get_sids_and_names_with_overview(conn).unwrap_or_else(|err| {
     println!("Cannot load results from database {}", err);
+    _ = log_proc_end(conn, pid, 3).unwrap();
     process::exit(1);
   });
 
+  let count_of_sids = results.len();
+
   let mut params = Params::default();
-  let topics = get_topics(conn).unwrap();
-  let authors = get_authors(conn).unwrap();
-  let sources = get_sources(conn).unwrap();
+  let topics = get_topics(conn)?;
+  let authors = get_authors(conn)?;
+  let sources = get_sources(conn)?;
 
   for (sid, name) in results.iter() {
     params.names_to_sid.insert(name.clone(), *sid);
@@ -91,20 +84,32 @@ fn loader() {
     .iter()
     .map(|s| (s.source_name.clone(), s.id))
     .collect();
+  let mut symbol_log: BufWriter<File> = BufWriter::new(File::create("/tmp/symbol_log.txt")?);
 
-  let sid = 5344;
-  let mut symbol_log: BufWriter<File> =
-    BufWriter::new(File::create("/tmp/symbol_log.txt").unwrap());
-  _ = (process_news(
-    conn,
-    &sid,
-    &"GLW".to_string(),
-    dt,
-    &mut params,
-    &mut symbol_log,
-  ))
-  .unwrap_or_else(|err| {
-    println!("Cannot process news {}", err);
-  });
-  symbol_log.flush().unwrap();
+  let progress = ProgressBar::new(count_of_sids as u64);
+  progress.set_style(
+    indicatif::ProgressStyle::default_bar()
+      .template("[{elapsed_precise}] {bar:40.cyan/blue} {pos:>7}/{len:7} {msg}")
+      .expect("Error setting progress bar style")
+      .progress_chars("##-"),
+  );
+
+  for (s_id, symb) in results {
+    let _news_status = load_news(conn, &s_id, &symb, &mut params, &mut symbol_log);
+    if let Err(err) = load_intraday(conn, &symb, s_id) {
+      //todo: improve logging
+      // println!("Error getting intraday prices {} for sid {}", err, sid);
+      continue;
+    }
+    if let Err(err) = load_summary(conn, &symb, s_id) {
+      println!("Error loading open close prices {} for sid {}", err, symb);
+    }
+
+    progress.inc(1);
+  }
+  progress.finish_with_message("News loading complete");
+  symbol_log.flush()?;
+  progress.finish();
+  _ = log_proc_end(conn, pid, 2).unwrap();
+  Result::Ok(())
 }
