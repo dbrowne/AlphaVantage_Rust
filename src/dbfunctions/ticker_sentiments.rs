@@ -27,35 +27,39 @@
  * SOFTWARE.
  */
 
-use crate::db_models::{NewTickerSentiment, TickerSentiment};
-use crate::dbfunctions::common::*;
-use crate::schema::tickersentiments::dsl::tickersentiments;
-use diesel::PgConnection;
 use std::error::Error;
-pub fn ins_ticker_sentiment(
-    conn: &mut PgConnection,
-    s_id: &i64,
-    inp_feedid: i32,
-    inp_relevance: f64,
-    inp_sentiment: f64,
-    inp_sentlabel: String,
-) -> Result<TickerSentiment, Box<dyn Error>> {
-    let rt = NewTickerSentiment {
-        sid: &s_id.clone(),
-        feedid: &inp_feedid,
-        relevance: &inp_relevance,
-        tsentiment: &inp_sentiment,
-        sentimentlable: &&inp_sentlabel,
-    };
 
-    let root = diesel::insert_into(tickersentiments)
-        .values(&rt)
-        .get_result(conn);
-    match root {
-        Ok(root) => Ok(root),
-        Err(err) => {
-            eprintln!("Error inserting Ticker Sentiment {}", err);
-            Err(Box::new(err))
-        }
+use diesel::PgConnection;
+
+use crate::{
+  db_models::{NewTickerSentiment, TickerSentiment},
+  dbfunctions::common::*,
+  schema::tickersentiments::dsl::tickersentiments,
+};
+pub fn ins_ticker_sentiment(
+  conn: &mut PgConnection,
+  s_id: &i64,
+  inp_feedid: i32,
+  inp_relevance: f64,
+  inp_sentiment: f64,
+  inp_sentlabel: String,
+) -> Result<TickerSentiment, Box<dyn Error>> {
+  let rt = NewTickerSentiment {
+    sid: &s_id.clone(),
+    feedid: &inp_feedid,
+    relevance: &inp_relevance,
+    tsentiment: &inp_sentiment,
+    sentimentlable: &&inp_sentlabel,
+  };
+
+  let root = diesel::insert_into(tickersentiments)
+    .values(&rt)
+    .get_result(conn);
+  match root {
+    Ok(root) => Ok(root),
+    Err(err) => {
+      eprintln!("Error inserting Ticker Sentiment {}", err);
+      Err(Box::new(err))
     }
+  }
 }

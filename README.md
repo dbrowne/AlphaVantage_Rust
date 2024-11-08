@@ -1,8 +1,8 @@
-# AlphaVantage_Rust
+# alpha_vantage_rust
 
 ![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-green.svg)
 ![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)
-![Build Status:](https://github.com/dbrowne/AlphaVantage_Rust/actions/workflows/rust.yml/badge.svg)
+![Build Status:](https://github.com/dbrowne/alpha_vantage_rust/actions/workflows/rust.yml/badge.svg)
 
 A Rust API client and demonstration for the [Alpha Vantage](https://www.alphavantage.co/) API.
 
@@ -19,8 +19,8 @@ A Rust API client and demonstration for the [Alpha Vantage](https://www.alphavan
 
 1. **Clone the repository:**
     ```sh
-    git clone https://github.com/your_username/AlphaVantage_Rust.git
-    cd AlphaVantage_Rust
+    git clone https://github.com/your_username/alpha_vantage_rust.git
+    cd alpha_vantage_rust
     ```
 
 2. **Set up the environment:**
@@ -39,15 +39,19 @@ A Rust API client and demonstration for the [Alpha Vantage](https://www.alphavan
 
 This section will provide guidance on how to utilize the API client. (Expand upon this with examples, commands, etc.)
 
-## Development Progress
+## Status Update
+### Finally getting back to this will have more updates and improved code coverage. 
+### Current code coverage state: 8.92% coverage, 127/1424 lines covered.
 
+## Development Progress:
 - [x] Security loader
 - [x] Security overview loader
 - [x] Intraday price loader
 - [x] open/close price loader
 - [x] Symbol activity loader
 - [x] News loader
-- [x] db refactoring
+- [ ] improve code coverage
+- [ ] db refactoring
 - [ ] Add logging and enhance error handling
 - [ ] Refactor code for production use 
 - [ ] Front end

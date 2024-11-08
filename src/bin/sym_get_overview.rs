@@ -4,7 +4,7 @@
  *
  *
  * MIT License
- * Copyright (c) 2023. Dwight J. Browne
+ * Copyright (c) 2024. Dwight J. Browne
  * dwight[-dot-]browne[-at-]dwightjbrowne[-dot-]com
  *
  *
@@ -27,19 +27,14 @@
  * SOFTWARE.
  */
 #[cfg(not(tarpaulin_include))]
-use std::process;
-
 use alpha_vantage_rust::{
-  alpha_lib::alpha_io_funcs::load_tops, dbfunctions::base::establish_connection_or_exit,
+  db_funcs::get_full_overview, dbfunctions::base::establish_connection_or_exit,
 };
-use dotenvy::dotenv;
 
 fn main() {
-  let conn = &mut establish_connection_or_exit();
-  dotenv().ok();
-
-  if let Err(_err) = load_tops(conn) {
-    eprintln!("Error loading Top statistics");
-    process::exit(1);
-  }
+  let symbol = "MA";
+  let connection = &mut establish_connection_or_exit();
+  if let Ok(overview) = get_full_overview(connection, symbol) {
+    println!("{:#?}", overview);
+  };
 }

@@ -27,28 +27,30 @@
  * SOFTWARE.
  */
 
-use crate::db_models::{AuthorMap, NewAuthorMap};
-use crate::dbfunctions::common::*;
-use crate::schema::authormaps::dsl::authormaps;
+use crate::{
+  db_models::{AuthorMap, NewAuthorMap},
+  dbfunctions::common::*,
+  schema::authormaps::dsl::authormaps,
+};
 
 pub fn insert_author_map(
-    conn: &mut PgConnection,
-    feed_id: i32,
-    author_id: i32,
+  conn: &mut PgConnection,
+  feed_id: i32,
+  author_id: i32,
 ) -> Result<AuthorMap, Box<dyn Error>> {
-    let new_author_map = NewAuthorMap {
-        feedid: &feed_id,
-        authorid: &author_id,
-    };
+  let new_author_map = NewAuthorMap {
+    feedid: &feed_id,
+    authorid: &author_id,
+  };
 
-    let author_map = diesel::insert_into(authormaps)
-        .values(&new_author_map)
-        .get_result::<AuthorMap>(conn);
-    match author_map {
-        Ok(author_map) => Ok(author_map),
-        Err(err) => {
-            eprintln!("Error inserting author_map {}", err);
-            Err(Box::new(err))
-        }
+  let author_map = diesel::insert_into(authormaps)
+    .values(&new_author_map)
+    .get_result::<AuthorMap>(conn);
+  match author_map {
+    Ok(author_map) => Ok(author_map),
+    Err(err) => {
+      eprintln!("Error inserting author_map {}", err);
+      Err(Box::new(err))
     }
+  }
 }
