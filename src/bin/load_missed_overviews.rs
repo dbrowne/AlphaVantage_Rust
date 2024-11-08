@@ -50,7 +50,12 @@ fn main() {
     let mut dur_time: DateTime<Local>;
     let conn = &mut establish_connection_or_exit();
 
-    let res = get_sids_and_names_after(conn, COUNTRY.to_string(), TYPE.to_string(),"2024-05-16".to_string());
+    let res = get_sids_and_names_after(
+        conn,
+        COUNTRY.to_string(),
+        TYPE.to_string(),
+        "2024-05-16".to_string(),
+    );
     let results = match res {
         Ok(results) => results,
         Err(err) => {
@@ -59,10 +64,10 @@ fn main() {
         }
     };
 
-    for (symbol,sid) in results {
+    for (symbol, sid) in results {
         println!("{}: {}", sid, symbol);
         dur_time = Local::now();
-        if let Err(err) = get_overview(conn,sid, symbol) {
+        if let Err(err) = get_overview(conn, sid, symbol) {
             println!("Error running reader: {}", err);
             continue;
         }

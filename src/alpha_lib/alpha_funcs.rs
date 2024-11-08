@@ -29,7 +29,6 @@
 
 use crate::alpha_lib::alpha_data_types::TopType;
 
-
 /// Normalizes region names to their respective short forms.
 ///
 /// This function takes a string slice (`&str`) that represents a region name and
@@ -70,15 +69,17 @@ pub fn normalize_alpha_region(reg: &str) -> String {
         "India/Bombay" => "Bomb",
         "Brazil/Sao Paolo" => "SaoP",
         _ => reg,
-    }.to_string()
+    }
+    .to_string()
 }
 
 pub fn top_constants(act: &TopType) -> String {
     match act {
         TopType::TopGainer => "GAIN",
-        TopType::TopLoser  => "LOSE",
+        TopType::TopLoser => "LOSE",
         TopType::TopActive => "ACTV",
-    }.to_string()
+    }
+    .to_string()
 }
 
 #[cfg(test)]

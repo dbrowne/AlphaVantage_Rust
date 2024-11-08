@@ -27,11 +27,11 @@
  * SOFTWARE.
  */
 
-use std::error::Error;
-use diesel::PgConnection;
 use crate::db_models::{NewTickerSentiment, TickerSentiment};
-use crate::schema::tickersentiments::dsl::tickersentiments;
 use crate::dbfunctions::common::*;
+use crate::schema::tickersentiments::dsl::tickersentiments;
+use diesel::PgConnection;
+use std::error::Error;
 pub fn ins_ticker_sentiment(
     conn: &mut PgConnection,
     s_id: &i64,

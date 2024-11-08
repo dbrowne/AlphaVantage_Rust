@@ -38,26 +38,24 @@ use crate::dbfunctions::news_root::insert_news_root;
 use crate::dbfunctions::sources::insert_source;
 use crate::dbfunctions::topic_refs::insert_topic;
 
+use crate::alpha_lib::misc_functions::log_missed_symbol;
+use crate::dbfunctions::author_map::insert_author_map;
 use crate::dbfunctions::feed::ins_n_ret_feed;
 use crate::dbfunctions::ticker_sentiments::ins_ticker_sentiment;
+use crate::dbfunctions::topic_maps::ins_topic_map;
 use diesel::PgConnection;
 use std::collections::HashMap;
 use std::error::Error;
-use std::io::BufWriter;
-use crate::dbfunctions::author_map::insert_author_map;
-use crate::dbfunctions::topic_maps::ins_topic_map;
 use std::fs::File;
-use crate::alpha_lib::misc_functions::log_missed_symbol;
+use std::io::BufWriter;
 
 #[derive(Debug, Default)]
 pub struct Params {
     pub topics: HashMap<String, i32>,
     pub authors: HashMap<String, i32>,
     pub sources: HashMap<String, i32>,
-    pub names_to_sid: HashMap<String, i64>
+    pub names_to_sid: HashMap<String, i64>,
 }
-
-
 
 pub fn load_news(
     conn: &mut PgConnection,
@@ -79,7 +77,7 @@ pub fn process_news(
     tkr: &String,
     root: NewsRoot,
     params: &mut Params,
-    symbol_log: &mut BufWriter<File>
+    symbol_log: &mut BufWriter<File>,
 ) -> Result<(), Box<dyn Error>> {
     let item_count = root.items.parse::<i32>()?;
     if item_count < 1 {
@@ -88,7 +86,7 @@ pub fn process_news(
     }
 
     if let Ok(overview) = insert_news_root(conn, *s_id, item_count, root.feed.clone()) {
-        process_feed(conn, s_id, tkr, root.feed, overview.id, params,  symbol_log)?;
+        process_feed(conn, s_id, tkr, root.feed, overview.id, params, symbol_log)?;
     } else {
         println!("Cannot insert news root for {}", tkr);
     }
@@ -118,11 +116,11 @@ fn process_article(
     article: RawFeed,
     overview_id: i32,
     params: &mut Params,
-    symbol_log: &mut BufWriter<File>
+    symbol_log: &mut BufWriter<File>,
 ) -> Result<(), Box<dyn Error>> {
     let mut author_id: i32 = -1;
     let mut topic_id: i32 = -1;
-    let source_id: i32 ;
+    let source_id: i32;
 
     let sources = params.sources.clone();
     // bad logic here need to fix
@@ -206,22 +204,23 @@ fn process_article(
             article.overall_sentiment_score,
             article.overall_sentiment_label,
         ) {
-            if let Ok(_ts) = load_sentiments(conn, article.ticker_sentiment, params, feed.id,  symbol_log) {
+            if let Ok(_ts) =
+                load_sentiments(conn, article.ticker_sentiment, params, feed.id, symbol_log)
+            {
                 println!("Inserted sentiments for {}", art.title);
             } else {
                 println!("Cannot insert sentiments for {}", art.title);
             }
-            if let Ok(_tp) = load_topic_map(conn, s_id, article.topics,feed.id, params) {
+            if let Ok(_tp) = load_topic_map(conn, s_id, article.topics, feed.id, params) {
                 println!("Inserted topics for {}", art.title);
             } else {
                 println!("Cannot insert topics for {}", art.title);
             }
-            if let Ok(_am) = insert_author_map(conn, feed.id,author_id) {
+            if let Ok(_am) = insert_author_map(conn, feed.id, author_id) {
                 println!("Inserted author map for {}", art.title);
             } else {
                 println!("Cannot insert author map for {}", art.title);
             }
-
         } else {
             println!("Cannot insert feed {} for sid {}", art.title, s_id);
             return Err(Box::new(std::io::Error::new(
@@ -237,8 +236,6 @@ fn process_article(
         )));
     }
 
-
-
     Ok(())
 }
 
@@ -247,10 +244,10 @@ fn load_sentiments(
     sentiments: Vec<TickerSentiment>,
     params: &mut Params,
     inp_feed_id: i32,
-    symbol_log: &mut BufWriter<File>
+    symbol_log: &mut BufWriter<File>,
 ) -> Result<(), Box<dyn Error>> {
     for sent in sentiments {
-        let sent_label =sent.ticker_sentiment_label;
+        let sent_label = sent.ticker_sentiment_label;
         let sent_score = sent.ticker_sentiment_score.parse::<f64>()?;
         let sent_rel = sent.relevance_score.parse::<f64>()?;
         let sent_tkr = sent.ticker.clone();
@@ -260,19 +257,31 @@ fn load_sentiments(
             log_missed_symbol(symbol_log, &sent_tkr)?;
             continue;
         }
-       _ = ins_ticker_sentiment(conn, sid, inp_feed_id, sent_rel, sent_score, sent_label)
+        _ = ins_ticker_sentiment(conn, sid, inp_feed_id, sent_rel, sent_score, sent_label)
     }
     Ok(())
 }
 
-fn load_topic_map(conn: &mut PgConnection, inp_sid: &i64, topics: Vec<Topic>, inp_feed_id:i32, params: &mut Params) -> Result<(), Box<dyn Error>> {
+fn load_topic_map(
+    conn: &mut PgConnection,
+    inp_sid: &i64,
+    topics: Vec<Topic>,
+    inp_feed_id: i32,
+    params: &mut Params,
+) -> Result<(), Box<dyn Error>> {
     for topic in topics {
         let topic_id = *params.topics.get(&topic.topic).unwrap_or(&-1);
         if topic_id == -1 {
             println!("Cannot find topic id for {}", topic.topic);
             continue;
         }
-        let _ = ins_topic_map(conn, *inp_sid,inp_feed_id, topic_id,topic.relevance_score.parse::<f64>()?)?;
+        let _ = ins_topic_map(
+            conn,
+            *inp_sid,
+            inp_feed_id,
+            topic_id,
+            topic.relevance_score.parse::<f64>()?,
+        )?;
     }
     Ok(())
 }

@@ -62,7 +62,7 @@ fn main() {
     for (sid, symbol) in results {
         println!("{}: {}", sid, symbol);
         dur_time = Local::now();
-        if let Err(err) = get_overview(conn,sid, symbol) {
+        if let Err(err) = get_overview(conn, sid, symbol) {
             println!("Error running reader: {}", err);
             process::exit(1);
         }

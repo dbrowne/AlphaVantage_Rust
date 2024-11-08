@@ -27,18 +27,17 @@
  * SOFTWARE.
  */
 
-use  dotenvy::dotenv;
-use  std::process;
+use dotenvy::dotenv;
+use std::process;
 use AlphaVantage_Rust::alpha_lib::alpha_io_funcs::load_tops;
 use AlphaVantage_Rust::dbfunctions::base::establish_connection_or_exit;
 
 fn main() {
-    let  conn = &mut establish_connection_or_exit();
+    let conn = &mut establish_connection_or_exit();
     dotenv().ok();
 
-    if  let  Err(_err) = load_tops(conn) {
+    if let Err(_err) = load_tops(conn) {
         eprintln!("Error loading Top statistics");
         process::exit(1);
     }
-
 }

@@ -31,16 +31,15 @@ use crate::dbfunctions::common::*;
 use crate::db_models::{Feed, NewFeed};
 use crate::schema::feeds::dsl::feeds;
 
-
-pub  fn ins_n_ret_feed(conn:&mut PgConnection,s_id:&i64,
-                           inp_newsoverviewid:i32,
-                          inp_articleid:String,
-                          inp_sourceid:i32,
-                          inp_osentiment:f64,
-                          inp_sentlabel:String,
-
-
-    ) -> Result<Feed, Box<dyn Error>>{
+pub fn ins_n_ret_feed(
+    conn: &mut PgConnection,
+    s_id: &i64,
+    inp_newsoverviewid: i32,
+    inp_articleid: String,
+    inp_sourceid: i32,
+    inp_osentiment: f64,
+    inp_sentlabel: String,
+) -> Result<Feed, Box<dyn Error>> {
     // let local :DateTime<Local>= Local::now();
     // let date= NaiveDate::from_ymd_opt(local.year(),local.month(),local.day()).unwrap_or(NaiveDate::from_ymd_opt(1900,1,1).unwrap());
     // let tim = NaiveTime::from_hms_opt(0,0,0).unwrap();
@@ -51,23 +50,14 @@ pub  fn ins_n_ret_feed(conn:&mut PgConnection,s_id:&i64,
         newsoverviewid: &inp_newsoverviewid,
         articleid: &inp_articleid,
         sourceid: &inp_sourceid,
-        osentiment:&inp_osentiment,
+        osentiment: &inp_osentiment,
         sentlabel: &inp_sentlabel,
     };
 
-    let root = diesel::insert_into(feeds)
-        .values(&rt)
-        .get_result(conn);
+    let root = diesel::insert_into(feeds).values(&rt).get_result(conn);
 
     match root {
         Ok(r) => Ok(r),
-        Err(e) => {
-
-            Err(Box::new(e))
-        },
+        Err(e) => Err(Box::new(e)),
     }
-
-
-
-
 }

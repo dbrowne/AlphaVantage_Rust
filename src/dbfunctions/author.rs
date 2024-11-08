@@ -27,10 +27,9 @@
  * SOFTWARE.
  */
 
+use crate::db_models::{Author, NewAuthor};
 use crate::dbfunctions::common::*;
-use crate::db_models::{NewAuthor, Author};
 use crate::schema::authors::dsl::authors;
-
 
 pub fn get_authors(conn: &mut PgConnection) -> Result<Vec<Author>, Box<dyn Error>> {
     let auths = authors.load::<Author>(conn);
@@ -43,9 +42,11 @@ pub fn get_authors(conn: &mut PgConnection) -> Result<Vec<Author>, Box<dyn Error
     }
 }
 
-
-pub  fn get_author_by_name(conn: &mut PgConnection, auth_name: String) ->Result<Author, Box<dyn Error>> {
-    use crate::schema::authors::dsl::{author_name};
+pub fn get_author_by_name(
+    conn: &mut PgConnection,
+    auth_name: String,
+) -> Result<Author, Box<dyn Error>> {
+    use crate::schema::authors::dsl::author_name;
 
     let author = authors
         .filter(author_name.eq(auth_name))
@@ -60,11 +61,9 @@ pub  fn get_author_by_name(conn: &mut PgConnection, auth_name: String) ->Result<
 }
 
 pub fn get_author_by_id(conn: &mut PgConnection, author_id: i32) -> Result<Author, Box<dyn Error>> {
-    use crate::schema::authors::dsl::{id};
+    use crate::schema::authors::dsl::id;
 
-    let author = authors
-        .filter(id.eq(author_id))
-        .first::<Author>(conn);
+    let author = authors.filter(id.eq(author_id)).first::<Author>(conn);
     match author {
         Ok(author) => Ok(author),
         Err(err) => {
@@ -78,9 +77,7 @@ pub fn insert_author(conn: &mut PgConnection, author: String) -> Result<Author, 
     let auth = NewAuthor {
         author_name: &author,
     };
-    let author = diesel::insert_into(authors)
-        .values(&auth)
-        .get_result(conn);
+    let author = diesel::insert_into(authors).values(&auth).get_result(conn);
     match author {
         Ok(author) => Ok(author),
         Err(err) => {
