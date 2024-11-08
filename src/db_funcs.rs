@@ -745,7 +745,7 @@ pub fn get_intr_day_max_date(conn: &mut PgConnection, s_id: i64) -> NaiveDateTim
 }
 
 pub fn get_summary_max_date(conn: &mut PgConnection, s_id: i64) -> NaiveDate {
-    use crate::schema::summaryprices::dsl::{summaryprices, date, sid};
+  use crate::schema::summaryprices::dsl::{date, sid, summaryprices};
 
   let xx = summaryprices
     .filter(sid.eq(s_id))

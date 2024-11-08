@@ -195,7 +195,6 @@ pub struct NewOverviewext<'a> {
   pub mod_time: &'a NaiveDateTime,
 }
 
-
 #[derive(Queryable, Debug)]
 pub struct IntraDayPrice {
   pub eventid: i32,
@@ -248,7 +247,6 @@ pub struct NewSummaryPrice<'a> {
   pub volume: &'a i32,
 }
 
-
 #[derive(Queryable, Debug)]
 pub struct TopStat {
   pub eventid: i32,
@@ -261,7 +259,6 @@ pub struct TopStat {
   pub change_pct: f32,
   pub volume: i32,
 }
-
 
 #[derive(Insertable, Debug)]
 #[diesel(table_name = topstats)]
@@ -318,7 +315,6 @@ pub struct NewNewsOverview<'a> {
   pub creation: &'a NaiveDateTime,
 }
 
-
 #[derive(Queryable, Debug)]
 pub struct Feed {
   pub id: i32,
@@ -340,7 +336,6 @@ pub struct NewFeed<'a> {
   pub osentiment: &'a f64,
   pub sentlabel: &'a String,
 }
-
 
 #[derive(Queryable, Debug)]
 pub struct Article {
@@ -407,7 +402,6 @@ pub struct TickerSentiment {
   pub sentimentlable: String,
 }
 
-
 #[derive(Insertable, Debug)]
 #[diesel(table_name = tickersentiments)]
 pub struct NewTickerSentiment<'a> {
@@ -417,7 +411,6 @@ pub struct NewTickerSentiment<'a> {
   pub tsentiment: &'a f64,
   pub sentimentlable: &'a String,
 }
-
 
 #[derive(Queryable, Debug)]
 pub struct TopicMap {
