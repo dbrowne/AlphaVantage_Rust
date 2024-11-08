@@ -27,31 +27,30 @@
  * SOFTWARE.
  */
 
-
-use std::io::{self, Write, BufWriter, BufRead};
-use std::env;
+use std::{
+  env,
+  io::{self, BufRead, BufWriter, Write},
+};
 
 pub fn log_missed_symbol(buf_writer: &mut BufWriter<impl Write>, data: &str) -> io::Result<()> {
-    let newln = format!("{}\n", data);
-    buf_writer.write_all(newln.as_bytes()) // Convert string to bytes and write
+  let newln = format!("{}\n", data);
+  buf_writer.write_all(newln.as_bytes()) // Convert string to bytes and write
 }
 
-pub fn read_missed_symbols(file_name:String) -> io::Result<Vec<String>> {
-    let mut missed_symbols = Vec::new();
-    let file = std::fs::File::open(file_name)?;
-    let reader = io::BufReader::new(file);
-    for line in reader.lines() {
-        missed_symbols.push(line?);
-    }
-    Ok(missed_symbols)
+pub fn read_missed_symbols(file_name: String) -> io::Result<Vec<String>> {
+  let mut missed_symbols = Vec::new();
+  let file = std::fs::File::open(file_name)?;
+  let reader = io::BufReader::new(file);
+  for line in reader.lines() {
+    missed_symbols.push(line?);
+  }
+  Ok(missed_symbols)
 }
 
-
-
-    pub  fn get_exe_name() -> String {
-    let exe_name = env::current_exe().unwrap();
-     exe_name.to_str().unwrap().to_string()
-    // let exe_name = exe_name.file_name().unwrap();
-    // let exe_name = exe_name.to_str().unwrap();
-    // exe_name.to_string()
+pub fn get_exe_name() -> String {
+  let exe_name = env::current_exe().unwrap();
+  exe_name.to_str().unwrap().to_string()
+  // let exe_name = exe_name.file_name().unwrap();
+  // let exe_name = exe_name.to_str().unwrap();
+  // exe_name.to_string()
 }

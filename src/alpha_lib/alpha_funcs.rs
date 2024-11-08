@@ -29,7 +29,6 @@
 
 use crate::alpha_lib::alpha_data_types::TopType;
 
-
 /// Normalizes region names to their respective short forms.
 ///
 /// This function takes a string slice (`&str`) that represents a region name and
@@ -51,8 +50,8 @@ use crate::alpha_lib::alpha_data_types::TopType;
 ///
 /// # Returns
 ///
-/// * A `String` containing the shortened form of the region name. If the region name is not recognized,
-///   the function returns the original name.
+/// * A `String` containing the shortened form of the region name. If the region name is not
+///   recognized, the function returns the original name.
 ///
 /// # Examples
 ///
@@ -62,40 +61,42 @@ use crate::alpha_lib::alpha_data_types::TopType;
 /// assert_eq!(short_region, "USA");
 /// ```
 pub fn normalize_alpha_region(reg: &str) -> String {
-    match reg {
-        "United States" => "USA",
-        "United Kingdom" => "UK",
-        "Frankfurt" => "Frank",
-        "Toronto Venture" => "TOR",
-        "India/Bombay" => "Bomb",
-        "Brazil/Sao Paolo" => "SaoP",
-        _ => reg,
-    }.to_string()
+  match reg {
+    "United States" => "USA",
+    "United Kingdom" => "UK",
+    "Frankfurt" => "Frank",
+    "Toronto Venture" => "TOR",
+    "India/Bombay" => "Bomb",
+    "Brazil/Sao Paolo" => "SaoP",
+    _ => reg,
+  }
+  .to_string()
 }
 
 pub fn top_constants(act: &TopType) -> String {
-    match act {
-        TopType::TopGainer => "GAIN",
-        TopType::TopLoser  => "LOSE",
-        TopType::TopActive => "ACTV",
-    }.to_string()
+  match act {
+    TopType::TopGainer => "GAIN",
+    TopType::TopLoser => "LOSE",
+    TopType::TopActive => "ACTV",
+  }
+  .to_string()
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+  use super::*;
 
-    #[test]
-    fn test_normalize_alpha_region() {
-        let region = "United States";
-        let short_region = normalize_alpha_region(region);
-        assert_eq!(short_region, "USA");
-    }
+  #[test]
+  fn test_normalize_alpha_region() {
+    let region = "United States";
+    let short_region = normalize_alpha_region(region);
+    assert_eq!(short_region, "USA");
+  }
 
-    #[test]
-    fn test_normalize_alpha_region_2() {
-        let region = "Whatever";
-        let short_region = normalize_alpha_region(region);
-        assert_eq!(short_region, "Whatever");
-    }
+  #[test]
+  fn test_normalize_alpha_region_2() {
+    let region = "Whatever";
+    let short_region = normalize_alpha_region(region);
+    assert_eq!(short_region, "Whatever");
+  }
 }

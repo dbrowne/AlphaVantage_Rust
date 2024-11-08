@@ -27,68 +27,67 @@
  * SOFTWARE.
  */
 
-use crate::dbfunctions::common::*;
 use std::error::Error;
-use chrono::{Datelike, DateTime, Local, NaiveDate, NaiveDateTime, NaiveTime};
-use serde::Serialize;
-use crate::alpha_lib::news_type::RawFeed;
-use crate::db_models::{NewNewsOverview, NewsOverview};
-use crate::schema::newsoverviews::dsl::newsoverviews;
+
 use bincode::Options;
-
+use chrono::{DateTime, Datelike, Local, NaiveDate, NaiveDateTime, NaiveTime};
 use crc32fast::Hasher;
-pub fn insert_news_root(conn: &mut PgConnection, s_id: i64, item_count: i32,
-                        news: Vec<RawFeed>,
+use serde::Serialize;
+
+use crate::{
+  alpha_lib::news_type::RawFeed,
+  db_models::{NewNewsOverview, NewsOverview},
+  dbfunctions::common::*,
+  schema::newsoverviews::dsl::newsoverviews,
+};
+pub fn insert_news_root(
+  conn: &mut PgConnection,
+  s_id: i64,
+  item_count: i32,
+  news: Vec<RawFeed>,
 ) -> Result<NewsOverview, Box<dyn Error>> {
+  let local: DateTime<Local> = Local::now();
+  let date = NaiveDate::from_ymd_opt(local.year(), local.month(), local.day())
+    .unwrap_or(NaiveDate::from_ymd_opt(1900, 1, 1).unwrap());
+  let tim = NaiveTime::from_hms_opt(0, 0, 0).unwrap();
+  let creattion_date = NaiveDateTime::new(date, tim);
 
-    let local :DateTime<Local>= Local::now();
-    let date= NaiveDate::from_ymd_opt(local.year(),local.month(),local.day()).unwrap_or(NaiveDate::from_ymd_opt(1900,1,1).unwrap());
-    let tim = NaiveTime::from_hms_opt(0,0,0).unwrap();
-    let creattion_date= NaiveDateTime::new(date,tim);
+  let rt = NewNewsOverview {
+    items: &item_count,
+    sid: s_id.clone(),
+    hashid: &get_hash_id(news),
+    creation: &creattion_date,
+  };
 
-    let rt = NewNewsOverview{
-        items: &item_count,
-        sid: s_id.clone(),
-        hashid: &get_hash_id(news),
-        creation: &creattion_date,
-    };
+  let root = diesel::insert_into(newsoverviews)
+    .values(&rt)
+    .get_result(conn);
 
-    let root = diesel::insert_into(newsoverviews)
-        .values(&rt)
-        .get_result(conn);
-
-    match root {
-        Ok(root) => Ok(root),
-        Err(err) =>{
-            eprintln!("Cannot insert news Root for sid {}  err=->{}",s_id,err);
-            Err(Box::new(err))
-        }
-    }
-
-
-
+  match root {
+    Ok(root) => Ok(root),
+    Err(err) => Err(Box::new(err)),
+  }
 }
 
-fn get_hash_id(news:Vec<RawFeed>) -> String {
-    let bytes = convert_to_bytes(news);
-    calculate_checksum(&bytes)
+fn get_hash_id(news: Vec<RawFeed>) -> String {
+  let bytes = convert_to_bytes(news);
+  calculate_checksum(&bytes)
 }
 fn convert_to_bytes<T>(vec: Vec<T>) -> Vec<u8>
-    where
-        T: Serialize,
+where
+  T: Serialize,
 {
-    let mut bytes = Vec::new();
-    for item in vec {
-        // Correct usage with the default options
-        let serialized = bincode::options().serialize(&item).unwrap();
-        bytes.extend(serialized);
-    }
-    bytes
+  let mut bytes = Vec::new();
+  for item in vec {
+    // Correct usage with the default options
+    let serialized = bincode::options().serialize(&item).unwrap();
+    bytes.extend(serialized);
+  }
+  bytes
 }
 
 fn calculate_checksum(bytes: &[u8]) -> String {
-    let mut hasher = Hasher::new();
-    hasher.update(bytes);
-    hasher.finalize().to_string()
-
+  let mut hasher = Hasher::new();
+  hasher.update(bytes);
+  hasher.finalize().to_string()
 }

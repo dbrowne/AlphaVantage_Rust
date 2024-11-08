@@ -4,7 +4,7 @@
  *
  *
  * MIT License
- * Copyright (c) 2023. Dwight J. Browne
+ * Copyright (c) 2024. Dwight J. Browne
  * dwight[-dot-]browne[-at-]dwightjbrowne[-dot-]com
  *
  *
@@ -26,16 +26,15 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
+#[cfg(not(tarpaulin_include))]
+use alpha_vantage_rust::{
+  db_funcs::get_full_overview, dbfunctions::base::establish_connection_or_exit,
+};
 
-pub mod articles;
-pub mod author;
-pub mod author_map;
-pub mod base;
-pub mod common;
-pub mod feed;
-pub mod news_root;
-pub mod raw_queries;
-pub mod sources;
-pub mod ticker_sentiments;
-pub mod topic_maps;
-pub mod topic_refs;
+fn main() {
+  let symbol = "MA";
+  let connection = &mut establish_connection_or_exit();
+  if let Ok(overview) = get_full_overview(connection, symbol) {
+    println!("{:#?}", overview);
+  };
+}

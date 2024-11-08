@@ -27,33 +27,50 @@
  * SOFTWARE.
  */
 
-use dotenvy::dotenv;
+#[cfg(not(tarpaulin_include))]
 use std::process;
-use AlphaVantage_Rust::alpha_lib::alpha_io_funcs::load_intraday;
-use AlphaVantage_Rust::alpha_lib::misc_functions::get_exe_name;
-use AlphaVantage_Rust::db_funcs::{get_proc_id_or_insert, get_sids_and_names_with_overview, log_proc_end, log_proc_start};
-use AlphaVantage_Rust::dbfunctions::base::establish_connection_or_exit;
+
+use alpha_vantage_rust::{
+  alpha_lib::{alpha_io_funcs::load_intraday, misc_functions::get_exe_name},
+  db_funcs::{
+    get_proc_id_or_insert, get_sids_and_names_with_overview, log_proc_end, log_proc_start,
+  },
+  dbfunctions::base::establish_connection_or_exit,
+};
+use dotenvy::dotenv;
+use indicatif::ProgressBar;
 
 fn main() {
-    let conn = &mut establish_connection_or_exit();
+  let conn = &mut establish_connection_or_exit();
 
-    dotenv().ok();
+  dotenv().ok();
 
-    let id_val = get_proc_id_or_insert(conn,&get_exe_name()).unwrap();
-    let pid = log_proc_start(conn, id_val).unwrap();
-    let results: Vec<(i64, String)> =
-        get_sids_and_names_with_overview(conn).unwrap_or_else(|err| {
-            println!("Cannot load results from database {}", err);
-            _= log_proc_end(conn, pid,3).unwrap();
-            process::exit(1);
-        });
+  let id_val = get_proc_id_or_insert(conn, &get_exe_name()).unwrap();
+  let pid = log_proc_start(conn, id_val).unwrap();
+  let results: Vec<(i64, String)> = get_sids_and_names_with_overview(conn).unwrap_or_else(|err| {
+    println!("Cannot load results from database {}", err);
+    _ = log_proc_end(conn, pid, 3).unwrap();
+    process::exit(1);
+  });
 
-    for (sid, symbol) in results {
-        println!("{}:{}", sid, symbol);
-        if let Err(err) = load_intraday(conn, symbol, sid) {
-            println!("Error getting intraday prices {} for sid {}", err, sid);
-            continue;
-        }
+  let progress_size = results.len() as u64;
+  let bar = ProgressBar::new(progress_size);
+  bar.set_style(
+    indicatif::ProgressStyle::default_bar()
+      .template("[{elapsed_precise}] {bar:40.cyan/blue} {pos:>7}/{len:7} {msg}")
+      .expect("Error setting progress bar style")
+      .progress_chars("##-"),
+  );
+
+  for (sid, symbol) in results {
+    bar.inc(1);
+
+    if let Err(err) = load_intraday(conn, &symbol, sid) {
+      //todo: improve logging
+      // println!("Error getting intraday prices {} for sid {}", err, sid);
+      continue;
     }
-    _= log_proc_end(conn, pid,2).unwrap();
+  }
+  bar.finish();
+  _ = log_proc_end(conn, pid, 2).unwrap();
 }

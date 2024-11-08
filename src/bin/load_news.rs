@@ -26,60 +26,79 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
+#[cfg(not(tarpaulin_include))]
+use std::{
+  env::var,
+  fs::File,
+  io::{BufWriter, Write},
+  process,
+};
 
-use std::fs::File;
-use std::io::{BufWriter, Write};
+use alpha_vantage_rust::{
+  alpha_lib::{
+    alpha_io::news_loader::{load_news, Params},
+    misc_functions::get_exe_name,
+  },
+  db_funcs::{
+    get_proc_id_or_insert, get_sids_and_names_with_overview, log_proc_end, log_proc_start,
+  },
+  dbfunctions::{
+    author::get_authors, base::establish_connection_or_exit, sources::get_sources,
+    topic_refs::get_topics,
+  },
+};
 use dotenvy::dotenv;
-use std::process;
-use AlphaVantage_Rust::alpha_lib::misc_functions::get_exe_name;
-use AlphaVantage_Rust::alpha_lib::alpha_io::news_loader::{load_news,Params};
-use AlphaVantage_Rust::db_funcs::{get_proc_id_or_insert, get_sids_and_names_with_overview, log_proc_end, log_proc_start};
-use AlphaVantage_Rust::dbfunctions::base::establish_connection_or_exit;
-use AlphaVantage_Rust::dbfunctions::sources::get_sources;
-use AlphaVantage_Rust::dbfunctions::topic_refs::get_topics;
-use AlphaVantage_Rust::dbfunctions::author::get_authors;
-fn main()->Result<(),Box<dyn std::error::Error>>{
-    dotenv().ok();
-    let conn = &mut establish_connection_or_exit();
+use indicatif::ProgressBar;
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+  dotenv().ok();
+  let conn = &mut establish_connection_or_exit();
 
-    let id_val = get_proc_id_or_insert(conn,&get_exe_name()).unwrap();
+  let id_val = get_proc_id_or_insert(conn, &get_exe_name()).unwrap();
 
-    let pid = log_proc_start(conn, id_val).unwrap();
-    let results: Vec<(i64, String)> = get_sids_and_names_with_overview(conn)
-        .unwrap_or_else(|err| {
-            println!("Cannot load results from database {}", err);
-            _= log_proc_end(conn, pid,3).unwrap();
-            process::exit(1);
-        }
-        );
+  let pid = log_proc_start(conn, id_val).unwrap();
+  let results: Vec<(i64, String)> = get_sids_and_names_with_overview(conn).unwrap_or_else(|err| {
+    println!("Cannot load results from database {}", err);
+    _ = log_proc_end(conn, pid, 3).unwrap();
+    process::exit(1);
+  });
 
+  let count_of_sids = results.len();
 
-    let mut params = Params::default();
-    let mut topics = get_topics(conn)?;
-    let mut authors = get_authors(conn)?;
-    let mut sources = get_sources(conn)?;
+  let mut params = Params::default();
+  let topics = get_topics(conn)?;
+  let authors = get_authors(conn)?;
+  let sources = get_sources(conn)?;
 
-    for  (sid, name) in results.iter(){
-        params.names_to_sid.insert(name.clone(), *sid);
-    }
+  for (sid, name) in results.iter() {
+    params.names_to_sid.insert(name.clone(), *sid);
+  }
 
-    params.topics = topics.iter().map(|t| (t.name.clone(), t.id)).collect();
-    params.authors = authors.iter().map(|a| (a.author_name.clone(), a.id)).collect();
-    params.sources = sources.iter().map(|s| (s.source_name.clone(), s.id)).collect();
-    let mut symbol_log: BufWriter<File> = BufWriter::new(File::create("/tmp/symbol_log.txt")?);
+  params.topics = topics.iter().map(|t| (t.name.clone(), t.id)).collect();
+  params.authors = authors
+    .iter()
+    .map(|a| (a.author_name.clone(), a.id))
+    .collect();
+  params.sources = sources
+    .iter()
+    .map(|s| (s.source_name.clone(), s.id))
+    .collect();
+  let mut symbol_log: BufWriter<File> = BufWriter::new(File::create("/tmp/symbol_log.txt")?);
 
+  let progress = ProgressBar::new(count_of_sids as u64);
+  progress.set_style(
+    indicatif::ProgressStyle::default_bar()
+      .template("[{elapsed_precise}] {bar:40.cyan/blue} {pos:>7}/{len:7} {msg}")
+      .expect("Error setting progress bar style")
+      .progress_chars("##-"),
+  );
 
-    for (s_id, symb) in results{
-        let news_status = load_news(conn, &s_id, &symb, &mut params, &mut  symbol_log);
-        match news_status {
-            Ok(_news) => println!("News loaded for {}: {}",s_id, symb),
-            Err(err) => {
-                eprintln!("Error loading news {} for {}", err,symb);
-            }
-        }
-    }
-    symbol_log.flush()?;
-    _= log_proc_end(conn, pid,2).unwrap();
-    Result::Ok(())
+  for (s_id, symb) in results {
+    let _news_status = load_news(conn, &s_id, &symb, &mut params, &mut symbol_log);
+    progress.inc(1);
+  }
+  progress.finish_with_message("News loading complete");
+  symbol_log.flush()?;
+  progress.finish();
+  _ = log_proc_end(conn, pid, 2).unwrap();
+  Result::Ok(())
 }
-

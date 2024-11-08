@@ -73,8 +73,8 @@ diesel::table! {
         operatingmarginttm -> Float4,
         returnonassetsttm -> Float4,
         returnonequityttm -> Float4,
-        revenuettm -> Int4,
-        grossprofitttm -> Int4,
+        revenuettm -> Int8,
+        grossprofitttm -> Int8,
         dilutedepsttm -> Float4,
         quarterlyearningsgrowthyoy -> Float4,
         quarterlyrevenuegrowthyoy -> Float4,
@@ -85,12 +85,12 @@ diesel::table! {
         pricetobookratio -> Float4,
         evtorevenue -> Float4,
         evtoebitda -> Float4,
-        beta -> Float4,
-        annweekhigh -> Float4,
-        annweeklow -> Float4,
-        fiftydaymovingaverage -> Float4,
-        twohdaymovingaverage -> Float4,
-        sharesoutstanding -> Float4,
+        beta -> Float8,
+        annweekhigh -> Float8,
+        annweeklow -> Float8,
+        fiftydaymovingaverage -> Float8,
+        twohdaymovingaverage -> Float8,
+        sharesoutstanding -> Float8,
         dividenddate -> Date,
         exdividenddate -> Date,
         c_time -> Timestamp,
@@ -113,11 +113,11 @@ diesel::table! {
         address -> Text,
         fiscalyearend -> Text,
         latestquarter -> Date,
-        marketcapitalization -> Int4,
-        ebitda -> Int4,
+        marketcapitalization -> Int8,
+        ebitda -> Int8,
         peratio -> Float4,
         pegratio -> Float4,
-        bookvalue -> Float4,
+        bookvalue -> Float8,
         dividendpershare -> Float4,
         dividendyield -> Float4,
         eps -> Float4,
@@ -127,34 +127,10 @@ diesel::table! {
 }
 
 diesel::table! {
-    procstates (spid) {
-        spid -> Int4,
-        proc_id -> Nullable<Int4>,
-        start_time -> Timestamp,
-        end_state -> Nullable<Int4>,
-        end_time -> Nullable<Timestamp>,
-    }
-}
-
-diesel::table! {
-    proctypes (id) {
-        id -> Int4,
-        name -> Text,
-    }
-}
-
-diesel::table! {
     sources (id) {
         id -> Int4,
         source_name -> Text,
         domain -> Text,
-    }
-}
-
-diesel::table! {
-    states (id) {
-        id -> Int4,
-        name -> Text,
     }
 }
 
@@ -245,8 +221,6 @@ diesel::joinable!(intradayprices -> symbols (sid));
 diesel::joinable!(newsoverviews -> symbols (sid));
 diesel::joinable!(overviewexts -> symbols (sid));
 diesel::joinable!(overviews -> symbols (sid));
-diesel::joinable!(procstates -> proctypes (proc_id));
-diesel::joinable!(procstates -> states (end_state));
 diesel::joinable!(summaryprices -> symbols (sid));
 diesel::joinable!(tickersentiments -> feeds (feedid));
 diesel::joinable!(tickersentiments -> symbols (sid));
@@ -256,22 +230,22 @@ diesel::joinable!(topicmaps -> topicrefs (topicid));
 diesel::joinable!(topstats -> symbols (sid));
 
 diesel::allow_tables_to_appear_in_same_query!(
-    articles,
-    authormaps,
-    authors,
-    feeds,
-    intradayprices,
-    newsoverviews,
-    overviewexts,
-    overviews,
-    procstates,
-    proctypes,
-    sources,
-    states,
-    summaryprices,
-    symbols,
-    tickersentiments,
-    topicmaps,
-    topicrefs,
-    topstats,
+  articles,
+  authormaps,
+  authors,
+  feeds,
+  intradayprices,
+  newsoverviews,
+  overviewexts,
+  overviews,
+  procstates,
+  proctypes,
+  sources,
+  states,
+  summaryprices,
+  symbols,
+  tickersentiments,
+  topicmaps,
+  topicrefs,
+  topstats,
 );
