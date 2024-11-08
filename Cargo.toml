@@ -20,7 +20,6 @@ crc = "3.2.1"
 crc32fast = "1.4.0"
 csv = "1.2.1"
 diesel = { version = "2.0.4", features = ["postgres", "chrono", "uuid"] }
-bigdecimal = "0.4.3"
 dotenvy = "0.15.7"
 indicatif = "0.17.8"
 lazy_static = "1.4.0"
