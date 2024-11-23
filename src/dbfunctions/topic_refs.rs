@@ -4,7 +4,7 @@
  *
  *
  * MIT License
- * Copyright (c) 2023. Dwight J. Browne
+ * Copyright (c) 2024. Dwight J. Browne
  * dwight[-dot-]browne[-at-]dwightjbrowne[-dot-]com
  *
  *
@@ -33,61 +33,42 @@ use crate::{
   schema::topicrefs::dsl::topicrefs,
 };
 
-pub fn get_topics(conn: &mut PgConnection) -> Result<Vec<TopicRef>, Box<dyn Error>> {
-  let topics = topicrefs.load::<TopicRef>(conn);
-  match topics {
-    Ok(topics) => Ok(topics),
-    Err(err) => {
-      eprintln!("Error loading topics {}", err);
-      Err(Box::new(err))
-    }
-  }
+#[derive(Error, Debug)]
+pub enum Error {
+  #[error(transparent)]
+  DB(#[from] diesel::result::Error),
+  #[error("Unexpected error: {0}")]
+  UnEx(String),
+}
+pub fn get_topics(conn: &mut PgConnection) -> Result<Vec<TopicRef>, Error> {
+  topicrefs.load::<TopicRef>(conn).map_err(Error::from)
 }
 
-pub fn get_topic_by_id(conn: &mut PgConnection, topic_id: i32) -> Result<TopicRef, Box<dyn Error>> {
+pub fn get_topic_by_id(conn: &mut PgConnection, topic_id: i32) -> Result<TopicRef, Error> {
   use crate::schema::topicrefs::dsl::id;
 
-  let topic = topicrefs.filter(id.eq(topic_id)).first::<TopicRef>(conn);
-  match topic {
-    Ok(topic) => Ok(topic),
-    Err(err) => {
-      eprintln!("Error loading topic {}", err);
-      Err(Box::new(err))
-    }
-  }
+  topicrefs
+    .filter(id.eq(topic_id))
+    .first::<TopicRef>(conn)
+    .map_err(Error::from)
 }
 
 pub fn get_id_topic_by_name(
   conn: &mut PgConnection,
   topic_name: String,
-) -> Result<TopicRef, Box<dyn Error>> {
+) -> Result<TopicRef, Error> {
   use crate::schema::topicrefs::dsl::name;
 
-  let topic = topicrefs
+  topicrefs
     .filter(name.eq(topic_name))
-    .first::<TopicRef>(conn);
-  match topic {
-    Ok(topic) => Ok(topic),
-    Err(err) => {
-      eprintln!("Error loading topic {}", err);
-      Err(Box::new(err))
-    }
-  }
+    .first::<TopicRef>(conn)
+    .map_err(Error::from)
 }
 
-pub fn insert_topic(
-  conn: &mut PgConnection,
-  topic_name: String,
-) -> Result<TopicRef, Box<dyn Error>> {
+pub fn insert_topic(conn: &mut PgConnection, topic_name: String) -> Result<TopicRef, Error> {
   let new_topic = NewTopicRef { name: &topic_name };
-  let row_cnt = diesel::insert_into(topicrefs)
+  diesel::insert_into(topicrefs)
     .values(&new_topic)
-    .get_result::<TopicRef>(conn);
-  match row_cnt {
-    Ok(topic) => Ok(topic),
-    Err(err) => {
-      eprintln!("Error inserting topic {}", err);
-      Err(Box::new(err))
-    }
-  }
+    .get_result::<TopicRef>(conn)
+    .map_err(Error::from)
 }
