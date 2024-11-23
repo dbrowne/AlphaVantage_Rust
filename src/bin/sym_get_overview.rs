@@ -26,6 +26,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
+#![allow(unexpected_cfgs)]
 #[cfg(not(tarpaulin_include))]
 use alpha_vantage_rust::{
   db_funcs::get_full_overview, dbfunctions::base::establish_connection_or_exit,

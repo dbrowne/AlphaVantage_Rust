@@ -1,3 +1,4 @@
+#![allow(unexpected_cfgs)]
 #[cfg(not(tarpaulin_include))]
 use std::process;
 
@@ -21,7 +22,7 @@ fn main() {
   };
 
   let res = process_symbols(sec_vec, false);
-  let _ = match res {
+  match res {
     Ok(_) => println!("Operation completed successfully."),
     Err(e) => println!("An error occurred: {}", e),
   };

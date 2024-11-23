@@ -312,9 +312,9 @@ fn persist_ticks(
 ) -> Result<(), Box<dyn Error>> {
   let last_date = get_intr_day_max_date(connection, s_id);
 
-  let mut skipped = 0;
+  let mut _skipped = 0;
 
-  let mut processed = 0;
+  let mut _processed = 0;
 
   for tick in ticks {
     let tmp_tick = IntraDayPrice {
@@ -330,9 +330,9 @@ fn persist_ticks(
     };
     if tmp_tick.tstamp > last_date {
       let _ = create_intra_day(connection, tmp_tick);
-      processed += 1;
+      _processed += 1;
     } else {
-      skipped += 1;
+      _skipped += 1;
     }
   }
   Ok(())
