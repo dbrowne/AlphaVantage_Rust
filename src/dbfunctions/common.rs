@@ -4,7 +4,7 @@
  *
  *
  * MIT License
- * Copyright (c) 2023. Dwight J. Browne
+ * Copyright (c) 2024. Dwight J. Browne
  * dwight[-dot-]browne[-at-]dwightjbrowne[-dot-]com
  *
  *
@@ -27,6 +27,5 @@
  * SOFTWARE.
  */
 
-pub use std::error::Error;
-
 pub use diesel::{pg::PgConnection, prelude::*};
+pub use thiserror::Error;

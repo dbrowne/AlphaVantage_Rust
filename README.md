@@ -28,9 +28,9 @@ A Rust API client and demonstration for the [Alpha Vantage](https://www.alphavan
 
     ```dotenv
     DATABASE_URL=USERNAME://postgres:PASSWORD@localhost/sec_master
-    OTHER_LISTED=[Path_to_this_file]/data/other-listed.csv
+    OTHER_LISTED=[PATH_TO_THIS_FILE]/data/other-listed.csv
     ALPHA_VANTAGE_API_KEY="YOUR_ALPHA_VANTAGE_API_KEY"
-    NASDAQ_LISTED=[Path_to_this_file]/data/nasdaq-listed_csv.csv
+    NASDAQ_LISTED=[PATH_TO_THIS_FILE]/data/nasdaq-listed_csv.csv
     ```
 
    Replace the placeholders (`USERNAME`, `PASSWORD`, etc.) with your actual values.
@@ -50,8 +50,10 @@ This section will provide guidance on how to utilize the API client. (Expand upo
 - [x] open/close price loader
 - [x] Symbol activity loader
 - [x] News loader
-- [ ] improve code coverage
+  [ ] Warning cleanup ----- in progress
+- [ ] Error type handling ----- in progress
 - [ ] db refactoring
+- [ ] improve code coverage
 - [ ] Add logging and enhance error handling
 - [ ] Refactor code for production use 
 - [ ] Front end

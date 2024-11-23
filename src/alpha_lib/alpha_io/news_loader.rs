@@ -4,7 +4,7 @@
  *
  *
  * MIT License
- * Copyright (c) 2023. Dwight J. Browne
+ * Copyright (c) 2024. Dwight J. Browne
  * dwight[-dot-]browne[-at-]dwightjbrowne[-dot-]com
  *
  *
@@ -42,7 +42,7 @@ use crate::{
   create_url,
   dbfunctions::{
     articles::insert_article, author::insert_author, author_map::insert_author_map,
-    feed::ins_n_ret_feed, news_root::insert_news_root, sources::insert_source,
+    feed::insert_feed, news_root::insert_news_root, sources::insert_source,
     ticker_sentiments::ins_ticker_sentiment, topic_maps::ins_topic_map, topic_refs::insert_topic,
   },
 };
@@ -196,7 +196,7 @@ fn process_article(
     author_id,
     article.time_published,
   ) {
-    if let Ok(feed) = ins_n_ret_feed(
+    if let Ok(feed) = insert_feed(
       conn,
       &s_id.clone(),
       overview_id,

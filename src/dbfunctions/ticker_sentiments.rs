@@ -27,8 +27,6 @@
  * SOFTWARE.
  */
 
-use std::error::Error;
-
 use diesel::PgConnection;
 
 use crate::{
@@ -36,6 +34,15 @@ use crate::{
   dbfunctions::common::*,
   schema::tickersentiments::dsl::tickersentiments,
 };
+
+#[derive(Debug, Error)]
+pub enum Error {
+  #[error(transparent)]
+  DB(#[from] diesel::result::Error),
+
+  #[error("Unexpected : {0}")]
+  UnEx(String),
+}
 pub fn ins_ticker_sentiment(
   conn: &mut PgConnection,
   s_id: &i64,
@@ -43,7 +50,7 @@ pub fn ins_ticker_sentiment(
   inp_relevance: f64,
   inp_sentiment: f64,
   inp_sentlabel: String,
-) -> Result<TickerSentiment, Box<dyn Error>> {
+) -> Result<TickerSentiment, Error> {
   let rt = NewTickerSentiment {
     sid: &s_id.clone(),
     feedid: &inp_feedid,
@@ -52,14 +59,8 @@ pub fn ins_ticker_sentiment(
     sentimentlable: &&inp_sentlabel,
   };
 
-  let root = diesel::insert_into(tickersentiments)
+  diesel::insert_into(tickersentiments)
     .values(&rt)
-    .get_result(conn);
-  match root {
-    Ok(root) => Ok(root),
-    Err(err) => {
-      eprintln!("Error inserting Ticker Sentiment {}", err);
-      Err(Box::new(err))
-    }
-  }
+    .get_result(conn)
+    .map_err(Error::from)
 }

@@ -4,7 +4,7 @@
  *
  *
  * MIT License
- * Copyright (c) 2023. Dwight J. Browne
+ * Copyright (c) 2024. Dwight J. Browne
  * dwight[-dot-]browne[-at-]dwightjbrowne[-dot-]com
  *
  *
@@ -37,34 +37,31 @@ use crate::{
   schema::articles::dsl::articles,
 };
 
-pub fn get_article_hashes(conn: &mut PgConnection) -> Result<Vec<String>, Box<dyn Error>> {
-  use crate::schema::articles::dsl::hashid;
-  let hashes = articles.select(hashid).load::<String>(conn);
-  match hashes {
-    Ok(hashes) => Ok(hashes),
-    Err(err) => {
-      eprintln!("Error loading Hashes {}", err);
-      Err(Box::new(err))
-    }
-  }
+#[derive(Error, Debug)]
+pub enum Error {
+  #[error(transparent)]
+  DB(#[from] diesel::result::Error),
+  #[error("Unexpected error: {0}")]
+  UnEx(String),
+  #[error(transparent)]
+  TM(#[from] chrono::format::ParseError),
 }
 
-pub fn get_article_by_hash(
-  conn: &mut PgConnection,
-  hash_id: String,
-) -> Result<Article, Box<dyn Error>> {
+pub fn get_article_hashes(conn: &mut PgConnection) -> Result<Vec<String>, Error> {
+  use crate::schema::articles::dsl::hashid;
+  articles
+    .select(hashid)
+    .load::<String>(conn)
+    .map_err(Error::from)
+}
+
+pub fn get_article_by_hash(conn: &mut PgConnection, hash_id: String) -> Result<Article, Error> {
   use crate::schema::articles::dsl::*;
 
-  let art = articles
+  articles
     .filter(hashid.eq(hash_id.clone()))
-    .first::<Article>(conn);
-  match art {
-    Ok(art) => Ok(art),
-    Err(err) => {
-      eprintln!("Error getting hashid {}  {}", hash_id, err);
-      Err(Box::new(err))
-    }
-  }
+    .first::<Article>(conn)
+    .map_err(Error::from)
 }
 
 pub fn insert_article(
@@ -77,10 +74,11 @@ pub fn insert_article(
   b_anner: String,
   a_uthor: i32,
   t_published: String,
-) -> Result<Article, Box<dyn Error>> {
+) -> Result<Article, Error> {
   let time_format = "%Y%m%dT%H%M%S";
 
-  let parsed_date = NaiveDateTime::parse_from_str(&t_published, time_format)?;
+  let parsed_date =
+    NaiveDateTime::parse_from_str(&t_published, time_format).map_err(Error::from)?;
   let string_to_hash = format!("{}{}{}", t_itle.clone(), u_rl.clone(), s_ummary.clone());
   let hash = format!("{:?}", digest(&SHA256, string_to_hash.as_bytes()));
 
@@ -96,14 +94,8 @@ pub fn insert_article(
     ct: &parsed_date,
   };
 
-  let art = diesel::insert_into(articles).values(&n_a).get_result(conn);
-  match art {
-    Ok(art) => Ok(art),
-    Err(err) => {
-      // todo: Improve logging
-
-      // eprintln!("Could not insert article {} {}", t_itle, err);
-      Err(Box::new(err))
-    }
-  }
+  diesel::insert_into(articles)
+    .values(&n_a)
+    .get_result(conn)
+    .map_err(Error::from)
 }
