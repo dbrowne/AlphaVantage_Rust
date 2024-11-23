@@ -73,10 +73,8 @@ pub fn establish_connection_or_exit() -> PgConnection {
     }
   };
 
-  let conn = PgConnection::establish(&database_url).unwrap_or_else(|_| {
+  PgConnection::establish(&database_url).unwrap_or_else(|_| {
     eprintln!("Can't establish db connection");
     process::exit(1);
-  });
-
-  conn
+  })
 }

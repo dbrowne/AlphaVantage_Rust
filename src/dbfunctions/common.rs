@@ -27,6 +27,5 @@
  * SOFTWARE.
  */
 
-pub use std::error::Error;
-
 pub use diesel::{pg::PgConnection, prelude::*};
+pub use thiserror::Error;

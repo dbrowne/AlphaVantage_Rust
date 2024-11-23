@@ -33,58 +33,42 @@ use crate::{
   schema::authors::dsl::authors,
 };
 
-pub fn get_authors(conn: &mut PgConnection) -> Result<Vec<Author>, Box<dyn Error>> {
-  let auths = authors.load::<Author>(conn);
-  match auths {
-    Ok(auths) => Ok(auths),
-    Err(err) => {
-      eprintln!("Error loading authors {}", err);
-      Err(Box::new(err))
-    }
-  }
+#[derive(Error, Debug)]
+pub enum Error {
+  #[error(transparent)]
+  DB(#[from] diesel::result::Error),
+  #[error("Unexpected error: {0}")]
+  UnEx(String),
 }
 
-pub fn get_author_by_name(
-  conn: &mut PgConnection,
-  auth_name: String,
-) -> Result<Author, Box<dyn Error>> {
+pub fn get_authors(conn: &mut PgConnection) -> Result<Vec<Author>, Error> {
+  authors.load::<Author>(conn).map_err(Error::from)
+}
+
+pub fn get_author_by_name(conn: &mut PgConnection, auth_name: String) -> Result<Author, Error> {
   use crate::schema::authors::dsl::author_name;
 
-  let author = authors
+  authors
     .filter(author_name.eq(auth_name))
-    .first::<Author>(conn);
-  match author {
-    Ok(author) => Ok(author),
-    Err(err) => {
-      eprintln!("Error loading author {}", err);
-      Err(Box::new(err))
-    }
-  }
+    .first::<Author>(conn)
+    .map_err(Error::from)
 }
 
-pub fn get_author_by_id(conn: &mut PgConnection, author_id: i32) -> Result<Author, Box<dyn Error>> {
+pub fn get_author_by_id(conn: &mut PgConnection, author_id: i32) -> Result<Author, Error> {
   use crate::schema::authors::dsl::id;
 
-  let author = authors.filter(id.eq(author_id)).first::<Author>(conn);
-  match author {
-    Ok(author) => Ok(author),
-    Err(err) => {
-      eprintln!("Error loading author {}", err);
-      Err(Box::new(err))
-    }
-  }
+  authors
+    .filter(id.eq(author_id))
+    .first::<Author>(conn)
+    .map_err(Error::from)
 }
 
-pub fn insert_author(conn: &mut PgConnection, author: String) -> Result<Author, Box<dyn Error>> {
+pub fn insert_author(conn: &mut PgConnection, author: String) -> Result<Author, Error> {
   let auth = NewAuthor {
     author_name: &author,
   };
-  let author = diesel::insert_into(authors).values(&auth).get_result(conn);
-  match author {
-    Ok(author) => Ok(author),
-    Err(err) => {
-      eprintln!("Error inserting author {}", err);
-      Err(Box::new(err))
-    }
-  }
+  diesel::insert_into(authors)
+    .values(&auth)
+    .get_result(conn)
+    .map_err(Error::from)
 }

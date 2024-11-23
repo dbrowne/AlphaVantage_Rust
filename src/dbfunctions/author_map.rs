@@ -33,24 +33,26 @@ use crate::{
   schema::authormaps::dsl::authormaps,
 };
 
+#[derive(Error, Debug)]
+pub enum Error {
+  #[error(transparent)]
+  DB(#[from] diesel::result::Error),
+  #[error("Unexpected error: {0}")]
+  UnEx(String),
+}
+
 pub fn insert_author_map(
   conn: &mut PgConnection,
   feed_id: i32,
   author_id: i32,
-) -> Result<AuthorMap, Box<dyn Error>> {
+) -> Result<AuthorMap, Error> {
   let new_author_map = NewAuthorMap {
     feedid: &feed_id,
     authorid: &author_id,
   };
 
-  let author_map = diesel::insert_into(authormaps)
+  diesel::insert_into(authormaps)
     .values(&new_author_map)
-    .get_result::<AuthorMap>(conn);
-  match author_map {
-    Ok(author_map) => Ok(author_map),
-    Err(err) => {
-      eprintln!("Error inserting author_map {}", err);
-      Err(Box::new(err))
-    }
-  }
+    .get_result::<AuthorMap>(conn)
+    .map_err(Error::from)
 }

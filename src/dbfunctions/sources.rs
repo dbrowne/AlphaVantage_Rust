@@ -33,63 +33,46 @@ use crate::{
   schema::sources::dsl::sources,
 };
 
-pub fn get_sources(conn: &mut PgConnection) -> Result<Vec<Source>, Box<dyn Error>> {
-  let srcs = sources.load::<Source>(conn);
-  match srcs {
-    Ok(srcs) => Ok(srcs),
-    Err(err) => {
-      eprintln!("Error loading sources {}", err);
-      Err(Box::new(err))
-    }
-  }
+#[derive(Error, Debug)]
+pub enum Error {
+  #[error(transparent)]
+  DB(#[from] diesel::result::Error),
+  #[error("Unexpected error: {0}")]
+  UnEx(String),
+}
+pub fn get_sources(conn: &mut PgConnection) -> Result<Vec<Source>, Error> {
+  sources.load::<Source>(conn).map_err(Error::from)
 }
 
-pub fn get_source_by_name(
-  conn: &mut PgConnection,
-  auth_name: String,
-) -> Result<Source, Box<dyn Error>> {
+pub fn get_source_by_name(conn: &mut PgConnection, auth_name: String) -> Result<Source, Error> {
   use crate::schema::sources::dsl::source_name;
 
-  let source = sources
+  sources
     .filter(source_name.eq(auth_name))
-    .first::<Source>(conn);
-  match source {
-    Ok(source) => Ok(source),
-    Err(err) => {
-      eprintln!("Error loading source {}", err);
-      Err(Box::new(err))
-    }
-  }
+    .first::<Source>(conn)
+    .map_err(Error::from)
 }
 
-pub fn get_source_by_id(conn: &mut PgConnection, src_id: i32) -> Result<Source, Box<dyn Error>> {
+pub fn get_source_by_id(conn: &mut PgConnection, src_id: i32) -> Result<Source, Error> {
   use crate::schema::sources::dsl::id;
 
-  let source = sources.filter(id.eq(src_id)).first::<Source>(conn);
-  match source {
-    Ok(source) => Ok(source),
-    Err(err) => {
-      eprintln!("Error loading source {}", err);
-      Err(Box::new(err))
-    }
-  }
+  sources
+    .filter(id.eq(src_id))
+    .first::<Source>(conn)
+    .map_err(Error::from)
 }
 
 pub fn insert_source(
   conn: &mut PgConnection,
   src_name: String,
   domain_name: String,
-) -> Result<Source, Box<dyn Error>> {
+) -> Result<Source, Error> {
   let nsrc = NewSource {
     source_name: &src_name,
     domain: &domain_name,
   };
-  let src = diesel::insert_into(sources).values(&nsrc).get_result(conn);
-  match src {
-    Ok(src) => Ok(src),
-    Err(err) => {
-      eprintln!("Error inserting source {}", err);
-      Err(Box::new(err))
-    }
-  }
+  diesel::insert_into(sources)
+    .values(&nsrc)
+    .get_result(conn)
+    .map_err(Error::from)
 }

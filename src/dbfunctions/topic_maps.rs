@@ -26,15 +26,21 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-
-use std::error::Error;
-
 use diesel::{PgConnection, RunQueryDsl};
+use thiserror::Error;
 
 use crate::{
   db_models::{NewTopicMap, TopicMap},
   schema::topicmaps::dsl::topicmaps,
 };
+
+#[derive(Error, Debug)]
+pub enum Error {
+  #[error(transparent)]
+  DB(#[from] diesel::result::Error),
+  #[error("Unexpected error: {0}")]
+  UnEx(String),
+}
 
 pub fn ins_topic_map(
   conn: &mut PgConnection,
@@ -42,7 +48,7 @@ pub fn ins_topic_map(
   inp_feedid: i32,
   inp_topicid: i32,
   inp_relscore: f64,
-) -> Result<TopicMap, Box<dyn Error>> {
+) -> Result<TopicMap, Error> {
   let rt = NewTopicMap {
     sid: &inp_sid,
     feedid: &inp_feedid,
@@ -50,12 +56,8 @@ pub fn ins_topic_map(
     relscore: &inp_relscore,
   };
 
-  let root = diesel::insert_into(topicmaps).values(&rt).get_result(conn);
-  match root {
-    Ok(root) => Ok(root),
-    Err(err) => {
-      eprintln!("Error inserting Topic Map {}", err);
-      Err(Box::new(err))
-    }
-  }
+  diesel::insert_into(topicmaps)
+    .values(&rt)
+    .get_result(conn)
+    .map_err(Error::from)
 }

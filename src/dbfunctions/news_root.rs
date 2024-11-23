@@ -27,8 +27,6 @@
  * SOFTWARE.
  */
 
-use std::error::Error;
-
 use bincode::Options;
 use chrono::{DateTime, Datelike, Local, NaiveDate, NaiveDateTime, NaiveTime};
 use crc32fast::Hasher;
@@ -40,12 +38,19 @@ use crate::{
   dbfunctions::common::*,
   schema::newsoverviews::dsl::newsoverviews,
 };
+#[derive(Error, Debug)]
+pub enum Error {
+  #[error(transparent)]
+  DB(#[from] diesel::result::Error),
+  #[error("Unexpected error: {0}")]
+  UnEx(String),
+}
 pub fn insert_news_root(
   conn: &mut PgConnection,
   s_id: i64,
   item_count: i32,
   news: Vec<RawFeed>,
-) -> Result<NewsOverview, Box<dyn Error>> {
+) -> Result<NewsOverview, Error> {
   let local: DateTime<Local> = Local::now();
   let date = NaiveDate::from_ymd_opt(local.year(), local.month(), local.day())
     .unwrap_or(NaiveDate::from_ymd_opt(1900, 1, 1).unwrap());
@@ -59,14 +64,10 @@ pub fn insert_news_root(
     creation: &creattion_date,
   };
 
-  let root = diesel::insert_into(newsoverviews)
+  diesel::insert_into(newsoverviews)
     .values(&rt)
-    .get_result(conn);
-
-  match root {
-    Ok(root) => Ok(root),
-    Err(err) => Err(Box::new(err)),
-  }
+    .get_result(conn)
+    .map_err(Error::from)
 }
 
 fn get_hash_id(news: Vec<RawFeed>) -> String {
