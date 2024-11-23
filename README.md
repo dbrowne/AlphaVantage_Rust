@@ -6,7 +6,7 @@
 
 A Rust API client and demonstration for the [Alpha Vantage](https://www.alphavantage.co/) API.
 
-> 🚧 **Project Status**: Currently under active development with daily updates.
+> 🚧 **Project Status**: Currently under active development with frequent updates.
 
 ## Table of Contents
 - [Getting Started](#getting-started)
@@ -50,7 +50,8 @@ This section will provide guidance on how to utilize the API client. (Expand upo
 - [x] open/close price loader
 - [x] Symbol activity loader
 - [x] News loader
-  [ ] Warning cleanup ----- in progress
+- [x] Warning cleanup 
+- [ ] Add crypto
 - [ ] Error type handling ----- in progress
 - [ ] db refactoring
 - [ ] improve code coverage

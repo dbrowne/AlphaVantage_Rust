@@ -27,6 +27,7 @@
  * SOFTWARE.
  */
 
+#![allow(unexpected_cfgs)]
 #[cfg(not(tarpaulin_include))]
 use std::{
   fs,

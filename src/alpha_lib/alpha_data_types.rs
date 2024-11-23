@@ -163,14 +163,6 @@ impl FullOverview {
     json_txt[field].as_str().unwrap_or(ERROR).to_string()
   }
 
-  fn get_i32_field(json_txt: &Value, field: &str) -> i32 {
-    json_txt[field]
-      .as_str()
-      .unwrap_or("")
-      .parse::<i32>()
-      .unwrap_or(-999)
-  }
-
   fn get_f32_field(json_txt: &Value, field: &str) -> f32 {
     json_txt[field]
       .as_str()
