@@ -27,9 +27,9 @@
  * SOFTWARE.
  */
 
+#![allow(unexpected_cfgs)]
 #[cfg(not(tarpaulin_include))]
 use std::{
-  env::var,
   fs::File,
   io::{BufWriter, Write},
   process,
@@ -96,7 +96,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
   for (s_id, symb) in results {
     let _news_status = load_news(conn, &s_id, &symb, &mut params, &mut symbol_log);
-    if let Err(err) = load_intraday(conn, &symb, s_id) {
+    if let Err(_err) = load_intraday(conn, &symb, s_id) {
       //todo: improve logging
       // println!("Error getting intraday prices {} for sid {}", err, sid);
       continue;

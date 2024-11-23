@@ -50,7 +50,7 @@ This section will provide guidance on how to utilize the API client. (Expand upo
 - [x] open/close price loader
 - [x] Symbol activity loader
 - [x] News loader
-  [ ] Warning cleanup ----- in progress
+- [ ] Warning cleanup ----- in progress
 - [ ] Error type handling ----- in progress
 - [ ] db refactoring
 - [ ] improve code coverage

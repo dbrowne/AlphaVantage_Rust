@@ -26,6 +26,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
+#![allow(unexpected_cfgs)]
 #[cfg(not(tarpaulin_include))]
 use alpha_vantage_rust::alpha_lib::{
   alpha_io_funcs::process_symbols, misc_functions::read_missed_symbols,

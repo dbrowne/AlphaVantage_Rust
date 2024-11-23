@@ -27,6 +27,7 @@
  * SOFTWARE.
  */
 
+#![allow(unexpected_cfgs)]
 #[cfg(not(tarpaulin_include))]
 use std::process;
 
@@ -65,7 +66,7 @@ fn main() {
   for (sid, symbol) in results {
     bar.inc(1);
 
-    if let Err(err) = load_intraday(conn, &symbol, sid) {
+    if let Err(_err) = load_intraday(conn, &symbol, sid) {
       //todo: improve logging
       // println!("Error getting intraday prices {} for sid {}", err, sid);
       continue;

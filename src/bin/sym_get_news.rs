@@ -27,6 +27,7 @@
  * SOFTWARE.
  */
 
+#![allow(unexpected_cfgs)]
 #[cfg(not(tarpaulin_include))]
 use alpha_vantage_rust::m_get_news_stories;
 extern crate diesel;
