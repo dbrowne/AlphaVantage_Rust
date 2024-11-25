@@ -69,23 +69,26 @@ pub enum FuncType {
 /// This macro does not panic.
 #[macro_export]
 macro_rules! create_url {
-    (FuncType:TsIntra,$string1:expr, $string2:expr) =>{
+    (FuncType::TsIntra,$string1:expr, $string2:expr) =>{
         format!("https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&datatype=csv&symbol={}&interval=1min&apikey={}",$string1,$string2)
     };
-    (FuncType:TsDaily,$string1:expr, $string2:expr) =>{
+    (FuncType::TsDaily,$string1:expr, $string2:expr) =>{
         format!("https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&datatype=json&symbol={}&apikey={}",$string1,$string2)
     };
-    (FuncType:Overview,$string1:expr, $string2:expr) =>{
+    (FuncType::Overview,$string1:expr, $string2:expr) =>{
         format!("https://www.alphavantage.co/query?function=OVERVIEW&symbol={}&apikey={}",$string1,$string2)
     };
-    (FuncType:SymSearch,$string1:expr, $string2:expr) =>{
+    (FuncType::SymSearch,$string1:expr, $string2:expr) =>{
         format!("https://www.alphavantage.co/query?function=SYMBOL_SEARCH&keywords={}&apikey={}&datatype=csv",$string1,$string2)
     };
-    (FuncType:TopQuery,$string1:expr, $string2:expr) =>{
+    (FuncType::TopQuery,$string1:expr, $string2:expr) =>{
         format!("https://www.alphavantage.co/query?function=TOP_GAINERS_LOSERS&apikey={}",$string2)
     };
-    (FuncType:NewsQuery,$string1:expr, $string2:expr) =>{
+    (FuncType::NewsQuery,$string1:expr, $string2:expr) =>{
         format!("https://www.alphavantage.co/query?function=NEWS_SENTIMENT&tickers={}&apikey={}",$string1,$string2)
+    };
+    (FuncType::CryptoIntraDay,$string1:expr, $string2:expr) =>{
+        format!("https://www.alphavantage.co/query?function=CRYPTO_INTRADAY&symbol={}&market=USD&interval=1min&apikey={}&datatype=csv",$string1,$string2)
     };
     ($other:expr,$string1:expr, $string2:expr) =>{
         format!("Unknown function type received {:?}",$other)
@@ -97,21 +100,21 @@ mod test {
   #[test]
   fn t_01() {
     let (sym, api_key) = ("AAPL", "123456789");
-    let url = create_url!(FuncType:TsIntra,sym,api_key);
+    let url = create_url!(FuncType::TsIntra, sym, api_key);
     assert_eq!(url, "https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&datatype=csv&symbol=AAPL&interval=1min&apikey=123456789");
   }
 
   #[test]
   fn t_02() {
     let (sym, api_key) = ("AAPL", "123456789");
-    let url = create_url!(FuncType:TsDaily,sym,api_key);
+    let url = create_url!(FuncType::TsDaily, sym, api_key);
     assert_eq!(url, "https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&datatype=json&symbol=AAPL&apikey=123456789");
   }
 
   #[test]
   fn t_03() {
     let (sym, api_key) = ("AAPL", "123456789");
-    let url = create_url!(FuncType:Overview,sym,api_key);
+    let url = create_url!(FuncType::Overview, sym, api_key);
     assert_eq!(
       url,
       "https://www.alphavantage.co/query?function=OVERVIEW&symbol=AAPL&apikey=123456789"
@@ -121,7 +124,7 @@ mod test {
   #[test]
   fn t_04() {
     let (sym, api_key) = ("AAPL", "123456789");
-    let url = create_url!(FuncType:SymSearch,sym,api_key);
+    let url = create_url!(FuncType::SymSearch, sym, api_key);
     assert_eq!(url, "https://www.alphavantage.co/query?function=SYMBOL_SEARCH&keywords=AAPL&apikey=123456789&datatype=csv");
   }
 
@@ -133,7 +136,7 @@ mod test {
 
   #[test]
   fn t_06() {
-    let url = create_url!(FuncType:TopQuery,"NONE","12345678");
+    let url = create_url!(FuncType::TopQuery, "NONE", "12345678");
     assert_eq!(
       url,
       "https://www.alphavantage.co/query?function=TOP_GAINERS_LOSERS&apikey=12345678"
@@ -142,10 +145,15 @@ mod test {
 
   #[test]
   fn t_09() {
-    let url = create_url!(FuncType:NewsQuery,"AAPL","12345678");
+    let url = create_url!(FuncType::NewsQuery, "AAPL", "12345678");
     assert_eq!(
       url,
       "https://www.alphavantage.co/query?function=NEWS_SENTIMENT&tickers=AAPL&apikey=12345678"
     );
+  }
+  #[test]
+  fn t_10() {
+    let url = create_url!(FuncType::CryptoIntraDay, "BTC", "12345678");
+    assert_eq!(url,"https://www.alphavantage.co/query?function=CRYPTO_INTRADAY&symbol=BTC&market=USD&interval=1min&apikey=12345678&datatype=csv");
   }
 }

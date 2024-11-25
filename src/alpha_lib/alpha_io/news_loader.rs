@@ -63,7 +63,7 @@ pub fn load_news(
   symbol_log: &mut BufWriter<File>,
 ) -> Result<(), Box<dyn Error>> {
   let api_key = get_api_key()?;
-  let url = create_url!(FuncType:NewsQuery,tkr,api_key);
+  let url = create_url!(FuncType::NewsQuery, tkr, api_key);
   let root = get_news_root(&url)?;
 
   process_news(conn, s_id, tkr, root, params, symbol_log)

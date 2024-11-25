@@ -48,9 +48,11 @@ use alpha_vantage_rust::{
     author::get_authors, base::establish_connection_or_exit, sources::get_sources,
     topic_refs::get_topics,
   },
+  security_types::sec_types::SecurityType,
 };
 use dotenvy::dotenv;
 use indicatif::ProgressBar;
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
   dotenv().ok();
   let conn = &mut establish_connection_or_exit();
@@ -96,7 +98,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
   for (s_id, symb) in results {
     let _news_status = load_news(conn, &s_id, &symb, &mut params, &mut symbol_log);
-    if let Err(_err) = load_intraday(conn, &symb, s_id) {
+    if let Err(_err) = load_intraday(conn, &symb, s_id, SecurityType::Equity) {
       //todo: improve logging
       // println!("Error getting intraday prices {} for sid {}", err, sid);
       continue;

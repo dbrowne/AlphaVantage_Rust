@@ -118,7 +118,7 @@ pub fn process_symbols(sec_vec: Vec<Vec<String>>, load_missed: bool) -> Result<(
 
   for sym_vec in sec_vec {
     for symb in sym_vec {
-      let url = create_url!(FuncType:SymSearch,symb,api_key);
+      let url = create_url!(FuncType::SymSearch, symb, api_key);
       let resp = reqwest::blocking::get(&url); //todo: change to async & refactor
       resp_time = Local::now();
       if let Ok(resp) = resp {
@@ -238,7 +238,7 @@ pub fn get_overview(
 ) -> Result<(), Box<dyn Error>> {
   const SYMBOL: &str = "Symbol";
   let api_key = get_api_key()?;
-  let url = create_url!(FuncType:Overview,symb,api_key);
+  let url = create_url!(FuncType::Overview, symb, api_key);
   let response = reqwest::blocking::get(&url);
 
   if let Ok(response) = response {
@@ -342,10 +342,16 @@ pub fn load_intraday(
   conn: &mut PgConnection,
   symb: &String,
   s_id: i64,
+  sectype: SecurityType,
 ) -> Result<(), Box<dyn Error>> {
   const HEADER: &str = "timestamp,open,high,low,close,volume";
   let api_key = get_api_key()?;
-  let url = create_url!(FuncType:TsIntra,symb,api_key);
+  let url = match sectype {
+    SecurityType::Crypto => create_url!(FuncType::CryptoIntraDay, symb, api_key),
+    SecurityType::Equity => create_url!(FuncType::TsIntra, symb, api_key),
+    _ => panic!("Unknown security type"),
+  };
+
   let text = get_api_data(&url)?;
   if !text.contains(HEADER) {
     // todo: Improve logging here
@@ -444,7 +450,7 @@ fn gen_new_summary_price(json_inp: (&String, &Value), sym: String) -> Option<Raw
 ///   records for dates that are after this last known date.
 pub fn load_summary(conn: &mut PgConnection, symb: &str, s_id: i64) -> Result<(), Box<dyn Error>> {
   let api_key = get_api_key()?;
-  let url = create_url!(FuncType:TsDaily,symb,api_key);
+  let url = create_url!(FuncType::TsDaily, symb, api_key);
   let text = get_api_data(&url)?;
   const HEADER: &str = "Meta Data";
   if !text.contains(HEADER) {
@@ -615,7 +621,7 @@ pub fn process_digital_symbols(sed_vec: Vec<String>) -> Result<(), Box<dyn Error
 /// the latest market movements.
 pub fn load_tops(conn: &mut PgConnection) -> Result<(), Box<dyn Error>> {
   let api_key = get_api_key()?;
-  let url = create_url!(FuncType:TopQuery," ",api_key);
+  let url = create_url!(FuncType::TopQuery, " ", api_key);
 
   let root: Root = get_top_data(&url)?;
 

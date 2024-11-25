@@ -67,11 +67,11 @@ impl AlphaSymbol {
       name,
       s_type,
       region,
-      marketOpen:market_open,
-      marketClose:market_close,
+      marketOpen: market_open,
+      marketClose: market_close,
       timezone,
       currency,
-      matchScore:match_score,
+      matchScore: match_score,
     }
   }
 }

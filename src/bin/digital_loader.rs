@@ -32,8 +32,7 @@
 use std::process;
 
 use alpha_vantage_rust::{
-  alpha_lib::alpha_io_funcs::{process_digital_symbols},
-  file_processors::file_proc,
+  alpha_lib::alpha_io_funcs::process_digital_symbols, file_processors::file_proc,
 };
 use dotenvy::dotenv;
 
@@ -45,5 +44,5 @@ fn main() {
     eprintln!("Cannot process data files. Check local env setting {}", e);
     process::exit(1);
   });
-  _=process_digital_symbols(res[0].clone());
+  _ = process_digital_symbols(res[0].clone());
 }
