@@ -100,3 +100,12 @@ pub struct NasdaqListed {
   /// This is usually 100 shares for most securities.
   pub roundlotsize: f32,
 }
+
+#[derive(Debug, Clone, Default, Deserialize)]
+pub struct DigitalAsset {
+  /// The trading symbol  from Alpha Vantage for the digital asset.
+  pub symbol: String,
+
+  /// the descriptive name of the digital asset
+  pub name: String,
+}

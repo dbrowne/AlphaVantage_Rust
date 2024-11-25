@@ -27,3 +27,23 @@
  * SOFTWARE.
  */
 
+#![allow(unexpected_cfgs)]
+#[cfg(not(tarpaulin_incllude))]
+use std::process;
+
+use alpha_vantage_rust::{
+  alpha_lib::alpha_io_funcs::{process_digital_symbols},
+  file_processors::file_proc,
+};
+use dotenvy::dotenv;
+
+fn main() {
+  dotenv().ok();
+
+  let file_list: Vec<(&str, &str)> = vec![("DIGITAL", "DIGITAL_LIST")];
+  let res = file_proc(file_list).unwrap_or_else(|e| {
+    eprintln!("Cannot process data files. Check local env setting {}", e);
+    process::exit(1);
+  });
+  _=process_digital_symbols(res[0].clone());
+}

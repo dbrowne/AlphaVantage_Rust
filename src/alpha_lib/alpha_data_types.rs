@@ -50,6 +50,32 @@ pub struct AlphaSymbol {
   pub matchScore: f32,
 }
 
+impl AlphaSymbol {
+  pub fn new(
+    symbol: String,
+    name: String,
+    s_type: String,
+    region: String,
+    market_open: String,
+    market_close: String,
+    timezone: String,
+    currency: String,
+    match_score: f32,
+  ) -> Self {
+    Self {
+      symbol,
+      name,
+      s_type,
+      region,
+      marketOpen:market_open,
+      marketClose:market_close,
+      timezone,
+      currency,
+      matchScore:match_score,
+    }
+  }
+}
+
 /// mapping of Company Overview from Alpha Vantage
 /// This is split into two structs to allow for easier use of the data and to avoid long
 ///compile times with the  Diesel 64-column-tables feature enabled

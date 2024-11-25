@@ -526,6 +526,51 @@ fn get_open_close(inp: &str, symb: &String) -> Result<Vec<RawDailyPrice>, Box<dy
   Ok(daily_prices)
 }
 
+pub fn process_digital_symbols(sed_vec: Vec<String>) -> Result<(), Box<dyn Error>> {
+  let sec_type = "Crypto";
+  let region = "USA";
+  let currency = "USD";
+  let timezone = "UTC-04";
+  let marketopen = "00:00";
+  let marketclose = "23:59";
+
+  let mut symbol_map: HashMap<String, i64> = HashMap::new();
+  let conn = &mut establish_connection_or_exit();
+
+  // assuming there are no digital currencies
+  let mut base_sid = 1;
+  for sym_string in sed_vec {
+    let sym_vec: Vec<&str> = sym_string.split(',').collect();
+    let symbol = sym_vec[0].to_string();
+    let name = sym_vec[1].to_string();
+
+    let s_id = SecurityType::encode(SecurityType::Crypto, base_sid);
+    let record = AlphaSymbol::new(
+      symbol,
+      name,
+      sec_type.to_string(),
+      region.to_string(),
+      marketopen.to_string(),
+      marketclose.to_string(),
+      timezone.to_string(),
+      currency.to_string(),
+      1.0,
+    );
+    if symbol_map.insert(record.symbol.clone(), s_id).is_some() {
+      eprintln!("Duplilcate symbol: {}", record.symbol);
+    } else {
+      println!("Inserting symbol: {}:{}", record.symbol, s_id);
+      create_symbol(conn, s_id, record).expect("Can't insert symbol");
+    }
+
+    base_sid += 1;
+  }
+
+  println!("Total sybols: {}", symbol_map.len());
+
+  Ok(())
+}
+
 /// Loads the top stock performers from an API and updates the database with the current
 /// information.
 ///
