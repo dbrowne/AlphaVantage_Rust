@@ -35,15 +35,18 @@ use diesel::PgConnection;
 
 use crate::{
   alpha_lib::{
-    alpha_io_funcs::{get_api_key, get_news_root},
+    alpha_io::{
+      base::{get_api_key, get_news_root},
+      news_root::insert_news_root,
+    },
+    core::news_type::{NewsRoot, RawFeed, TickerSentiment, Topic},
     misc_functions::log_missed_symbol,
-    news_type::{NewsRoot, RawFeed, TickerSentiment, Topic},
   },
   create_url,
   dbfunctions::{
     articles::insert_article, author::insert_author, author_map::insert_author_map,
-    feed::insert_feed, news_root::insert_news_root, sources::insert_source,
-    ticker_sentiments::ins_ticker_sentiment, topic_maps::ins_topic_map, topic_refs::insert_topic,
+    feed::insert_feed, sources::insert_source, ticker_sentiments::ins_ticker_sentiment,
+    topic_maps::ins_topic_map, topic_refs::insert_topic,
   },
 };
 

@@ -27,10 +27,6 @@
  * SOFTWARE.
  */
 
-pub(crate) mod alpha_data_types;
-mod alpha_funcs;
 pub mod alpha_io;
-pub mod alpha_io_funcs;
-mod macros;
+pub mod core;
 pub mod misc_functions;
-pub mod news_type;

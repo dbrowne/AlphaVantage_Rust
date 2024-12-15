@@ -32,7 +32,7 @@
 use std::process;
 
 use alpha_vantage_rust::{
-  alpha_lib::alpha_io_funcs::process_digital_symbols, file_processors::file_proc,
+  alpha_lib::alpha_io::base::process_digital_symbols, file_processors::file_proc,
 };
 use dotenvy::dotenv;
 

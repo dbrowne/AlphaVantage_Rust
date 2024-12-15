@@ -36,7 +36,7 @@ use diesel::PgConnection;
 use serde_json::Value;
 
 use crate::{
-  alpha_lib::{
+  alpha_lib::core::{
     alpha_data_types::{
       AlphaSymbol, Convert, FullOverview, RawDailyPrice, RawIntraDayPrice, Root, TopType,
     },
@@ -723,7 +723,7 @@ fn get_time_stamp(inp: String) -> Result<NaiveDateTime, Box<dyn Error>> {
 
 #[cfg(test)]
 mod test {
-  use crate::alpha_lib::alpha_io_funcs::get_time_stamp;
+  use crate::alpha_lib::base::get_time_stamp;
 
   #[test]
   fn t_001() {

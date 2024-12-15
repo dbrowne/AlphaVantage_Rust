@@ -32,7 +32,7 @@
 use std::process;
 
 use alpha_vantage_rust::{
-  alpha_lib::{alpha_io_funcs::load_intraday, misc_functions::get_exe_name},
+  alpha_lib::{alpha_io::base::load_intraday, misc_functions::get_exe_name},
   db_funcs::{get_proc_id_or_insert, get_symbols_and_sids_for, log_proc_end, log_proc_start},
   dbfunctions::base::establish_connection_or_exit,
   security_types::sec_types::SecurityType,

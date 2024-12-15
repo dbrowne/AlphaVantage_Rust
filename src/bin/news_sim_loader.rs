@@ -40,7 +40,7 @@ use std::{
 use alpha_vantage_rust::{
   alpha_lib::{
     alpha_io::news_loader::{process_news, Params},
-    news_type::NewsRoot,
+    core::news_type::NewsRoot,
   },
   db_funcs::get_sids_and_names_with_overview,
   dbfunctions::{

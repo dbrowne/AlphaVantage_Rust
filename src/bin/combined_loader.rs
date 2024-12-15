@@ -37,8 +37,10 @@ use std::{
 
 use alpha_vantage_rust::{
   alpha_lib::{
-    alpha_io::news_loader::{load_news, Params},
-    alpha_io_funcs::{load_intraday, load_summary},
+    alpha_io::{
+      base::{load_intraday, load_summary},
+      news_loader::{load_news, Params},
+    },
     misc_functions::get_exe_name,
   },
   db_funcs::{

@@ -38,7 +38,9 @@ use diesel::{
 };
 
 // NOTE!!! THIS WILL BE BROKEN INTO SEPARATE FILES INTO dbfunctions
-use crate::alpha_lib::alpha_data_types::{AlphaSymbol, FullOverview, GTopStat, RawDailyPrice};
+use crate::alpha_lib::core::alpha_data_types::{
+  AlphaSymbol, FullOverview, GTopStat, RawDailyPrice,
+};
 use crate::{
   db_models::{
     IntraDayPrice, NewIntraDayPrice, NewOverview, NewOverviewext, NewProcState, NewProcType,

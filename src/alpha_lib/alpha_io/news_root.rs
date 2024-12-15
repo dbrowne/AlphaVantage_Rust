@@ -33,7 +33,7 @@ use crc32fast::Hasher;
 use serde::Serialize;
 
 use crate::{
-  alpha_lib::news_type::RawFeed,
+  alpha_lib::core::news_type::RawFeed,
   db_models::{NewNewsOverview, NewsOverview},
   dbfunctions::common::*,
   schema::newsoverviews::dsl::newsoverviews,
