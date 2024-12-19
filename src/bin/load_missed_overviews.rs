@@ -31,7 +31,7 @@
 use std::process;
 
 use alpha_vantage_rust::{
-  alpha_lib::alpha_io_funcs::get_overview, db_funcs::get_sids_and_names_after,
+  alpha_lib::alpha_io::base::get_overview, db_funcs::get_sids_and_names_after,
   dbfunctions::base::establish_connection_or_exit,
 };
 use chrono::{prelude::*, Duration};

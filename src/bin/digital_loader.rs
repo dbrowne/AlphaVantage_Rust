@@ -26,24 +26,23 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
+
 #![allow(unexpected_cfgs)]
-#[cfg(not(tarpaulin_include))]
-use alpha_vantage_rust::alpha_lib::{
-  alpha_io::base::process_symbols, misc_functions::read_missed_symbols,
+#[cfg(not(tarpaulin_incllude))]
+use std::process;
+
+use alpha_vantage_rust::{
+  alpha_lib::alpha_io::base::process_digital_symbols, file_processors::file_proc,
 };
 use dotenvy::dotenv;
 
 fn main() {
   dotenv().ok();
-  if let Ok(secs) = read_missed_symbols("/tmp/symbol_log.txt".to_string()) {
-    let mut symbs: Vec<Vec<String>> = Vec::new();
-    symbs.push(secs);
-    let res = process_symbols(symbs, true);
-    let _ = match res {
-      Ok(_) => println!("Operation completed successfully."),
-      Err(e) => println!("An error occurred: {}", e),
-    };
-  } else {
-    println!("Error reading missed symbols");
-  }
+
+  let file_list: Vec<(&str, &str)> = vec![("DIGITAL", "DIGITAL_LIST")];
+  let res = file_proc(file_list).unwrap_or_else(|e| {
+    eprintln!("Cannot process data files. Check local env setting {}", e);
+    process::exit(1);
+  });
+  _ = process_digital_symbols(res[0].clone());
 }

@@ -69,10 +69,11 @@ macro_rules! m_get_news_count {
 // ROUND(AVG(duration_minutes)::numeric, 2) AS average_duration,
 // ROUND(STDDEV(duration_minutes)::numeric, 2) AS stddev_duration,
 // ROUND(VARIANCE(duration_minutes)::numeric, 2) AS variance_duration,
-// ROUND(PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY duration_minutes)::numeric, 2) AS median_duration,
-// ROUND(PERCENTILE_CONT(0.25) WITHIN GROUP (ORDER BY duration_minutes)::numeric, 2) AS first_quartile,
-// ROUND(PERCENTILE_CONT(0.75) WITHIN GROUP (ORDER BY duration_minutes)::numeric, 2) AS third_quartile,
-// ROUND(MIN(NULLIF(duration_minutes, 0))::numeric, 2) AS min_non_zero_duration,  -- Minimum non-zero duration
+// ROUND(PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY duration_minutes)::numeric, 2) AS
+// median_duration, ROUND(PERCENTILE_CONT(0.25) WITHIN GROUP (ORDER BY duration_minutes)::numeric,
+// 2) AS first_quartile, ROUND(PERCENTILE_CONT(0.75) WITHIN GROUP (ORDER BY
+// duration_minutes)::numeric, 2) AS third_quartile, ROUND(MIN(NULLIF(duration_minutes,
+// 0))::numeric, 2) AS min_non_zero_duration,  -- Minimum non-zero duration
 // ROUND(MAX(duration_minutes)::numeric, 2) AS max_duration,
 // COUNT(*) AS process_count,
 // CASE

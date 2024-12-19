@@ -33,7 +33,7 @@ pub mod author_map;
 pub mod base;
 pub mod common;
 pub mod feed;
-pub mod news_root;
+
 pub mod raw_queries;
 pub mod sources;
 pub mod ticker_sentiments;

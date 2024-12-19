@@ -31,7 +31,7 @@
 use std::process;
 
 use alpha_vantage_rust::{
-  alpha_lib::alpha_io_funcs::load_tops, dbfunctions::base::establish_connection_or_exit,
+  alpha_lib::alpha_io::base::load_tops, dbfunctions::base::establish_connection_or_exit,
 };
 use dotenvy::dotenv;
 

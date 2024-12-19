@@ -51,7 +51,7 @@ This section will provide guidance on how to utilize the API client. (Expand upo
 - [x] Symbol activity loader
 - [x] News loader
 - [x] Warning cleanup 
-- [ ] Add crypto
+- [ ] Add crypto  --- in progress
 - [ ] Error type handling ----- in progress
 - [ ] db refactoring
 - [ ] improve code coverage

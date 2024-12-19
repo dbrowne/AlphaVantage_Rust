@@ -29,11 +29,13 @@
 
 use std::{env, error::Error, fmt, fs::File, io::BufReader};
 
-use crate::datatypes::data_file_types::{NasdaqListed, NyseOtherSymbol};
+use crate::datatypes::data_file_types::{DigitalAsset, NasdaqListed, NyseOtherSymbol};
 
 const NASDAQ: &str = "NASDAQ";
 const NYSE: &str = "NYSE";
 const MAX_SYMBOLS: usize = 10000;
+
+const DIGITAL: &str = "DIGITAL";
 
 #[derive(Debug, Clone)]
 struct UnknownExchangeError(String);
@@ -84,6 +86,12 @@ fn csv_proc(file_name: String, exchange: &str) -> Result<Vec<String>, Box<dyn Er
       for result in file_reader.deserialize() {
         let record: NyseOtherSymbol = result?;
         symbols.push(record.actsymbol);
+      }
+    }
+    DIGITAL => {
+      for result in file_reader.deserialize() {
+        let record: DigitalAsset = result?;
+        symbols.push(format!("{},{}", record.symbol, record.name));
       }
     }
     _ => {

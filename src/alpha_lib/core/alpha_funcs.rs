@@ -27,7 +27,7 @@
  * SOFTWARE.
  */
 
-use crate::alpha_lib::alpha_data_types::TopType;
+use crate::alpha_lib::core::alpha_data_types::TopType;
 
 /// Normalizes region names to their respective short forms.
 ///

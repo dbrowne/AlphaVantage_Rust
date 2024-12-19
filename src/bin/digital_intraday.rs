@@ -33,9 +33,7 @@ use std::process;
 
 use alpha_vantage_rust::{
   alpha_lib::{alpha_io::base::load_intraday, misc_functions::get_exe_name},
-  db_funcs::{
-    get_proc_id_or_insert, get_sids_and_names_with_overview, log_proc_end, log_proc_start,
-  },
+  db_funcs::{get_proc_id_or_insert, get_symbols_and_sids_for, log_proc_end, log_proc_start},
   dbfunctions::base::establish_connection_or_exit,
   security_types::sec_types::SecurityType,
 };
@@ -43,18 +41,16 @@ use dotenvy::dotenv;
 use indicatif::ProgressBar;
 
 fn main() {
-  let conn = &mut establish_connection_or_exit();
-
   dotenv().ok();
-
+  let conn = &mut establish_connection_or_exit();
   let id_val = get_proc_id_or_insert(conn, &get_exe_name()).unwrap();
   let pid = log_proc_start(conn, id_val).unwrap();
-  let results: Vec<(i64, String)> = get_sids_and_names_with_overview(conn).unwrap_or_else(|err| {
-    println!("Cannot load results from database {}", err);
-    _ = log_proc_end(conn, pid, 3).unwrap();
-    process::exit(1);
-  });
 
+  let results = get_symbols_and_sids_for(conn, "USA".to_string(), "Crypto".to_string())
+    .unwrap_or_else(|err| {
+      eprintln!("Cannot load results from database {}", err);
+      process::exit(1);
+    });
   let progress_size = results.len() as u64;
   let bar = ProgressBar::new(progress_size);
   bar.set_style(
@@ -64,10 +60,12 @@ fn main() {
       .progress_chars("##-"),
   );
 
-  for (sid, symbol) in results {
+  bar.set_message("Loading Intraday Crypto Data");
+
+  for (symbol, sid) in results {
     bar.inc(1);
 
-    if let Err(_err) = load_intraday(conn, &symbol, sid, SecurityType::Equity) {
+    if let Err(_err) = load_intraday(conn, &symbol, sid, SecurityType::Crypto) {
       //todo: improve logging
       // println!("Error getting intraday prices {} for sid {}", err, sid);
       continue;

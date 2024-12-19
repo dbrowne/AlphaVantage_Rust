@@ -27,4 +27,6 @@
  * SOFTWARE.
  */
 
+pub mod base;
 pub mod news_loader;
+pub mod news_root;

@@ -26,24 +26,9 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-#![allow(unexpected_cfgs)]
-#[cfg(not(tarpaulin_include))]
-use alpha_vantage_rust::alpha_lib::{
-  alpha_io::base::process_symbols, misc_functions::read_missed_symbols,
-};
-use dotenvy::dotenv;
 
-fn main() {
-  dotenv().ok();
-  if let Ok(secs) = read_missed_symbols("/tmp/symbol_log.txt".to_string()) {
-    let mut symbs: Vec<Vec<String>> = Vec::new();
-    symbs.push(secs);
-    let res = process_symbols(symbs, true);
-    let _ = match res {
-      Ok(_) => println!("Operation completed successfully."),
-      Err(e) => println!("An error occurred: {}", e),
-    };
-  } else {
-    println!("Error reading missed symbols");
-  }
-}
+pub mod alpha_data_types;
+pub mod alpha_funcs;
+pub mod news_type;
+
+pub mod macros;

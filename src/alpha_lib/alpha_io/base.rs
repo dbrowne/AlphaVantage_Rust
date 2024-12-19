@@ -29,14 +29,43 @@
 
 extern crate chrono_tz;
 
-use std::{collections::HashMap, env::VarError, error::Error, thread, time};
+use std::{collections::HashMap, env::VarError, thread, time};
 
 use chrono::{DateTime, Duration, Local, NaiveDate, NaiveDateTime};
 use diesel::PgConnection;
 use serde_json::Value;
+use thiserror::Error;
+
+#[derive(Error, Debug)]
+pub enum Error {
+  #[error("Failed to retreive API key")]
+  ApiKey(#[from] VarError),
+  #[error(transparent)]
+  DbConn(#[from] diesel::result::Error),
+  #[error(transparent)]
+  Serde(#[from] serde_json::Error),
+  #[error(transparent)]
+  Reqwest(#[from] reqwest::Error),
+  #[error(transparent)]
+  Csv(#[from] csv::Error),
+  #[error("Error count exceeded {0}")]
+  ErrorCount(usize),
+  #[error(transparent)]
+  ParseDate(#[from] chrono::ParseError),
+  #[error(transparent)]
+  DBFuncs(#[from] crate::db_funcs::Error),
+  #[error(transparent)]
+  AlphaDataTypes(#[from] crate::alpha_lib::core::alpha_data_types::Error),
+  #[error("Error getting {0} from JSON data")]
+  MissingHeader(String),
+  #[error("Max exceeded : {0}")]
+  MaxExceeded(String),
+  #[error("Unexpected error: {0}")]
+  UnEx(String),
+}
 
 use crate::{
-  alpha_lib::{
+  alpha_lib::core::{
     alpha_data_types::{
       AlphaSymbol, Convert, FullOverview, RawDailyPrice, RawIntraDayPrice, Root, TopType,
     },
@@ -96,7 +125,7 @@ pub fn get_api_key() -> Result<String, VarError> {
 ///
 ///
 /// TODO:  Refactor as this is a bit of a mess
-pub fn process_symbols(sec_vec: Vec<Vec<String>>, load_missed: bool) -> Result<(), Box<dyn Error>> {
+pub fn process_symbols(sec_vec: Vec<Vec<String>>, load_missed: bool) -> Result<(), Error> {
   let api_key = get_api_key()?;
 
   let mut type_map: HashMap<SecurityType, i32> = HashMap::new();
@@ -109,23 +138,21 @@ pub fn process_symbols(sec_vec: Vec<Vec<String>>, load_missed: bool) -> Result<(
   let min_time = Duration::milliseconds(350); //We cant make MIN_TIME a constant because it is not a primitive type
 
   if load_missed {
-    let symbs = get_symbols_and_sids_for(conn, "USA".to_string(), "Eqty".to_string())
-      .expect("Can't get symbols");
-    for (symb, _sid) in symbs {
+    let symbs = get_symbols_and_sids_for(conn, "USA".to_string(), "Eqty".to_string())?;
+    for (symb, _) in symbs {
       symbol_map.insert(symb, 1);
     }
   }
 
   for sym_vec in sec_vec {
     for symb in sym_vec {
-      let url = create_url!(FuncType:SymSearch,symb,api_key);
+      let url = create_url!(FuncType::SymSearch, symb, api_key);
       let resp = reqwest::blocking::get(&url); //todo: change to async & refactor
       resp_time = Local::now();
       if let Ok(resp) = resp {
         let text = match resp.text() {
           Ok(text) => text,
           Err(e) => {
-            println!("Couldn't read text: {}", e);
             err_ct += 1;
             if err_ct > MAX_ERRORS {
               println!("Too many errors: {}", err_ct);
@@ -136,13 +163,11 @@ pub fn process_symbols(sec_vec: Vec<Vec<String>>, load_missed: bool) -> Result<(
         };
 
         if err_ct > MAX_ERRORS {
-          return Err(format!("Too many errors: {}", err_ct).into());
+          let errmsg = format!("Too many errors: {}", err_ct);
+          return Err(Error::MaxExceeded(errmsg));
         }
 
         if !text.contains(SYMBOL) {
-          //todo: Improve logging here
-          // println!("Bad response for symbol: {:?}", symb);
-          // println!("text error: for {:?}", text);
           continue;
         }
 
@@ -170,11 +195,11 @@ pub fn process_symbols(sec_vec: Vec<Vec<String>>, load_missed: bool) -> Result<(
           }
           let s_id: i64;
           if load_missed {
-            s_id = get_next_sid(conn, sec_type_string).expect("Can't get next sid");
+            s_id = get_next_sid(conn, sec_type_string)?
           } else {
             s_id = SecurityType::encode(sec_type, type_map.get(&sec_type).unwrap().clone() as u32);
           }
-          create_symbol(conn, s_id, record).expect("Can't write to DB fatal error");
+          create_symbol(conn, s_id, record)?;
 
           dur_time = Local::now();
 
@@ -231,72 +256,55 @@ pub fn process_symbols(sec_vec: Vec<Vec<String>>, load_missed: bool) -> Result<(
 ///
 /// * It might return an error if there's a problem establishing a database connection, making the
 ///   external API request, or processing the response.
-pub fn get_overview(
-  connection: &mut PgConnection,
-  s_id: i64,
-  symb: String,
-) -> Result<(), Box<dyn Error>> {
+pub fn get_overview(connection: &mut PgConnection, s_id: i64, symb: String) -> Result<(), Error> {
   const SYMBOL: &str = "Symbol";
   let api_key = get_api_key()?;
-  let url = create_url!(FuncType:Overview,symb,api_key);
-  let response = reqwest::blocking::get(&url);
+  let url = create_url!(FuncType::Overview, symb, api_key);
+  let response = reqwest::blocking::get(&url)?;
+  println!("Response is: {:?}", response);
 
-  if let Ok(response) = response {
-    println!("Response is: {:?}", response);
-    let text = match response.text() {
-      Ok(text) => text,
-      Err(err) => {
-        println!("Error getting text from response: {:?}", err);
-        return Err("Error getting text from response".into());
-      }
-    };
+  let text = response.text()?;
 
-    if !text.contains(SYMBOL) {
-      println!("Missing overview  for Symbol {}: {:?}", symb, text);
-      thread::sleep(time::Duration::from_secs(1));
-    } else {
-      let json = match serde_json::from_str::<Value>(&text) {
-        Ok(json) => json,
-        Err(err) => {
-          println!("Error parsing json: {:?}", err);
-          return Err("Error parsing json".into());
-        }
-      };
-      let ov = FullOverview::new(s_id, json);
-      if let Some(ov) = ov {
-        println!("Overview: {:?}", ov);
-        create_overview(connection, ov)?;
-      } else {
-        //todo: improve logging here
-        // println!("Error: for {}: {:?}", symb, text);
-      }
-    }
+  if !text.contains(SYMBOL) {
+    println!("Missing overview  for Symbol {}: {:?}", symb, text);
+    thread::sleep(time::Duration::from_secs(1));
+    return Ok(());
+  }
+  let json = serde_json::from_str::<Value>(&text)?;
+  let ov = FullOverview::new(s_id, json);
+  if let Some(ov) = ov {
+    println!("Overview: {:?}", ov);
+    create_overview(connection, ov)?;
   } else {
-    println!("Error getting response: {:?}", response);
+    println!("Failed to create overview for symbol {}: {:?}", symb, text);
+    return Err(Error::UnEx(format!(
+      "Failed to create overview for symbol {}",
+      symb
+    )));
   }
 
   Ok(())
 }
 
-fn get_api_data(url: &str) -> Result<String, Box<dyn Error>> {
+fn get_api_data(url: &str) -> Result<String, Error> {
   let response = reqwest::blocking::get(url)?;
   let text = response.text()?;
   Ok(text)
 }
 
-fn get_top_data(url: &str) -> Result<Root, Box<dyn Error>> {
+fn get_top_data(url: &str) -> Result<Root, Error> {
   let response = reqwest::blocking::get(url)?;
   let text = response.json::<Root>()?;
   Ok(text)
 }
 
-pub fn get_news_root(url: &str) -> Result<NewsRoot, Box<dyn Error>> {
+pub fn get_news_root(url: &str) -> Result<NewsRoot, Error> {
   let response = reqwest::blocking::get(url)?;
   let text = response.json::<NewsRoot>()?;
   Ok(text)
 }
 
-fn parse_intraday_from_csv(text: &str) -> Result<Vec<RawIntraDayPrice>, Box<dyn Error>> {
+fn parse_intraday_from_csv(text: &str) -> Result<Vec<RawIntraDayPrice>, Error> {
   let mut recs = csv::Reader::from_reader(text.as_bytes());
   recs
     .deserialize()
@@ -309,8 +317,8 @@ fn persist_ticks(
   s_id: i64,
   symb: &String,
   ticks: Vec<RawIntraDayPrice>,
-) -> Result<(), Box<dyn Error>> {
-  let last_date = get_intr_day_max_date(connection, s_id);
+) -> Result<(), Error> {
+  let last_date = get_intr_day_max_date(connection, s_id)?;
 
   let mut _skipped = 0;
 
@@ -342,10 +350,16 @@ pub fn load_intraday(
   conn: &mut PgConnection,
   symb: &String,
   s_id: i64,
-) -> Result<(), Box<dyn Error>> {
+  sectype: SecurityType,
+) -> Result<(), Error> {
   const HEADER: &str = "timestamp,open,high,low,close,volume";
   let api_key = get_api_key()?;
-  let url = create_url!(FuncType:TsIntra,symb,api_key);
+  let url = match sectype {
+    SecurityType::Crypto => create_url!(FuncType::CryptoIntraDay, symb, api_key),
+    SecurityType::Equity => create_url!(FuncType::TsIntra, symb, api_key),
+    _ => panic!("Unknown security type"),
+  };
+
   let text = get_api_data(&url)?;
   if !text.contains(HEADER) {
     // todo: Improve logging here
@@ -442,9 +456,9 @@ fn gen_new_summary_price(json_inp: (&String, &Value), sym: String) -> Option<Raw
 ///   symbol (such as missing price data) and will not perform any database updates for this symbol.
 /// - It logs the latest date for which data is available in the database and only inserts new
 ///   records for dates that are after this last known date.
-pub fn load_summary(conn: &mut PgConnection, symb: &str, s_id: i64) -> Result<(), Box<dyn Error>> {
+pub fn load_summary(conn: &mut PgConnection, symb: &str, s_id: i64) -> Result<(), Error> {
   let api_key = get_api_key()?;
-  let url = create_url!(FuncType:TsDaily,symb,api_key);
+  let url = create_url!(FuncType::TsDaily, symb, api_key);
   let text = get_api_data(&url)?;
   const HEADER: &str = "Meta Data";
   if !text.contains(HEADER) {
@@ -455,7 +469,7 @@ pub fn load_summary(conn: &mut PgConnection, symb: &str, s_id: i64) -> Result<()
   };
 
   let daily_prices = get_open_close(&text, &symb.to_string())?;
-  let last_date = get_summary_max_date(conn, s_id);
+  let last_date = get_summary_max_date(conn, s_id)?;
   //todo: improve logging here
 
   // println!("last date for sid{} is {:?}", s_id, last_date);
@@ -506,16 +520,14 @@ pub fn load_summary(conn: &mut PgConnection, symb: &str, s_id: i64) -> Result<()
 ///     Err(e) => eprintln!("Error: {}", e),
 /// }
 /// ```
-fn get_open_close(inp: &str, symb: &String) -> Result<Vec<RawDailyPrice>, Box<dyn Error>> {
+fn get_open_close(inp: &str, symb: &String) -> Result<Vec<RawDailyPrice>, Error> {
   const HEADER: &str = "Time Series (Daily)";
   let mut daily_prices: Vec<RawDailyPrice> = Vec::new();
   let json_data: Value = serde_json::from_str(inp)?;
 
-  let json_prices = json_data[HEADER].as_object().ok_or_else(|| {
-    let err_msg = format!("Error getting {} from json data", HEADER);
-    eprintln!("{}", err_msg);
-    err_msg
-  })?;
+  let json_prices = json_data[HEADER]
+    .as_object()
+    .ok_or_else(|| Error::MissingHeader(HEADER.to_string()))?;
 
   for (date, data) in json_prices.iter() {
     if let Some(open_close) = gen_new_summary_price((date, data), symb.clone()) {
@@ -524,6 +536,51 @@ fn get_open_close(inp: &str, symb: &String) -> Result<Vec<RawDailyPrice>, Box<dy
   }
 
   Ok(daily_prices)
+}
+
+pub fn process_digital_symbols(sed_vec: Vec<String>) -> Result<(), Error> {
+  let sec_type = "Crypto";
+  let region = "USA";
+  let currency = "USD";
+  let timezone = "UTC-04";
+  let marketopen = "00:00";
+  let marketclose = "23:59";
+
+  let mut symbol_map: HashMap<String, i64> = HashMap::new();
+  let conn = &mut establish_connection_or_exit();
+
+  // assuming there are no digital currencies
+  let mut base_sid = 1;
+  for sym_string in sed_vec {
+    let sym_vec: Vec<&str> = sym_string.split(',').collect();
+    let symbol = sym_vec[0].to_string();
+    let name = sym_vec[1].to_string();
+
+    let s_id = SecurityType::encode(SecurityType::Crypto, base_sid);
+    let record = AlphaSymbol::new(
+      symbol,
+      name,
+      sec_type.to_string(),
+      region.to_string(),
+      marketopen.to_string(),
+      marketclose.to_string(),
+      timezone.to_string(),
+      currency.to_string(),
+      1.0,
+    );
+    if symbol_map.insert(record.symbol.clone(), s_id).is_some() {
+      eprintln!("Duplilcate symbol: {}", record.symbol);
+    } else {
+      println!("Inserting symbol: {}:{}", record.symbol, s_id);
+      create_symbol(conn, s_id, record).expect("Can't insert symbol");
+    }
+
+    base_sid += 1;
+  }
+
+  println!("Total sybols: {}", symbol_map.len());
+
+  Ok(())
 }
 
 /// Loads the top stock performers from an API and updates the database with the current
@@ -568,9 +625,9 @@ fn get_open_close(inp: &str, symb: &String) -> Result<Vec<RawDailyPrice>, Box<dy
 ///
 /// This function is designed to be run at regular intervals to keep the database up to date with
 /// the latest market movements.
-pub fn load_tops(conn: &mut PgConnection) -> Result<(), Box<dyn Error>> {
+pub fn load_tops(conn: &mut PgConnection) -> Result<(), Error> {
   let api_key = get_api_key()?;
-  let url = create_url!(FuncType:TopQuery," ",api_key);
+  let url = create_url!(FuncType::TopQuery, " ", api_key);
 
   let root: Root = get_top_data(&url)?;
 
@@ -616,7 +673,7 @@ fn process_data_for_type(
   data: &[impl Convert],
   top_type: TopType,
   last_update: NaiveDateTime,
-) -> Result<(), Box<dyn Error>> {
+) -> Result<(), Error> {
   for item in data {
     let tt = item.make_top_stat()?;
     let s_id = match get_sid(conn, tt.ticker.clone()) {
@@ -662,7 +719,7 @@ fn process_data_for_type(
 /// - This function assumes that the input string will always follow the format with a space
 ///   separating the datetime and timezone components. It uses `rsplitn` with a limit of 2 to split
 ///   the string from the end, ensuring that the last part (timezone) is separated first.
-fn get_time_stamp(inp: String) -> Result<NaiveDateTime, Box<dyn Error>> {
+fn get_time_stamp(inp: String) -> Result<NaiveDateTime, Error> {
   let mut parts = inp.rsplitn(2, ' ');
   let _tz = parts.next().unwrap();
   let tm = parts.next().unwrap();
@@ -672,7 +729,7 @@ fn get_time_stamp(inp: String) -> Result<NaiveDateTime, Box<dyn Error>> {
 
 #[cfg(test)]
 mod test {
-  use crate::alpha_lib::alpha_io_funcs::get_time_stamp;
+  use crate::alpha_lib::alpha_io::base::get_time_stamp;
 
   #[test]
   fn t_001() {
