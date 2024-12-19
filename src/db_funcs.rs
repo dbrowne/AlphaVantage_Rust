@@ -27,15 +27,9 @@
  * SOFTWARE.
  */
 
-use std::error::Error as StdError;
-
 use chrono::{DateTime, Local, NaiveDate, NaiveDateTime, NaiveTime};
-use diesel::{
-  dsl::max,
-  pg::PgConnection,
-  prelude::*,
-  result::{DatabaseErrorKind, Error},
-};
+use diesel::{dsl::max, pg::PgConnection, prelude::*};
+pub use thiserror::Error;
 
 // NOTE!!! THIS WILL BE BROKEN INTO SEPARATE FILES INTO dbfunctions
 use crate::alpha_lib::core::alpha_data_types::{
@@ -49,6 +43,19 @@ use crate::{
   schema::procstates::dsl::procstates,
   security_types::sec_types::SymbolFlag,
 };
+#[derive(Error, Debug)]
+pub enum Error {
+  #[error(transparent)]
+  ParseError(#[from] chrono::ParseError),
+  #[error("Failed to parse time:{0}")]
+  TimeParse(String),
+  #[error(transparent)]
+  Diesel(#[from] diesel::result::Error),
+  #[error("No intraday prices found for sid: {0}")]
+  NoData(i64),
+  #[error("Unique constraint violation")]
+  UniqueViolation,
+}
 
 /// Parses a time string into a `NaiveTime` struct.
 ///
@@ -67,7 +74,7 @@ use crate::{
 /// # Returns
 ///
 /// * `Ok(NaiveTime)`: If the `time_str` is successfully parsed into `NaiveTime`.
-/// * `Err(Box<dyn Error>)`: If the `time_str` cannot be parsed into `NaiveTime`.
+/// * `Error)`: If the `time_str` cannot be parsed into `NaiveTime`.
 ///
 /// # Errors
 ///
@@ -86,14 +93,11 @@ fn parse_time(
   time_str: &str,
   error_message: &str,
   a_sym: &AlphaSymbol,
-) -> Result<NaiveTime, Box<dyn StdError>> {
-  match NaiveTime::parse_from_str(time_str, "%H:%M") {
-    Ok(time) => Ok(time),
-    Err(e) => {
-      eprintln!("Error parsing {}: {:?}, {:?}", error_message, a_sym, e);
-      Err(Box::new(e))
-    }
-  }
+) -> Result<NaiveTime, Error> {
+  NaiveTime::parse_from_str(time_str, "%H:%M").map_err(|e| {
+    let msg = format!("{}: {}. Symbol: {}", error_message, e, a_sym.symbol);
+    Error::TimeParse(msg)
+  })
 }
 
 /// Creates a new symbol entry in the database.
@@ -111,7 +115,7 @@ fn parse_time(
 /// # Returns
 ///
 /// * `Ok(())`: If the symbol is successfully inserted into the database.
-/// * `Err(Box<dyn Error>)`: If there was an error inserting the symbol into the database.
+/// * `Error)`: If there was an error inserting the symbol into the database.
 ///
 /// # Errors
 ///
@@ -129,11 +133,7 @@ fn parse_time(
 ///     Err(e) => println!("Error inserting new symbol: {}", e),
 /// }
 /// ```
-pub fn create_symbol(
-  conn: &mut PgConnection,
-  s_id: i64,
-  a_sym: AlphaSymbol,
-) -> Result<(), Box<dyn StdError>> {
+pub fn create_symbol(conn: &mut PgConnection, s_id: i64, a_sym: AlphaSymbol) -> Result<(), Error> {
   use crate::schema::symbols;
   let now = Local::now().naive_local();
 
@@ -158,19 +158,11 @@ pub fn create_symbol(
     m_time: &now,
   };
 
-  match diesel::insert_into(symbols::table)
+  diesel::insert_into(symbols::table)
     .values(&new_symbol)
     .get_result::<Symbol>(conn)
-  {
-    Ok(_) => Ok(()),
-    Err(e) => {
-      eprintln!(
-        "Error saving new symbols {:?} for sid: {}{:?} ",
-        e, s_id, a_sym
-      );
-      Err(Box::new(e))
-    }
-  }
+    .map(|_| ())
+    .map_err(Error::from)
 }
 
 /// Inserts a full overview of a financial entity into the database.
@@ -187,8 +179,8 @@ pub fn create_symbol(
 ///
 /// # Returns
 ///
-/// * `Result<(), Box<dyn Error>>`: Returns an `Ok(())` if the operation is successful. Returns an
-///   `Err` wrapped in a `Box` if any error occurs.
+/// * `Result<(), Error>`: Returns an `Ok(())` if the operation is successful. Returns an `Err`
+///   wrapped in a `Box` if any error occurs.
 ///
 /// # Examples
 ///
@@ -214,10 +206,7 @@ pub fn create_symbol(
 /// * Refactor the database insertion code to enhance maintainability.
 /// * Consider returning a custom error type or using more descriptive error handling.
 
-pub fn create_overview(
-  conn: &mut PgConnection,
-  full_ov: FullOverview,
-) -> Result<(), Box<dyn StdError>> {
+pub fn create_overview(conn: &mut PgConnection, full_ov: FullOverview) -> Result<(), Error> {
   use crate::schema::{overviewexts, overviews};
 
   let localt: DateTime<Local> = Local::now();
@@ -249,13 +238,10 @@ pub fn create_overview(
     mod_time: &now,
   };
   //todo: refactor this
-  if let Err(err) = diesel::insert_into(overviews::table)
+  _ = diesel::insert_into(overviews::table)
     .values(&new_overview)
     .execute(conn)
-  {
-    eprintln!("Error {:?}", err);
-    return Err(Box::new(err));
-  }
+    .map_err(Error::from);
 
   let new_overviewext: NewOverviewext = NewOverviewext {
     sid: &full_ov.sid.clone(),
@@ -289,40 +275,28 @@ pub fn create_overview(
   };
 
   //todo: refactor this
-  if let Err(err) = diesel::insert_into(overviewexts::table)
+  _ = diesel::insert_into(overviewexts::table)
     .values(&new_overviewext)
     .execute(conn)
-  {
-    eprintln!("{:?}", err);
-    eprintln!("cannot insert overviewext");
-    return Err(Box::new(err));
-  };
+    .map(|_| ())
+    .map_err(Error::from);
 
   set_symbol_booleans(conn, full_ov.sid.clone(), SymbolFlag::Overview, true)?;
 
   Ok(())
 }
 
-pub fn get_full_overview(
-  conn: &mut PgConnection,
-  sym: &str,
-) -> Result<FullOverview, Box<dyn StdError>> {
+pub fn get_full_overview(conn: &mut PgConnection, sym: &str) -> Result<FullOverview, Error> {
   use crate::schema::{overviewexts, overviews};
   let overview = overviews::table
     .filter(overviews::symbol.eq(sym))
     .first::<Overview>(conn)
-    .map_err(|e| {
-      eprintln!("Error {:?}", e);
-      Box::<dyn StdError>::from(e)
-    })?;
+    .map_err(Error::from)?;
 
   let overviewext = overviewexts::table
     .filter(overviewexts::sid.eq(overview.sid))
     .first::<Overviewext>(conn)
-    .map_err(|e| {
-      eprintln!("Error {:?}", e);
-      Box::<dyn StdError>::from(e)
-    })?;
+    .map_err(Error::from)?;
 
   Ok(FullOverview {
     sid: overview.sid,
@@ -418,7 +392,7 @@ fn set_symbol_booleans(
   s_id: i64,
   flag: SymbolFlag,
   value: bool,
-) -> Result<(), Box<dyn StdError>> {
+) -> Result<(), Error> {
   use crate::schema::symbols::dsl::{intraday, m_time, overview, sid, summary, symbols};
   let localt: DateTime<Local> = Local::now();
   let now = localt.naive_local();
@@ -427,31 +401,19 @@ fn set_symbol_booleans(
       diesel::update(symbols)
         .filter(sid.eq(s_id))
         .set((overview.eq(value), m_time.eq(now)))
-        .get_result::<Symbol>(conn)
-        .map_err(|e: diesel::result::Error| {
-          eprintln!("Cannot update overview for sid {}: {:?}", s_id, e);
-          Box::<dyn StdError>::from(e)
-        })?;
+        .get_result::<Symbol>(conn)?;
     }
     SymbolFlag::Intraday => {
       diesel::update(symbols)
         .filter(sid.eq(s_id))
         .set((intraday.eq(value), m_time.eq(now)))
-        .get_result::<Symbol>(conn)
-        .map_err(|e: diesel::result::Error| {
-          eprintln!("Cannot update intraday for sid {}: {:?}", s_id, e);
-          Box::<dyn StdError>::from(e)
-        })?;
+        .get_result::<Symbol>(conn)?;
     }
     SymbolFlag::Summary => {
       diesel::update(symbols)
         .filter(sid.eq(s_id))
         .set((summary.eq(value), m_time.eq(now)))
-        .get_result::<Symbol>(conn)
-        .map_err(|e: diesel::result::Error| {
-          eprintln!("Cannot update summary for sid {}: {:?}", s_id, e);
-          Box::<dyn StdError>::from(e)
-        })?;
+        .get_result::<Symbol>(conn)?;
     }
     SymbolFlag::All => {
       // todo: need to test this
@@ -462,11 +424,7 @@ fn set_symbol_booleans(
           summary.eq(value),
           m_time.eq(now),
         ))
-        .get_result::<Symbol>(conn)
-        .map_err(|e: diesel::result::Error| {
-          eprintln!("Cannot update all flags for sid {}: {:?}", s_id, e);
-          Box::<dyn StdError>::from(e)
-        })?;
+        .get_result::<Symbol>(conn)?;
     }
   }
 
@@ -655,10 +613,7 @@ pub fn get_sids_and_names_with_overview(
     .load::<(i64, String)>(conn)
 }
 
-pub fn create_intra_day(
-  conn: &mut PgConnection,
-  tick: IntraDayPrice,
-) -> Result<(), Box<dyn StdError>> {
+pub fn create_intra_day(conn: &mut PgConnection, tick: IntraDayPrice) -> Result<(), Error> {
   use crate::schema::intradayprices;
 
   let new_mkt_price = NewIntraDayPrice {
@@ -675,19 +630,9 @@ pub fn create_intra_day(
     .values(&new_mkt_price)
     .execute(conn)?;
 
-  // todo Refactor this
-  let _ = match set_symbol_booleans(conn, new_mkt_price.sid.clone(), SymbolFlag::Intraday, true) {
-    Ok(_) => (),
-    Err(err) => {
-      println!("{:?}", err);
-      println!(
-        "cannot set Intraday flag for sid: {}",
-        new_mkt_price.sid.clone()
-      );
-      return Err(err);
-    }
-  };
-  Ok(())
+  set_symbol_booleans(conn, new_mkt_price.sid.clone(), SymbolFlag::Intraday, true)
+    .map(|_| ())
+    .map_err(Error::from)
 }
 
 pub fn insert_open_close(
@@ -695,7 +640,7 @@ pub fn insert_open_close(
   symb: &String,
   s_id: i64,
   open_close: RawDailyPrice,
-) -> Result<(), Box<dyn StdError>> {
+) -> Result<(), Error> {
   use crate::schema::summaryprices;
 
   let np: NewSummaryPrice = NewSummaryPrice {
@@ -711,59 +656,40 @@ pub fn insert_open_close(
   diesel::insert_into(summaryprices::table)
     .values(&np)
     .execute(conn)?;
-  // todo Refactor this
-  let _ = match set_symbol_booleans(conn, s_id.clone(), SymbolFlag::Summary, true) {
-    Ok(_) => (),
-    Err(err) => {
-      println!("{:?}", err);
-      println!("cannot set overfiew flag for sid: {}", s_id.clone());
-      return Err(err);
-    }
-  };
-  Ok(())
+  set_symbol_booleans(conn, s_id.clone(), SymbolFlag::Summary, true)
+    .map(|_| ())
+    .map_err(Error::from)
 }
 
 ///
 ///
 /// todo: get rid of the cut and paste
-pub fn get_intr_day_max_date(conn: &mut PgConnection, s_id: i64) -> NaiveDateTime {
+pub fn get_intr_day_max_date(conn: &mut PgConnection, s_id: i64) -> Result<NaiveDateTime, Error> {
   use crate::schema::intradayprices::dsl::{intradayprices, sid, tstamp};
 
-  let xx = intradayprices
+  intradayprices
     .filter(sid.eq(s_id))
     .select(tstamp)
     .order(tstamp.desc())
-    .first::<NaiveDateTime>(conn);
-
-  let _tt = match xx {
-    Ok(res) => {
-      return res;
-    }
-    Err(_) => {
-      println!("No max date found for security {}", s_id);
-      return NaiveDateTime::from_timestamp_millis(0).unwrap();
-    }
-  };
+    .first::<NaiveDateTime>(conn)
+    .map_err(|err| match err {
+      diesel::result::Error::NotFound => Error::NoData(s_id),
+      other => Error::Diesel(other),
+    })
 }
 
-pub fn get_summary_max_date(conn: &mut PgConnection, s_id: i64) -> NaiveDate {
+pub fn get_summary_max_date(conn: &mut PgConnection, s_id: i64) -> Result<NaiveDate, Error> {
   use crate::schema::summaryprices::dsl::{date, sid, summaryprices};
 
-  let xx = summaryprices
+  summaryprices
     .filter(sid.eq(s_id))
     .select(date)
     .order(date.desc())
-    .first::<NaiveDate>(conn);
-
-  let _tt = match xx {
-    Ok(res) => {
-      return res;
-    }
-    Err(_) => {
-      println!("No max date found for security {}", s_id);
-      return NaiveDate::from_ymd_opt(1900, 1, 1).unwrap();
-    }
-  };
+    .first::<NaiveDate>(conn)
+    .map_err(|err| match err {
+      diesel::result::Error::NotFound => Error::NoData(s_id),
+      other => Error::Diesel(other),
+    })
 }
 
 pub fn get_sid(conn: &mut PgConnection, ticker: String) -> Result<i64, diesel::result::Error> {
@@ -817,7 +743,7 @@ pub fn insert_top_stat(
   ts: GTopStat,
   evt_type: &str,
   upd_time: NaiveDateTime,
-) -> Result<(), Box<dyn StdError>> {
+) -> Result<(), Error> {
   use crate::schema::topstats;
   let ns = NewTopStat {
     date: &upd_time,
@@ -831,26 +757,23 @@ pub fn insert_top_stat(
   };
 
   // todo: refactor this  crap error handling
-  let _row_cnt = match diesel::insert_into(topstats::table)
+  match diesel::insert_into(topstats::table)
     .values(&ns)
     .execute(conn)
   {
-    Ok(rwcnt) => {
-      println!("row count {}", rwcnt);
-      return Ok(());
+    Ok(row_count) => {
+      println!("Row count: {}", row_count);
+      Ok(())
     }
-    Err(err) => {
-      eprintln!("Error inserting topstat: {:?}", err);
-      match err {
-        Error::DatabaseError(DatabaseErrorKind::UniqueViolation, _) => {
-          // Handle unique violation specifically
-          Ok(())
-        }
-        _ => Err(Box::new(err) as Box<dyn StdError>),
-      }
+    Err(_) => {
+      // Handle unique violation specifically
+      println!(
+        "Unique constraint violation for sid: {}, event_type: {}",
+        s_id, evt_type
+      );
+      Err(Error::UniqueViolation)
     }
-  };
-  return Ok(());
+  }
 }
 
 pub fn get_proc_id(conn: &mut PgConnection, proc_name: &str) -> Result<i32, diesel::result::Error> {

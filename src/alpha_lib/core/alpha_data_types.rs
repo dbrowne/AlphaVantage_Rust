@@ -27,13 +27,21 @@
  * SOFTWARE.
  */
 
-use std::error::Error;
-
 use chrono::NaiveDate;
 use serde::Deserialize;
 use serde_json::Value;
+use thiserror::Error;
 
 // based on https://www.alphavantage.co/query?function=SYMBOL_SEARCH&keywords=BA&apikey=demo&datatype=csv
+
+#[derive(Error, Debug)]
+pub enum Error {
+  #[error(transparent)]
+  ParseFloat(#[from] std::num::ParseFloatError),
+  #[error(transparent)]
+  ParseInt(#[from] std::num::ParseIntError),
+}
+
 #[derive(Deserialize, Debug, Clone, Default)]
 #[allow(non_snake_case)]
 pub struct AlphaSymbol {
@@ -363,13 +371,13 @@ pub struct GTopStat {
 }
 
 pub trait Convert {
-  fn make_top_stat(&self) -> Result<GTopStat, Box<dyn Error>>;
+  fn make_top_stat(&self) -> Result<GTopStat, Error>;
 }
 
 macro_rules! impl_convert {
   ($type:ty) => {
     impl Convert for $type {
-      fn make_top_stat(&self) -> Result<GTopStat, Box<dyn Error>> {
+      fn make_top_stat(&self) -> Result<GTopStat, Error> {
         let cleaned = self.change_percentage.trim_end_matches('%');
         Ok(GTopStat {
           ticker: self.ticker.clone(),
