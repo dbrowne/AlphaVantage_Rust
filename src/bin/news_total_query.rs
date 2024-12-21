@@ -34,12 +34,15 @@ extern crate serde;
 
 use alpha_vantage_rust::{
   alpha_lib::misc_functions::get_exe_name,
-  db_funcs::{get_proc_id_or_insert, log_proc_end, log_proc_start},
-  dbfunctions::base::establish_connection_or_exit,
+  dbfunctions::{
+    base::establish_connection_or_exit,
+    process::{get_proc_id_or_insert, log_proc_end, log_proc_start},
+  },
 };
 use diesel::{pg::data_types::PgNumeric, prelude::*, sql_query};
 use dotenvy::dotenv;
 use serde::{Serialize, Serializer};
+
 fn pg_numeric_to_i32(numeric: &PgNumeric) -> Option<i32> {
   match numeric {
     PgNumeric::Positive { digits, .. } | PgNumeric::Negative { digits, .. } => {

@@ -63,8 +63,9 @@ pub fn get_sids_and_names_for(
   reg: String,
   s_typ: String,
 ) -> Result<Vec<(i64, String)>, diesel::result::Error> {
-    use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
-    use crate::schema::symbols::dsl::{region, sec_type, sid, symbol, symbols};
+  use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
+
+  use crate::schema::symbols::dsl::{region, sec_type, sid, symbol, symbols};
 
   symbols
     .filter(region.eq(reg).and(sec_type.eq(s_typ)))
@@ -112,9 +113,10 @@ pub fn get_sids_and_names_after(
   sec_typ: String,
   after_date: String,
 ) -> Result<Vec<(String, i64)>, diesel::result::Error> {
-    use chrono::NaiveDate;
-    use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
-    use crate::schema::symbols::dsl::{c_time, region as db_region, sec_type, sid, symbol, symbols};
+  use chrono::NaiveDate;
+  use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
+
+  use crate::schema::symbols::dsl::{c_time, region as db_region, sec_type, sid, symbol, symbols};
 
   // Parse the after_date string into a NaiveDate
   let after_date = NaiveDate::parse_from_str(&after_date, "%Y-%m-%d")
@@ -163,8 +165,9 @@ pub fn get_sids_and_names_after(
 pub fn get_sids_and_names_with_overview(
   conn: &mut PgConnection,
 ) -> Result<Vec<(i64, String)>, diesel::result::Error> {
-    use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
-    use crate::schema::symbols::dsl::{overview, sid, symbol, symbols};
+  use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
+
+  use crate::schema::symbols::dsl::{overview, sid, symbol, symbols};
   symbols
     .filter(overview.eq(true))
     .select((sid, symbol))

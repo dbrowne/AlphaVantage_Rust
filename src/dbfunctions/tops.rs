@@ -26,23 +26,48 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
+use chrono::NaiveDateTime;
+use diesel::PgConnection;
 
-pub mod articles;
-pub mod author;
-pub mod author_map;
-pub mod base;
-pub mod common;
-pub mod feed;
+use crate::{alpha_lib::core::alpha_data_types::GTopStat, dbfunctions::common::Error};
 
-pub mod combined;
-pub mod overview;
-pub mod price;
-pub mod process;
-pub mod raw_queries;
-pub mod sid;
-pub mod sources;
-pub mod symbols;
-pub mod ticker_sentiments;
-pub mod topic_maps;
-pub mod topic_refs;
-pub mod tops;
+pub fn insert_top_stat(
+  conn: &mut PgConnection,
+  s_id: i64,
+  ts: GTopStat,
+  evt_type: &str,
+  upd_time: NaiveDateTime,
+) -> Result<(), Error> {
+  use diesel::RunQueryDsl;
+
+  use crate::{db_models::NewTopStat, schema::topstats};
+  let ns = NewTopStat {
+    date: &upd_time,
+    event_type: evt_type,
+    sid: &s_id,
+    symbol: &ts.ticker,
+    price: &ts.price,
+    change_val: &ts.change_amount,
+    change_pct: &ts.change_percentage,
+    volume: &ts.volume,
+  };
+
+  // todo: refactor this  crap error handling
+  match diesel::insert_into(topstats::table)
+    .values(&ns)
+    .execute(conn)
+  {
+    Ok(row_count) => {
+      println!("Row count: {}", row_count);
+      Ok(())
+    }
+    Err(_) => {
+      // Handle unique violation specifically
+      println!(
+        "Unique constraint violation for sid: {}, event_type: {}",
+        s_id, evt_type
+      );
+      Err(Error::UniqueViolation)
+    }
+  }
+}

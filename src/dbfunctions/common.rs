@@ -29,3 +29,17 @@
 
 pub use diesel::{pg::PgConnection, prelude::*};
 pub use thiserror::Error;
+
+#[derive(Error, Debug)]
+pub enum Error {
+  #[error(transparent)]
+  ParseError(#[from] chrono::ParseError),
+  #[error("Failed to parse time:{0}")]
+  TimeParse(String),
+  #[error(transparent)]
+  Diesel(#[from] diesel::result::Error),
+  #[error("No intraday prices found for sid: {0}")]
+  NoData(i64),
+  #[error("Unique constraint violation")]
+  UniqueViolation,
+}

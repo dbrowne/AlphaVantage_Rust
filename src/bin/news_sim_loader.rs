@@ -43,13 +43,12 @@ use alpha_vantage_rust::{
     core::news_type::NewsRoot,
   },
   dbfunctions::{
-    author::get_authors, base::establish_connection_or_exit, sources::get_sources,
-    topic_refs::get_topics,
+    author::get_authors, base::establish_connection_or_exit,
+    combined::get_sids_and_names_with_overview, sources::get_sources, topic_refs::get_topics,
   },
 };
 use dotenvy::dotenv;
 use serde_json;
-use alpha_vantage_rust::dbfunctions::combined::get_sids_and_names_with_overview;
 
 fn main() {
   loader();

@@ -31,15 +31,14 @@
 use std::process;
 
 use alpha_vantage_rust::{
-  alpha_lib::alpha_io::base::get_overview,
-  dbfunctions::base::establish_connection_or_exit,
+  alpha_lib::alpha_io::base::get_overview, dbfunctions::base::establish_connection_or_exit,
 };
 use chrono::{prelude::*, Duration};
 use dotenvy::dotenv;
 
 extern crate lazy_static;
-use lazy_static::lazy_static;
 use alpha_vantage_rust::dbfunctions::combined::get_sids_and_names_for;
+use lazy_static::lazy_static;
 
 //We can't make MIN_TIME a constant because it is not a primitive type
 lazy_static! {

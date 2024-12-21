@@ -27,22 +27,5 @@
  * SOFTWARE.
  */
 
-pub mod articles;
-pub mod author;
-pub mod author_map;
-pub mod base;
-pub mod common;
-pub mod feed;
-
-pub mod combined;
-pub mod overview;
-pub mod price;
-pub mod process;
-pub mod raw_queries;
-pub mod sid;
-pub mod sources;
-pub mod symbols;
-pub mod ticker_sentiments;
-pub mod topic_maps;
-pub mod topic_refs;
-pub mod tops;
+pub mod parse;
+pub mod processor;

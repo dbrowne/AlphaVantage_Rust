@@ -27,8 +27,8 @@
  * SOFTWARE.
  */
 use diesel::PgConnection;
-use crate::alpha_lib::core::alpha_data_types::FullOverview;
-use crate::db_funcs::Error;
+
+use crate::{alpha_lib::core::alpha_data_types::FullOverview, dbfunctions::common::Error};
 
 /// Inserts a full overview of a financial entity into the database.
 ///
@@ -72,14 +72,17 @@ use crate::db_funcs::Error;
 /// * Consider returning a custom error type or using more descriptive error handling.
 
 pub fn create_overview(conn: &mut PgConnection, full_ov: FullOverview) -> Result<(), Error> {
-    use chrono::{DateTime, Local};
-    use diesel::RunQueryDsl;
-    use crate::db_models::{NewOverview, NewOverviewext};
-    use crate::dbfunctions::symbols;
-  use crate::schema::{overviewexts, overviews};
-    use crate::security_types::sec_types::SymbolFlag;
+  use chrono::{DateTime, Local};
+  use diesel::RunQueryDsl;
 
-    let localt: DateTime<Local> = Local::now();
+  use crate::{
+    db_models::{NewOverview, NewOverviewext},
+    dbfunctions::symbols,
+    schema::{overviewexts, overviews},
+    security_types::sec_types::SymbolFlag,
+  };
+
+  let localt: DateTime<Local> = Local::now();
   let now = localt.naive_local(); // NaiveDateTime::now();
 
   let new_overview: NewOverview = NewOverview {
@@ -157,9 +160,12 @@ pub fn create_overview(conn: &mut PgConnection, full_ov: FullOverview) -> Result
 }
 
 pub fn get_full_overview(conn: &mut PgConnection, sym: &str) -> Result<FullOverview, Error> {
-    use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
-    use crate::db_models::{Overview, Overviewext};
-    use crate::schema::{overviewexts, overviews};
+  use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
+
+  use crate::{
+    db_models::{Overview, Overviewext},
+    schema::{overviewexts, overviews},
+  };
   let overview = overviews::table
     .filter(overviews::symbol.eq(sym))
     .first::<Overview>(conn)

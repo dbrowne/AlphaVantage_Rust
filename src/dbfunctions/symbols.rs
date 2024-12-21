@@ -27,9 +27,11 @@
  * SOFTWARE.
  */
 use diesel::PgConnection;
-use crate::alpha_lib::core::alpha_data_types::AlphaSymbol;
-use crate::db_funcs::Error;
-use crate::security_types::sec_types::SymbolFlag;
+
+use crate::{
+  alpha_lib::core::alpha_data_types::AlphaSymbol, dbfunctions::common::Error,
+  security_types::sec_types::SymbolFlag, util,
+};
 
 /// Creates a new symbol entry in the database.
 ///
@@ -65,16 +67,18 @@ use crate::security_types::sec_types::SymbolFlag;
 /// }
 /// ```
 pub fn create_symbol(conn: &mut PgConnection, s_id: i64, a_sym: AlphaSymbol) -> Result<(), Error> {
-    use chrono::Local;
-    use diesel::RunQueryDsl;
-    use crate::db_funcs;
-    use crate::db_models::{NewSymbol, Symbol};
-    use crate::schema::symbols;
+  use chrono::Local;
+  use diesel::RunQueryDsl;
+
+  use crate::{
+    db_models::{NewSymbol, Symbol},
+    schema::symbols,
+  };
   let now = Local::now().naive_local();
 
   // Use the helper function to parse market open and close times
-  let market_open = db_funcs::parse_time(&a_sym.marketOpen, "market open time", &a_sym)?;
-  let market_close = db_funcs::parse_time(&a_sym.marketClose, "market close time", &a_sym)?;
+  let market_open = util::parse::parse_time(&a_sym.marketOpen, "market open time", &a_sym)?;
+  let market_close = util::parse::parse_time(&a_sym.marketClose, "market close time", &a_sym)?;
 
   let new_symbol: NewSymbol = NewSymbol {
     sid: &s_id,
@@ -146,10 +150,13 @@ pub fn set_symbol_booleans(
   flag: SymbolFlag,
   value: bool,
 ) -> Result<(), Error> {
-    use chrono::{DateTime, Local};
-    use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
-    use crate::db_models::Symbol;
-    use crate::schema::symbols::dsl::{intraday, m_time, overview, sid, summary, symbols};
+  use chrono::{DateTime, Local};
+  use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
+
+  use crate::{
+    db_models::Symbol,
+    schema::symbols::dsl::{intraday, m_time, overview, sid, summary, symbols},
+  };
   let localt: DateTime<Local> = Local::now();
   let now = localt.naive_local();
   match flag {
@@ -222,8 +229,9 @@ pub fn get_symbols_and_sids_for(
   reg: String,
   s_typ: String,
 ) -> Result<Vec<(String, i64)>, diesel::result::Error> {
-    use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
-    use crate::schema::symbols::dsl::{region, sec_type, sid, symbol, symbols};
+  use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
+
+  use crate::schema::symbols::dsl::{region, sec_type, sid, symbol, symbols};
 
   symbols
     .filter(region.eq(reg).and(sec_type.eq(s_typ)))

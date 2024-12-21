@@ -2,8 +2,9 @@
 #[cfg(not(tarpaulin_include))]
 use std::process;
 
-use alpha_vantage_rust::{alpha_lib::alpha_io::base::process_symbols, file_processors::file_proc};
+use alpha_vantage_rust::{alpha_lib::alpha_io::base::process_symbols, util::processor::file_proc};
 use dotenvy::dotenv;
+
 ///
 /// This is the first program to be run in the alpha_vantage_rust project.
 /// It populates the database with the symbols and names of the instruments

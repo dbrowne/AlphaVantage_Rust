@@ -26,20 +26,23 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
+use chrono::{NaiveDate, NaiveDateTime};
 use diesel::PgConnection;
-use chrono::NaiveDateTime;
-use crate::alpha_lib::core::alpha_data_types::RawDailyPrice;
-use crate::db_funcs::Error;
-use crate::db_models::IntraDayPrice;
+
+use crate::{
+  alpha_lib::core::alpha_data_types::RawDailyPrice, db_models::IntraDayPrice,
+  dbfunctions::common::Error,
+};
 
 pub fn create_intra_day(conn: &mut PgConnection, tick: IntraDayPrice) -> Result<(), Error> {
-    use diesel::RunQueryDsl;
-    use crate::db_models::NewIntraDayPrice;
-    use crate::dbfunctions::symbols;
-  use crate::schema::intradayprices;
-    use crate::security_types::sec_types::SymbolFlag;
+  use diesel::RunQueryDsl;
 
-    let new_mkt_price = NewIntraDayPrice {
+  use crate::{
+    db_models::NewIntraDayPrice, dbfunctions::symbols, schema::intradayprices,
+    security_types::sec_types::SymbolFlag,
+  };
+
+  let new_mkt_price = NewIntraDayPrice {
     sid: &tick.sid,
     tstamp: &tick.tstamp,
     symbol: &tick.symbol,
@@ -64,13 +67,14 @@ pub fn insert_open_close(
   s_id: i64,
   open_close: RawDailyPrice,
 ) -> Result<(), Error> {
-    use diesel::RunQueryDsl;
-    use crate::db_models::NewSummaryPrice;
-    use crate::dbfunctions::symbols;
-  use crate::schema::summaryprices;
-    use crate::security_types::sec_types::SymbolFlag;
+  use diesel::RunQueryDsl;
 
-    let np: NewSummaryPrice = NewSummaryPrice {
+  use crate::{
+    db_models::NewSummaryPrice, dbfunctions::symbols, schema::summaryprices,
+    security_types::sec_types::SymbolFlag,
+  };
+
+  let np: NewSummaryPrice = NewSummaryPrice {
     date: &open_close.date,
     sid: &s_id,
     symbol: &symb,
@@ -92,14 +96,31 @@ pub fn insert_open_close(
 ///
 /// todo: get rid of the cut and paste
 pub fn get_intr_day_max_date(conn: &mut PgConnection, s_id: i64) -> Result<NaiveDateTime, Error> {
-    use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
-    use crate::schema::intradayprices::dsl::{intradayprices, sid, tstamp};
+  use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
+
+  use crate::schema::intradayprices::dsl::{intradayprices, sid, tstamp};
 
   intradayprices
     .filter(sid.eq(s_id))
     .select(tstamp)
     .order(tstamp.desc())
     .first::<NaiveDateTime>(conn)
+    .map_err(|err| match err {
+      diesel::result::Error::NotFound => Error::NoData(s_id),
+      other => Error::Diesel(other),
+    })
+}
+
+pub fn get_summary_max_date(conn: &mut PgConnection, s_id: i64) -> Result<NaiveDate, Error> {
+  use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
+
+  use crate::schema::summaryprices::dsl::{date, sid, summaryprices};
+
+  summaryprices
+    .filter(sid.eq(s_id))
+    .select(date)
+    .order(date.desc())
+    .first::<NaiveDate>(conn)
     .map_err(|err| match err {
       diesel::result::Error::NotFound => Error::NoData(s_id),
       other => Error::Diesel(other),
