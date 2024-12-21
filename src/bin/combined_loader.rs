@@ -44,7 +44,7 @@ use alpha_vantage_rust::{
     misc_functions::get_exe_name,
   },
   db_funcs::{
-    get_proc_id_or_insert, get_sids_and_names_with_overview, log_proc_end, log_proc_start,
+    get_proc_id_or_insert, log_proc_end, log_proc_start,
   },
   dbfunctions::{
     author::get_authors, base::establish_connection_or_exit, sources::get_sources,
@@ -54,6 +54,7 @@ use alpha_vantage_rust::{
 };
 use dotenvy::dotenv;
 use indicatif::ProgressBar;
+use alpha_vantage_rust::dbfunctions::combined::get_sids_and_names_with_overview;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
   dotenv().ok();

@@ -42,7 +42,6 @@ use alpha_vantage_rust::{
     alpha_io::news_loader::{process_news, Params},
     core::news_type::NewsRoot,
   },
-  db_funcs::get_sids_and_names_with_overview,
   dbfunctions::{
     author::get_authors, base::establish_connection_or_exit, sources::get_sources,
     topic_refs::get_topics,
@@ -50,6 +49,7 @@ use alpha_vantage_rust::{
 };
 use dotenvy::dotenv;
 use serde_json;
+use alpha_vantage_rust::dbfunctions::combined::get_sids_and_names_with_overview;
 
 fn main() {
   loader();

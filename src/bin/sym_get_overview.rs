@@ -28,9 +28,9 @@
  */
 #![allow(unexpected_cfgs)]
 #[cfg(not(tarpaulin_include))]
-use alpha_vantage_rust::{
-  db_funcs::get_full_overview, dbfunctions::base::establish_connection_or_exit,
-};
+use alpha_vantage_rust::dbfunctions::base::establish_connection_or_exit;
+#[cfg(not(tarpaulin_include))]
+use alpha_vantage_rust::dbfunctions::overview::get_full_overview;
 
 fn main() {
   let symbol = "MA";

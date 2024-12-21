@@ -74,13 +74,16 @@ use crate::{
   },
   create_url,
   db_funcs::{
-    create_intra_day, create_overview, create_symbol, get_intr_day_max_date, get_next_sid, get_sid,
-    get_summary_max_date, get_symbols_and_sids_for, insert_open_close, insert_top_stat,
+    get_next_sid, get_sid,
+    get_summary_max_date, insert_top_stat,
   },
   db_models::IntraDayPrice,
   dbfunctions::base::establish_connection_or_exit,
   security_types::sec_types::SecurityType,
 };
+use crate::dbfunctions::overview::create_overview;
+use crate::dbfunctions::price::{create_intra_day, get_intr_day_max_date, insert_open_close};
+use crate::dbfunctions::symbols::{create_symbol, get_symbols_and_sids_for};
 
 const SYMBOL: &str = "symbol";
 const MAX_ERRORS: i32 = 50;
