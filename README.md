@@ -52,6 +52,7 @@ This section will provide guidance on how to utilize the API client. (Expand upo
 - [x] News loader
 - [x] Warning cleanup 
 - [x] Added crypto price feeder. No news available for crypto yet
+- [ ] Code cleanup ----- in progress
 - [ ] Error type handling ----- in progress
 - [ ] db refactoring  ----- in progress
 - [ ] improve code coverage

@@ -72,3 +72,101 @@ pub fn parse_time(
     Error::TimeParse(msg)
   })
 }
+#[cfg(test)]
+mod tests {
+  use chrono::NaiveTime;
+
+  use super::*;
+
+  #[test]
+  fn test_parse_time_valid_time() {
+    // Create a valid AlphaSymbol
+    let alpha_symbol = AlphaSymbol {
+      symbol: "AAPL".to_string(),
+      name: "Apple Inc.".to_string(),
+      s_type: "Equity".to_string(),
+      region: "US".to_string(),
+      marketOpen: "09:30".to_string(),
+      marketClose: "16:00".to_string(),
+      timezone: "EST".to_string(),
+      currency: "USD".to_string(),
+      matchScore: 1.0,
+    };
+
+    // Test valid marketOpen time
+    let result = parse_time(
+      &alpha_symbol.marketOpen,
+      "Failed to parse marketOpen",
+      &alpha_symbol,
+    );
+    assert!(result.is_ok());
+    assert_eq!(result.unwrap(), NaiveTime::from_hms(9, 30, 0));
+
+    // Test valid marketClose time
+    let result = parse_time(
+      &alpha_symbol.marketClose,
+      "Failed to parse marketClose",
+      &alpha_symbol,
+    );
+    assert!(result.is_ok());
+    assert_eq!(result.unwrap(), NaiveTime::from_hms(16, 0, 0));
+  }
+
+  #[test]
+  fn test_parse_time_invalid_time() {
+    let alpha_symbol = AlphaSymbol {
+      symbol: "GOOG".to_string(),
+      name: "Alphabet Inc.".to_string(),
+      s_type: "Equity".to_string(),
+      region: "US".to_string(),
+      marketOpen: "9:30 AM".to_string(), // Invalid time format
+      marketClose: "16:00".to_string(),
+      timezone: "PST".to_string(),
+      currency: "USD".to_string(),
+      matchScore: 0.9,
+    };
+
+    let result = parse_time(
+      &alpha_symbol.marketOpen,
+      "Failed to parse marketOpen",
+      &alpha_symbol,
+    );
+    assert!(result.is_err());
+
+    if let Err(Error::TimeParse(msg)) = result {
+      assert!(msg.contains("Failed to parse marketOpen"));
+      assert!(msg.contains("GOOG")); // Symbol should be in the error message
+    } else {
+      panic!("Expected Error::TimeParse");
+    }
+  }
+
+  #[test]
+  fn test_parse_time_empty_time() {
+    let alpha_symbol = AlphaSymbol {
+      symbol: "TSLA".to_string(),
+      name: "Tesla Inc.".to_string(),
+      s_type: "Equity".to_string(),
+      region: "US".to_string(),
+      marketOpen: "".to_string(), // Empty string
+      marketClose: "16:00".to_string(),
+      timezone: "PST".to_string(),
+      currency: "USD".to_string(),
+      matchScore: 0.95,
+    };
+
+    let result = parse_time(
+      &alpha_symbol.marketOpen,
+      "Failed to parse marketOpen",
+      &alpha_symbol,
+    );
+    assert!(result.is_err());
+
+    if let Err(Error::TimeParse(msg)) = result {
+      assert!(msg.contains("Failed to parse marketOpen"));
+      assert!(msg.contains("TSLA")); // Symbol should be in the error message
+    } else {
+      panic!("Expected Error::TimeParse");
+    }
+  }
+}
