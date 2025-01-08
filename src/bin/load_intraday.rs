@@ -33,10 +33,11 @@ use std::process;
 
 use alpha_vantage_rust::{
   alpha_lib::{alpha_io::base::load_intraday, misc_functions::get_exe_name},
-  db_funcs::{
-    get_proc_id_or_insert, get_sids_and_names_with_overview, log_proc_end, log_proc_start,
+  dbfunctions::{
+    base::establish_connection_or_exit,
+    combined::get_sids_and_names_with_overview,
+    process::{get_proc_id_or_insert, log_proc_end, log_proc_start},
   },
-  dbfunctions::base::establish_connection_or_exit,
   security_types::sec_types::SecurityType,
 };
 use dotenvy::dotenv;

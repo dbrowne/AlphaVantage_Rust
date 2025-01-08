@@ -50,7 +50,4 @@ pub fn read_missed_symbols(file_name: String) -> io::Result<Vec<String>> {
 pub fn get_exe_name() -> String {
   let exe_name = env::current_exe().unwrap();
   exe_name.to_str().unwrap().to_string()
-  // let exe_name = exe_name.file_name().unwrap();
-  // let exe_name = exe_name.to_str().unwrap();
-  // exe_name.to_string()
 }

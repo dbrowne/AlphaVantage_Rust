@@ -53,7 +53,7 @@ pub enum Error {
   #[error(transparent)]
   ParseDate(#[from] chrono::ParseError),
   #[error(transparent)]
-  DBFuncs(#[from] crate::db_funcs::Error),
+  DBFuncs(#[from] crate::dbfunctions::common::Error),
   #[error(transparent)]
   AlphaDataTypes(#[from] crate::alpha_lib::core::alpha_data_types::Error),
   #[error("Error getting {0} from JSON data")]
@@ -73,12 +73,15 @@ use crate::{
     news_type::NewsRoot,
   },
   create_url,
-  db_funcs::{
-    create_intra_day, create_overview, create_symbol, get_intr_day_max_date, get_next_sid, get_sid,
-    get_summary_max_date, get_symbols_and_sids_for, insert_open_close, insert_top_stat,
-  },
   db_models::IntraDayPrice,
-  dbfunctions::base::establish_connection_or_exit,
+  dbfunctions::{
+    base::establish_connection_or_exit,
+    overview::create_overview,
+    price::{create_intra_day, get_intr_day_max_date, get_summary_max_date, insert_open_close},
+    sid::{get_next_sid, get_sid},
+    symbols::{create_symbol, get_symbols_and_sids_for},
+    tops::insert_top_stat,
+  },
   security_types::sec_types::SecurityType,
 };
 

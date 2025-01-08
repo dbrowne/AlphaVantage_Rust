@@ -1,0 +1,5 @@
+FROM postgres:15.1-alpine
+LABEL authors="djb"
+LABEL description="Test database for secloader"
+LABEL version="1.0"
+COPY 01_create_db.sql /docker-entrypoint-initdb.d/
