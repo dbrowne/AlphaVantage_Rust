@@ -6,3 +6,10 @@ file = "src/schema.rs"
 
 [migrations_directory]
 dir = "migrations"
+
+[default]
+url = "postgres://devuser:dev_user_p@localhost:6999/d_alpha"
+
+
+[test]
+url = "postgres://test_user:p_test_user@localhost:8999/test_alpha"

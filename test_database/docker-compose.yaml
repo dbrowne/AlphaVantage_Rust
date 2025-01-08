@@ -1,0 +1,20 @@
+services:
+  postgres:
+    build:
+      context: .
+      dockerfile: test_alpha_docker_file
+    image: "test_alpha_docker_file"
+    container_name: ${PG_CONTAINER_NAME}
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      PGDATA: ${PGDATA}
+    volumes:
+      - test_alpha:/data/test_alpha
+    ports:
+      - "8999:5432"
+    restart: unless-stopped
+volumes:
+  test_alpha:
+    external: true
