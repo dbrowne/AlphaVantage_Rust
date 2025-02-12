@@ -1,8 +1,8 @@
 
-# Development Testing Database Setup
+# Testing Database Setup
 
 This is for unit and integration testing of the database. 
-It is a separate database from the development database.
+It is different from the development database defined in dev_database.
 
 ## Prerequisites
 
@@ -23,7 +23,7 @@ Ensure you have Docker and Docker Compose installed on your machine.
 3. **Connect to your Database**
 use the command below with **'psql'** to connect to the database. The default password is **'devuser_p'**
    ```bash 
-      psql -U devuser -h localhost -p 8999 -d test_alpha
+      psql -U testuser -h localhost -p 8999 -d test_alpha
    ```
 
 
