@@ -2,14 +2,16 @@ services:
   postgres:
     build:
       context: .
-      dockerfile: dev_aphava_docker_file
-    image: "dev_alphava_docker_file"
-    container_name: ${PG_CONTAINER_NAME}
+      dockerfile: dev_alpha_docker_file
+    image: "dev_alpha_docker_file"
+    container_name: ${D_PG_CONTAINER_NAME}
+    env_file:
+      - .env
     environment:
-      POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      PGDATA: ${PGDATA}
+      POSTGRES_DB: ${D_POSTGRES_DB}
+      POSTGRES_USER: ${D_POSTGRES_USER}
+      POSTGRES_PASSWORD: ${D_POSTGRES_PASSWORD}
+      PGDATA: ${D_PGDATA}
     volumes:
       - d_alpha:/data/d_alpha
     ports:

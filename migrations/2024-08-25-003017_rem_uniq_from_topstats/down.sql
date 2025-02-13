@@ -1,0 +1,1 @@
+ALTER TABLE topstats DROP CONSTRAINT IF EXISTS topstats_pk;

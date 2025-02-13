@@ -1,6 +1,6 @@
 -- This file should undo anything in `up.sql`
-drop table if exists topicmaps;
-drop table if exists tickersentiments;
-drop table if exists authormaps;
-drop table if exists feeds;
-drop table if exists newsoverviews;
+DROP TABLE IF EXISTS tickersentiments CASCADE;
+DROP TABLE IF EXISTS topicmaps CASCADE;
+DROP TABLE IF EXISTS authormaps CASCADE;
+DROP TABLE IF EXISTS feeds CASCADE;
+DROP TABLE IF EXISTS newsoverviews CASCADE;

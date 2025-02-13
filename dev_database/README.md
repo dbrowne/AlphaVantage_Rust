@@ -25,8 +25,6 @@ use the command below with **'psql'** to connect to the database. The default pa
       psql -U devuser -h localhost -p 6999 -d d_alpha
    ```
 
-## IMPORTANT NOTE!
- This is the only supplied **.env** file
 
 
 ** To regenerate the database documentation:
