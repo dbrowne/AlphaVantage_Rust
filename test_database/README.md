@@ -20,6 +20,17 @@ Ensure you have Docker and Docker Compose installed on your machine.
    docker-compose up -d
    ```
    
+3. Load the database
+   ```bash
+   cd ..
+   export=DATABASE_URL=$(cat .env.test | grep DATABASE_URL | cut -d '=' -f2) 
+   diesel database setup
+   diesel migration run
+   diesel migration list
+   unset DATABASE_URL
+   ```
+
+
 3. **Connect to your Database**
 use the command below with **'psql'** to connect to the database. The default password is **'devuser_p'**
    ```bash 

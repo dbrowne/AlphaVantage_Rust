@@ -1,4 +1,10 @@
 -- Your SQL goes here
+DROP TABLE IF EXISTS tickersentiments CASCADE;
+DROP TABLE IF EXISTS topicmaps CASCADE;
+DROP TABLE IF EXISTS authormaps CASCADE;
+DROP TABLE IF EXISTS feeds CASCADE;
+DROP TABLE IF EXISTS newsoverviews CASCADE;
+
 create table newsoverviews
 (
     id       serial primary key,
