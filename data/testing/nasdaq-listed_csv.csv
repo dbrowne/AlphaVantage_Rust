@@ -1,0 +1,6 @@
+symbol,companyname,securityname,marketcategory,testissue,financialstatus,roundlotsize
+AAPL,Apple Inc.,Apple Inc. - Common Stock,Q,N,N,100.0
+GOOG,Google Inc.,Google Inc. - Class C Capital Stock,Q,N,N,100.0
+GOOGL,Google Inc.,Google Inc. - Class A Common Stock,Q,N,N,100.0
+NVDA,NVIDIA Corporation,NVIDIA Corporation - Common Stock,Q,N,N,100.0
+INTC,Intel Corporation,Intel Corporation - Common Stock,Q,N,N,100.0
