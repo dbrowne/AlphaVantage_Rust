@@ -83,7 +83,7 @@ impl DatabaseEnv {
       Ok("development") => Self::Development,
       _ => {
         eprintln!(
-          "Invalid database environment: {:?}. Expected 'development', 'test', or 'production'.",
+          "Invalid database environment: {:?}. Expected 'development', 'test', or 'production'. for DATABASE_ENV variable" ,
           env::var("DATABASE_ENV").unwrap_or_else(|_| "None".to_string())
         );
         process::exit(1);

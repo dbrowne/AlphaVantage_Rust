@@ -36,6 +36,7 @@ use diesel::PgConnection;
 use serde_json::Value;
 use thiserror::Error;
 
+
 #[derive(Error, Debug)]
 pub enum Error {
   #[error("Failed to retreive API key")]
@@ -314,36 +315,78 @@ fn parse_intraday_from_csv(text: &str) -> Result<Vec<RawIntraDayPrice>, Error> {
     .collect::<Result<Vec<RawIntraDayPrice>, _>>()
     .map_err(|e| e.into())
 }
-
+/// Persists a list of intraday price ticks into the database.
+///
+/// This function retrieves the latest intraday price timestamp for a given security (`s_id`).
+/// - If there is no existing data (`NoData` error), all ticks are inserted.
+/// - If data exists, only ticks with timestamps newer than the latest recorded timestamp are inserted.
+///
+/// # Arguments
+/// - `connection` - A mutable reference to the PostgreSQL connection.
+/// - `s_id` - The security ID associated with the price data.
+/// - `symb` - The symbol of the security.
+/// - `ticks` - A vector of `RawIntraDayPrice` values representing tick data to be persisted.
+///
+/// # Returns
+/// - `Ok(())` if the operation succeeds.
+/// - `Err(Error::DBFuncs(e))` if a database-related error occurs.
+/// - `Err(Error::ParseDate(e))` if parsing the timestamp fails.
+///
+/// # Behavior
+/// - Calls `get_intr_day_max_date` to fetch the latest recorded timestamp.
+/// - If no prior data exists, all ticks are inserted.
+/// - Otherwise, only ticks with a timestamp greater than the latest recorded date are inserted.
+/// - Calls `create_intra_day` to persist valid ticks into the database.
+///
+/// # Errors
+/// - If there is an error retrieving the latest timestamp, it propagates the error.
+/// - If there is an error inserting data into the database, it is ignored (consider logging it instead).
+///
+/// # Example
+/// ```ignore
+/// let mut connection = establish_connection();
+/// let s_id = 123;
+/// let symb = "AAPL";
+/// let ticks = vec![
+///     RawIntraDayPrice {
+///         timestamp: "2024-02-17 15:30:00".to_string(),
+///         open: 150.0,
+///         high: 155.0,
+///         low: 149.0,
+///         close: 152.0,
+///         volume: 10000,
+///     },
+/// ];
+///
+/// persist_ticks(&mut connection, s_id, symb, ticks).unwrap();
+/// `
 fn persist_ticks(
   connection: &mut PgConnection,
   s_id: i64,
-  symb: &String,
+  symb: &str,
   ticks: Vec<RawIntraDayPrice>,
 ) -> Result<(), Error> {
-  let last_date = get_intr_day_max_date(connection, s_id)?;
+  let last_date = match get_intr_day_max_date(connection, s_id) {
+    Ok(date) => Some(date),
+    Err(crate::dbfunctions::common::Error::NoData(_)) =>None,
+    Err(e) => return Err(Error::DBFuncs(e)),
+  };
 
-  let mut _skipped = 0;
-
-  let mut _processed = 0;
 
   for tick in ticks {
     let tmp_tick = IntraDayPrice {
       eventid: 0,
       tstamp: NaiveDateTime::parse_from_str(&tick.timestamp, "%Y-%m-%d %H:%M:%S")?,
       sid: s_id,
-      symbol: symb.clone(),
+      symbol: symb.to_string(),
       open: tick.open,
       high: tick.high,
       low: tick.low,
       close: tick.close,
       volume: tick.volume,
     };
-    if tmp_tick.tstamp > last_date {
+    if last_date.is_none() || tmp_tick.tstamp > last_date.unwrap(){
       let _ = create_intra_day(connection, tmp_tick);
-      _processed += 1;
-    } else {
-      _skipped += 1;
     }
   }
   Ok(())

@@ -1,0 +1,6 @@
+actsymbol,companyname,securityname,exchange,cqssymbol,etf,roundlotsize,testissue,nasdaqsymbol
+ADM,Archer,Archer-Daniels-Midland Company Common Stock,N,ADM,N,100.0,N,ADM
+CBS,CBS Corporation Class B Common Stock,CBS Corporation Class B Common Stock,N,CBS,N,100.0,N,CBS
+ETN,"Eaton Corporation, PLC Ordinary Shares","Eaton Corporation, PLC Ordinary Shares",N,ETN,N,100.0,N,ETN
+RGA,"Reinsurance Group of America, Incorporated Common Stock","Reinsurance Group of America, Incorporated Common Stock",N,RGA,N,100.0,N,RGA
+X,United States Steel Corporation Common Stock,United States Steel Corporation Common Stock,N,X,N,100.0,N,

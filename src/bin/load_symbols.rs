@@ -11,7 +11,6 @@ use dotenvy::dotenv;
 fn main() {
   dotenv().ok();
   let file_list: Vec<(&str, &str)> = vec![("NYSE", "OTHER_LISTED"), ("NASDAQ", "NASDAQ_LISTED")];
-
   let res = file_proc(file_list);
 
   let sec_vec = match res {
