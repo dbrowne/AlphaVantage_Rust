@@ -51,7 +51,7 @@ use alpha_vantage_rust::{
     sources::get_sources,
     topic_refs::get_topics,
   },
-  security_types::sec_types::SecurityType,
+  security_types::SecurityType,
 };
 use dotenvy::dotenv;
 use indicatif::ProgressBar;

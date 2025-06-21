@@ -39,7 +39,7 @@ pub fn create_intra_day(conn: &mut PgConnection, tick: IntraDayPrice) -> Result<
 
   use crate::{
     db_models::NewIntraDayPrice, dbfunctions::symbols, schema::intradayprices,
-    security_types::sec_types::SymbolFlag,
+    security_types::SymbolFlag,
   };
 
   let new_mkt_price = NewIntraDayPrice {
@@ -71,7 +71,7 @@ pub fn insert_open_close(
 
   use crate::{
     db_models::NewSummaryPrice, dbfunctions::symbols, schema::summaryprices,
-    security_types::sec_types::SymbolFlag,
+    security_types::SymbolFlag,
   };
 
   let np: NewSummaryPrice = NewSummaryPrice {

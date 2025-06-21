@@ -30,7 +30,7 @@ use diesel::PgConnection;
 
 use crate::{
   alpha_lib::core::alpha_data_types::AlphaSymbol, dbfunctions::common::Error,
-  security_types::sec_types::SymbolFlag, util,
+  security_types::SymbolFlag, util,
 };
 
 /// Creates a new symbol entry in the database.

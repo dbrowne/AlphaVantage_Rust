@@ -1,12 +1,7 @@
 /*
- *
- *
- *
- *
  * MIT License
  * Copyright (c) 2024. Dwight J. Browne
  * dwight[-dot-]browne[-at-]dwightjbrowne[-dot-]com
- *
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -27,42 +22,17 @@
  * SOFTWARE.
  */
 
-extern crate chrono_tz;
+//! Alpha Vantage API integration and data processing module
+//!
+//! This module provides functionality for fetching, processing, and storing
+//! financial data from the Alpha Vantage API.
 
-use std::{collections::HashMap, env::VarError, thread, time};
+use std::{collections::HashMap, env::VarError, thread, time::Duration};
 
-use chrono::{DateTime, Duration, Local, NaiveDate, NaiveDateTime};
+use chrono::{Local, NaiveDate, NaiveDateTime};
 use diesel::PgConnection;
 use serde_json::Value;
 use thiserror::Error;
-
-#[derive(Error, Debug)]
-pub enum Error {
-  #[error("Failed to retreive API key")]
-  ApiKey(#[from] VarError),
-  #[error(transparent)]
-  DbConn(#[from] diesel::result::Error),
-  #[error(transparent)]
-  Serde(#[from] serde_json::Error),
-  #[error(transparent)]
-  Reqwest(#[from] reqwest::Error),
-  #[error(transparent)]
-  Csv(#[from] csv::Error),
-  #[error("Error count exceeded {0}")]
-  ErrorCount(usize),
-  #[error(transparent)]
-  ParseDate(#[from] chrono::ParseError),
-  #[error(transparent)]
-  DBFuncs(#[from] crate::dbfunctions::common::Error),
-  #[error(transparent)]
-  AlphaDataTypes(#[from] crate::alpha_lib::core::alpha_data_types::Error),
-  #[error("Error getting {0} from JSON data")]
-  MissingHeader(String),
-  #[error("Max exceeded : {0}")]
-  MaxExceeded(String),
-  #[error("Unexpected error: {0}")]
-  UnEx(String),
-}
 
 use crate::{
   alpha_lib::core::{
@@ -82,662 +52,711 @@ use crate::{
     symbols::{create_symbol, get_symbols_and_sids_for},
     tops::insert_top_stat,
   },
-  security_types::sec_types::SecurityType,
+  security_types::SecurityType,
 };
 
-const SYMBOL: &str = "symbol";
-const MAX_ERRORS: i32 = 50;
-
-pub fn get_api_key() -> Result<String, VarError> {
-  std::env::var("ALPHA_VANTAGE_API_KEY")
+/// Custom error types for the base module
+#[derive(Error, Debug)]
+pub enum BaseError {
+  #[error("Failed to retrieve API key")]
+  ApiKey(#[from] VarError),
+  #[error("Database connection error")]
+  DbConnection(#[from] diesel::result::Error),
+  #[error("JSON serialization/deserialization error")]
+  Serialization(#[from] serde_json::Error),
+  #[error("HTTP request error")]
+  HttpRequest(#[from] reqwest::Error),
+  #[error("CSV parsing error")]
+  CsvParsing(#[from] csv::Error),
+  #[error("Date parsing error")]
+  DateParsing(#[from] chrono::ParseError),
+  #[error("Database function error")]
+  DatabaseFunction(#[from] crate::dbfunctions::common::Error),
+  #[error("Alpha data types error")]
+  AlphaDataTypes(#[from] crate::alpha_lib::core::alpha_data_types::Error),
+  #[error("Missing header '{0}' in API response")]
+  MissingHeader(String),
+  #[error("Error count exceeded: {0}")]
+  ErrorCountExceeded(usize),
+  #[error("Maximum limit exceeded: {0}")]
+  MaximumExceeded(String),
+  #[error("Unexpected error: {0}")]
+  Unexpected(String),
 }
 
-/// # process_symbols Function
-///
-/// This function makes HTTP requests to the Alpha Vantage API to retrieve the basic symbol data
-///for the symbol table.
-/// It reads symbols from an array of strings and makes requests at a maximum rate of 75 reqs/min.
-/// This function checks for duplicate symbols and writes unique records into the sec database.
-///
-/// # Arguments
-///
-/// * `sec_vec` - A 2D vector containing symbol strings.
-///
-/// # Returns
-///
-/// * `Ok(())` - The function completed successfully.
-/// * `Err(Box<dyn Error>)` - An error occurred during the operation.
-///
-/// # Errors
-///
-/// This function will return an error if there are any issues reading the environment variables,
-/// making the HTTP request, parsing the response, or interacting with the database.
-///
-/// # Example
-///
-/// ```ignore
-/// use alpha_vantage_rust::alpha_lib::alpha_io_funcs::process_symbols;
-/// let symbols = vec![vec!["AAPL".to_string(),  "GOOG".to_string()], vec!["TSLA".to_string()]];
-/// let result = process_symbols(symbols);
-///
-/// match result {
-///     Ok(_) => println!("Operation completed successfully."),
-///     Err(e) => println!("An error occurred: {}", e),
-/// }
-/// ```
-///
-///
-/// TODO:  Refactor as this is a bit of a mess
-pub fn process_symbols(sec_vec: Vec<Vec<String>>, load_missed: bool) -> Result<(), Error> {
-  let api_key = get_api_key()?;
+/// Configuration constants
+pub mod config {
+  use chrono::Duration;
 
-  let mut type_map: HashMap<SecurityType, i32> = HashMap::new();
-  let mut symbol_map: HashMap<String, i32> = HashMap::new();
-  let mut err_ct = 0;
+  pub const SYMBOL_FIELD: &str = "symbol";
+  pub const MAX_ERRORS: i32 = 50;
+  pub const API_RATE_LIMIT_MS: i64 = 350;
+  pub const OVERVIEW_SYMBOL_FIELD: &str = "Symbol";
+  pub const INTRADAY_HEADER: &str = "timestamp,open,high,low,close,volume";
+  pub const DAILY_METADATA_HEADER: &str = "Meta Data";
+  pub const DAILY_TIMESERIES_HEADER: &str = "Time Series (Daily)";
 
-  let conn = &mut establish_connection_or_exit();
-  let mut dur_time: DateTime<Local>;
-  let mut resp_time: DateTime<Local>;
-  let min_time = Duration::milliseconds(350); //We cant make MIN_TIME a constant because it is not a primitive type
+  /// Minimum time between API requests (75 requests per minute)
+  pub fn min_request_interval() -> Duration {
+    Duration::milliseconds(API_RATE_LIMIT_MS)
+  }
+}
 
-  if load_missed {
-    let symbs = get_symbols_and_sids_for(conn, "USA".to_string(), "Eqty".to_string())?;
-    for (symb, _) in symbs {
-      symbol_map.insert(symb, 1);
-    }
+/// API client for Alpha Vantage
+pub struct AlphaVantageClient {
+  api_key: String,
+  client: reqwest::blocking::Client,
+}
+
+impl AlphaVantageClient {
+  /// Create a new AlphaVantage client
+  pub fn new() -> Result<Self, BaseError> {
+    Ok(Self {
+      api_key: get_api_key()?,
+      client: reqwest::blocking::Client::new(),
+    })
   }
 
-  for sym_vec in sec_vec {
-    for symb in sym_vec {
-      let url = create_url!(FuncType::SymSearch, symb, api_key);
-      let resp = reqwest::blocking::get(&url); //todo: change to async & refactor
-      resp_time = Local::now();
-      if let Ok(resp) = resp {
-        let text = match resp.text() {
-          Ok(text) => text,
-          Err(e) => {
-            err_ct += 1;
-            if err_ct > MAX_ERRORS {
-              println!("Too many errors: {}", err_ct);
-              return Err(e.into());
-            }
-            continue;
-          }
-        };
+  /// Get data from API endpoint
+  fn get_text(&self, url: &str) -> Result<String, BaseError> {
+    let response = self.client.get(url).send()?;
+    Ok(response.text()?)
+  }
 
-        if err_ct > MAX_ERRORS {
-          let errmsg = format!("Too many errors: {}", err_ct);
-          return Err(Error::MaxExceeded(errmsg));
-        }
+  /// Get JSON data from API endpoint
+  fn get_json<T>(&self, url: &str) -> Result<T, BaseError>
+  where
+    T: for<'de> serde::Deserialize<'de>,
+  {
+    let response = self.client.get(url).send()?;
+    Ok(response.json::<T>()?)
+  }
 
-        if !text.contains(SYMBOL) {
-          continue;
-        }
+  /// Get the API key
+  pub fn api_key(&self) -> &str {
+    &self.api_key
+  }
+}
 
-        let mut rdr = csv::Reader::from_reader(text.as_bytes());
-        for result in rdr.deserialize() {
-          let mut record: AlphaSymbol = result.expect("process_symbols: can't read record");
-          if symbol_map.insert(record.symbol.clone(), 1).is_some() {
-            // todo: Improve logging
-            // println!("Duplicate symbol: {}", record.symbol);
-            continue;
-          }
+/// Symbol processing functionality
+pub mod symbol_processing {
+  use super::*;
+  use crate::security_types::SecurityType;
 
-          let (sec_type, sec_type_string) =
-            SecurityType::get_detailed_sec_type(record.s_type.as_str(), record.name.as_str());
-          record.s_type = sec_type_string.clone();
-          record.region = normalize_alpha_region(record.region.as_str());
+  /// Configuration for symbol processing
+  #[derive(Debug, Clone)]
+  pub struct ProcessingConfig {
+    pub load_missed: bool,
+    pub region_filter: Option<String>,
+    pub max_errors: i32,
+  }
 
-          if load_missed && record.region.ne("USA") {
-            continue;
-          }
-          if !type_map.contains_key(&sec_type) {
-            type_map.insert(sec_type, 1);
-          } else {
-            type_map.entry(sec_type).and_modify(|e| *e += 1);
-          }
-          let s_id: i64;
-          if load_missed {
-            s_id = get_next_sid(conn, sec_type_string)?
-          } else {
-            s_id = SecurityType::encode(sec_type, type_map.get(&sec_type).unwrap().clone() as u32);
-          }
-          create_symbol(conn, s_id, record)?;
-
-          dur_time = Local::now();
-
-          if dur_time - resp_time < min_time {
-            // Current rate limit is 75 per minute
-            std::thread::sleep(std::time::Duration::from_secs(1));
-            println!("stats:{}, {:?}", Local::now(), type_map);
-          }
-        }
-      } else {
-        println!("Error: {:?}", resp);
+  impl Default for ProcessingConfig {
+    fn default() -> Self {
+      Self {
+        load_missed: false,
+        region_filter: Some("USA".to_string()),
+        max_errors: config::MAX_ERRORS,
       }
     }
   }
 
-  Ok(())
-}
-
-/// Fetches and processes the overview of a financial entity using an external API.
-///
-/// This function contacts the external API specified by the `ALPHA_VANTAGE_API_KEY` environment
-/// variable to get a detailed overview of a financial entity identified by its `sid` and `symbol`.
-/// After obtaining the overview, the function processes the response to create a `FullOverview`
-/// struct and subsequently stores it in the database.
-///
-/// # Parameters
-///
-/// * `sid`: An `i64` identifier representing the financial entity.
-/// * `symb`: A `String` representing the symbol of the financial entity.
-///
-/// # Returns
-///
-/// * `Result<(), Box<dyn Error>>`: Returns an `Ok(())` if the operation is successful. Returns an
-///   `Err` wrapped in a `Box` if any error occurs.
-///
-///
-/// # Examples
-///
-/// ```ignore
-/// let sid = 12345;
-/// let symb = "AAPL".to_string();
-///
-/// match get_overview(sid, symb) {
-///     Ok(_) => println!("Overview fetched and processed successfully."),
-///     Err(e) => println!("Error fetching or processing overview: {:?}", e),
-/// }
-/// ```
-///
-/// # Panics
-///
-/// * This function will panic if the `ALPHA_VANTAGE_API_KEY` environment variable is not set.
-///
-/// # Errors
-///
-/// * It might return an error if there's a problem establishing a database connection, making the
-///   external API request, or processing the response.
-pub fn get_overview(connection: &mut PgConnection, s_id: i64, symb: String) -> Result<(), Error> {
-  const SYMBOL: &str = "Symbol";
-  let api_key = get_api_key()?;
-  let url = create_url!(FuncType::Overview, symb, api_key);
-  let response = reqwest::blocking::get(&url)?;
-  println!("Response is: {:?}", response);
-
-  let text = response.text()?;
-
-  if !text.contains(SYMBOL) {
-    println!("Missing overview  for Symbol {}: {:?}", symb, text);
-    thread::sleep(time::Duration::from_secs(1));
-    return Ok(());
-  }
-  let json = serde_json::from_str::<Value>(&text)?;
-  let ov = FullOverview::new(s_id, json);
-  if let Some(ov) = ov {
-    println!("Overview: {:?}", ov);
-    create_overview(connection, ov)?;
-  } else {
-    println!("Failed to create overview for symbol {}: {:?}", symb, text);
-    return Err(Error::UnEx(format!(
-      "Failed to create overview for symbol {}",
-      symb
-    )));
+  /// Symbol processor for handling batch symbol operations
+  pub struct SymbolProcessor {
+    client: AlphaVantageClient,
+    config: ProcessingConfig,
+    type_counts: HashMap<SecurityType, i32>,
+    symbol_cache: HashMap<String, i32>,
+    error_count: i32,
   }
 
-  Ok(())
-}
+  impl SymbolProcessor {
+    pub fn new(config: ProcessingConfig) -> Result<Self, BaseError> {
+      let mut processor = Self {
+        client: AlphaVantageClient::new()?,
+        config,
+        type_counts: HashMap::new(),
+        symbol_cache: HashMap::new(),
+        error_count: 0,
+      };
 
-fn get_api_data(url: &str) -> Result<String, Error> {
-  let response = reqwest::blocking::get(url)?;
-  let text = response.text()?;
-  Ok(text)
-}
+      if processor.config.load_missed {
+        processor.load_existing_symbols()?;
+      }
 
-fn get_top_data(url: &str) -> Result<Root, Error> {
-  let response = reqwest::blocking::get(url)?;
-  let text = response.json::<Root>()?;
-  Ok(text)
-}
+      Ok(processor)
+    }
 
-pub fn get_news_root(url: &str) -> Result<NewsRoot, Error> {
-  let response = reqwest::blocking::get(url)?;
-  let text = response.json::<NewsRoot>()?;
-  Ok(text)
-}
+    fn load_existing_symbols(&mut self) -> Result<(), BaseError> {
+      let conn = &mut establish_connection_or_exit();
+      let symbols = get_symbols_and_sids_for(conn, "USA".to_string(), "Equity".to_string())?;
 
-fn parse_intraday_from_csv(text: &str) -> Result<Vec<RawIntraDayPrice>, Error> {
-  let mut recs = csv::Reader::from_reader(text.as_bytes());
-  recs
-    .deserialize()
-    .collect::<Result<Vec<RawIntraDayPrice>, _>>()
-    .map_err(|e| e.into())
-}
+      for (symbol, _) in symbols {
+        self.symbol_cache.insert(symbol, 1);
+      }
 
-fn persist_ticks(
-  connection: &mut PgConnection,
-  s_id: i64,
-  symb: &String,
-  ticks: Vec<RawIntraDayPrice>,
-) -> Result<(), Error> {
-  let last_date = get_intr_day_max_date(connection, s_id)?;
+      Ok(())
+    }
 
-  let mut _skipped = 0;
+    /// Process a batch of symbols
+    pub fn process_symbols(&mut self, symbol_batches: Vec<Vec<String>>) -> Result<(), BaseError> {
+      let conn = &mut establish_connection_or_exit();
+      let min_interval = config::min_request_interval();
 
-  let mut _processed = 0;
+      for batch in symbol_batches {
+        for symbol in batch {
+          if self.error_count > self.config.max_errors {
+            return Err(BaseError::ErrorCountExceeded(self.error_count as usize));
+          }
 
-  for tick in ticks {
-    let tmp_tick = IntraDayPrice {
-      eventid: 0,
-      tstamp: NaiveDateTime::parse_from_str(&tick.timestamp, "%Y-%m-%d %H:%M:%S")?,
-      sid: s_id,
-      symbol: symb.clone(),
-      open: tick.open,
-      high: tick.high,
-      low: tick.low,
-      close: tick.close,
-      volume: tick.volume,
-    };
-    if tmp_tick.tstamp > last_date {
-      let _ = create_intra_day(connection, tmp_tick);
-      _processed += 1;
-    } else {
-      _skipped += 1;
+          let start_time = Local::now();
+
+          match self.process_single_symbol(conn, &symbol) {
+            Ok(_) => {}
+            Err(e) => {
+              self.error_count += 1;
+              eprintln!("Error processing symbol {}: {}", symbol, e);
+
+              if self.error_count > self.config.max_errors {
+                return Err(BaseError::ErrorCountExceeded(self.error_count as usize));
+              }
+              continue;
+            }
+          }
+
+          // Rate limiting
+          let elapsed = Local::now() - start_time;
+          if elapsed < min_interval {
+            thread::sleep(Duration::from_secs(1));
+            println!("Stats: {}, {:?}", Local::now(), self.type_counts);
+          }
+        }
+      }
+
+      Ok(())
+    }
+
+    fn process_single_symbol(
+      &mut self,
+      conn: &mut PgConnection,
+      symbol: &str,
+    ) -> Result<(), BaseError> {
+      let url = create_url!(FuncType::SymSearch, symbol, self.client.api_key());
+      let text = self.client.get_text(&url)?;
+
+      if !text.contains(config::SYMBOL_FIELD) {
+        return Ok(()); // Skip if no symbol data
+      }
+
+      let mut reader = csv::Reader::from_reader(text.as_bytes());
+
+      for result in reader.deserialize() {
+        let mut record: AlphaSymbol = result?;
+
+        // Skip duplicates
+        if self.symbol_cache.insert(record.symbol.clone(), 1).is_some() {
+          continue;
+        }
+
+        // Classify security type
+        let (sec_type, sec_type_string) =
+          SecurityType::classify_detailed(&record.s_type, &record.name);
+
+        record.s_type = sec_type_string.clone();
+        record.region = normalize_alpha_region(&record.region);
+
+        // Apply region filter
+        if self.config.load_missed && record.region != "USA" {
+          continue;
+        }
+
+        // Update type counts
+        self.update_type_count(sec_type);
+
+        // Generate security ID
+        let s_id = if self.config.load_missed {
+          get_next_sid(conn, sec_type_string)?
+        } else {
+          SecurityType::encode(sec_type, *self.type_counts.get(&sec_type).unwrap() as u32)
+        };
+
+        // Create symbol record
+        create_symbol(conn, s_id, record)?;
+      }
+
+      Ok(())
+    }
+
+    fn update_type_count(&mut self, sec_type: SecurityType) {
+      *self.type_counts.entry(sec_type).or_insert(0) += 1;
+    }
+
+    /// Get current type statistics
+    pub fn type_statistics(&self) -> &HashMap<SecurityType, i32> {
+      &self.type_counts
     }
   }
-  Ok(())
+}
+
+/// Data fetching and processing functionality
+pub mod data_processing {
+  use super::*;
+
+  /// Overview data processor
+  pub struct OverviewProcessor {
+    client: AlphaVantageClient,
+  }
+
+  impl OverviewProcessor {
+    pub fn new() -> Result<Self, BaseError> {
+      Ok(Self {
+        client: AlphaVantageClient::new()?,
+      })
+    }
+
+    /// Fetch and process overview data for a symbol
+    pub fn process_overview(
+      &self,
+      connection: &mut PgConnection,
+      s_id: i64,
+      symbol: String,
+    ) -> Result<(), BaseError> {
+      let url = create_url!(FuncType::Overview, symbol, self.client.api_key());
+      let text = self.client.get_text(&url)?;
+
+      if !text.contains(config::OVERVIEW_SYMBOL_FIELD) {
+        println!("Missing overview for symbol {}: {}", symbol, text);
+        thread::sleep(Duration::from_secs(1));
+        return Ok(());
+      }
+
+      let json: Value = serde_json::from_str(&text)?;
+
+      if let Some(overview) = FullOverview::new(s_id, json) {
+        println!("Overview: {:?}", overview);
+        create_overview(connection, overview)?;
+      } else {
+        return Err(BaseError::Unexpected(format!(
+          "Failed to create overview for symbol {}",
+          symbol
+        )));
+      }
+
+      Ok(())
+    }
+  }
+
+  /// Intraday price processor
+  pub struct IntradayProcessor {
+    client: AlphaVantageClient,
+  }
+
+  impl IntradayProcessor {
+    pub fn new() -> Result<Self, BaseError> {
+      Ok(Self {
+        client: AlphaVantageClient::new()?,
+      })
+    }
+
+    /// Load intraday price data
+    pub fn load_intraday(
+      &self,
+      conn: &mut PgConnection,
+      symbol: &str,
+      s_id: i64,
+      sec_type: SecurityType,
+    ) -> Result<(), BaseError> {
+      let url = match sec_type {
+        SecurityType::Crypto => {
+          create_url!(FuncType::CryptoIntraDay, symbol, self.client.api_key())
+        }
+        SecurityType::Equity => create_url!(FuncType::TsIntra, symbol, self.client.api_key()),
+        _ => {
+          return Err(BaseError::Unexpected(
+            "Unsupported security type for intraday data".to_string(),
+          ))
+        }
+      };
+
+      let text = self.client.get_text(&url)?;
+
+      if !text.contains(config::INTRADAY_HEADER) {
+        return Ok(()); // Alpha Vantage returns error for missing price data
+      }
+
+      let ticks = self.parse_intraday_csv(&text)?;
+      self.persist_ticks(conn, s_id, symbol, ticks)?;
+
+      Ok(())
+    }
+
+    fn parse_intraday_csv(&self, text: &str) -> Result<Vec<RawIntraDayPrice>, BaseError> {
+      let mut reader = csv::Reader::from_reader(text.as_bytes());
+      reader
+        .deserialize()
+        .collect::<Result<Vec<RawIntraDayPrice>, _>>()
+        .map_err(BaseError::from)
+    }
+
+    fn persist_ticks(
+      &self,
+      connection: &mut PgConnection,
+      s_id: i64,
+      symbol: &str,
+      ticks: Vec<RawIntraDayPrice>,
+    ) -> Result<(), BaseError> {
+      let last_date = get_intr_day_max_date(connection, s_id)?;
+      let mut processed = 0;
+      let mut skipped = 0;
+
+      for tick in ticks {
+        let parsed_time = NaiveDateTime::parse_from_str(&tick.timestamp, "%Y-%m-%d %H:%M:%S")?;
+
+        let intraday_price = IntraDayPrice {
+          eventid: 0,
+          tstamp: parsed_time,
+          sid: s_id,
+          symbol: symbol.to_string(),
+          open: tick.open,
+          high: tick.high,
+          low: tick.low,
+          close: tick.close,
+          volume: tick.volume,
+        };
+
+        if intraday_price.tstamp > last_date {
+          create_intra_day(connection, intraday_price)?;
+          processed += 1;
+        } else {
+          skipped += 1;
+        }
+      }
+
+      println!("Processed: {}, Skipped: {}", processed, skipped);
+      Ok(())
+    }
+  }
+
+  /// Daily summary processor
+  pub struct SummaryProcessor {
+    client: AlphaVantageClient,
+  }
+
+  impl SummaryProcessor {
+    pub fn new() -> Result<Self, BaseError> {
+      Ok(Self {
+        client: AlphaVantageClient::new()?,
+      })
+    }
+
+    /// Load daily summary data
+    pub fn load_summary(
+      &self,
+      conn: &mut PgConnection,
+      symbol: &str,
+      s_id: i64,
+    ) -> Result<(), BaseError> {
+      let url = create_url!(FuncType::TsDaily, symbol, self.client.api_key());
+      let text = self.client.get_text(&url)?;
+
+      if !text.contains(config::DAILY_METADATA_HEADER) {
+        return Ok(()); // Alpha Vantage returns error for missing price data
+      }
+
+      let daily_prices = self.parse_daily_prices(&text, symbol)?;
+      let last_date = get_summary_max_date(conn, s_id)?;
+
+      for price in daily_prices {
+        if price.date > last_date {
+          insert_open_close(conn, &symbol.to_string(), s_id, price)?;
+        }
+      }
+
+      Ok(())
+    }
+
+    fn parse_daily_prices(
+      &self,
+      input: &str,
+      symbol: &str,
+    ) -> Result<Vec<RawDailyPrice>, BaseError> {
+      let json_data: Value = serde_json::from_str(input)?;
+
+      let price_data = json_data[config::DAILY_TIMESERIES_HEADER]
+        .as_object()
+        .ok_or_else(|| BaseError::MissingHeader(config::DAILY_TIMESERIES_HEADER.to_string()))?;
+
+      let mut daily_prices = Vec::new();
+
+      for (date_str, data) in price_data {
+        if let Some(price) = self.create_daily_price(date_str, data, symbol) {
+          daily_prices.push(price);
+        }
+      }
+
+      Ok(daily_prices)
+    }
+
+    fn create_daily_price(
+      &self,
+      date_str: &str,
+      data: &Value,
+      symbol: &str,
+    ) -> Option<RawDailyPrice> {
+      let date = NaiveDate::parse_from_str(date_str, "%Y-%m-%d").ok()?;
+      let open = data["1. open"].as_str()?.parse().ok()?;
+      let high = data["2. high"].as_str()?.parse().ok()?;
+      let low = data["3. low"].as_str()?.parse().ok()?;
+      let close = data["4. close"].as_str()?.parse().ok()?;
+      let volume = data["5. volume"].as_str()?.parse().ok()?;
+
+      Some(RawDailyPrice {
+        date,
+        symbol: symbol.to_string(),
+        open,
+        high,
+        low,
+        close,
+        volume,
+      })
+    }
+  }
+
+  /// Top performers processor
+  pub struct TopProcessor {
+    client: AlphaVantageClient,
+  }
+
+  impl TopProcessor {
+    pub fn new() -> Result<Self, BaseError> {
+      Ok(Self {
+        client: AlphaVantageClient::new()?,
+      })
+    }
+
+    /// Load top performers data
+    pub fn load_tops(&self, conn: &mut PgConnection) -> Result<(), BaseError> {
+      let url = create_url!(FuncType::TopQuery, " ", self.client.api_key());
+      let root: Root = self.client.get_json(&url)?;
+      let last_update = parse_timestamp(&root.last_updated)?;
+
+      self.process_top_data(conn, &root.top_gainers, TopType::TopGainer, last_update)?;
+      self.process_top_data(conn, &root.top_losers, TopType::TopLoser, last_update)?;
+      self.process_top_data(
+        conn,
+        &root.most_actively_traded,
+        TopType::TopActive,
+        last_update,
+      )?;
+
+      Ok(())
+    }
+
+    fn process_top_data(
+      &self,
+      conn: &mut PgConnection,
+      data: &[impl Convert],
+      top_type: TopType,
+      last_update: NaiveDateTime,
+    ) -> Result<(), BaseError> {
+      for item in data {
+        let top_stat = item.make_top_stat()?;
+
+        let s_id = match get_sid(conn, top_stat.ticker.clone()) {
+          Ok(value) => value,
+          Err(_) => continue, // Skip if symbol not found
+        };
+
+        let type_constant = top_constants(&top_type);
+        insert_top_stat(conn, s_id, top_stat.clone(), &type_constant, last_update)?;
+      }
+
+      Ok(())
+    }
+  }
+}
+
+/// Cryptocurrency symbol processing
+pub mod crypto_processing {
+  use super::*;
+
+  /// Default cryptocurrency configuration
+  #[derive(Debug, Clone)]
+  pub struct CryptoConfig {
+    pub security_type: String,
+    pub region: String,
+    pub currency: String,
+    pub timezone: String,
+    pub market_open: String,
+    pub market_close: String,
+  }
+
+  impl Default for CryptoConfig {
+    fn default() -> Self {
+      Self {
+        security_type: "Crypto".to_string(),
+        region: "USA".to_string(),
+        currency: "USD".to_string(),
+        timezone: "UTC-04".to_string(),
+        market_open: "00:00".to_string(),
+        market_close: "23:59".to_string(),
+      }
+    }
+  }
+
+  /// Process cryptocurrency symbols
+  pub fn process_digital_symbols(symbol_data: Vec<String>) -> Result<(), BaseError> {
+    let config = CryptoConfig::default();
+    let mut symbol_map = HashMap::new();
+    let conn = &mut establish_connection_or_exit();
+    let mut base_sid = 1u32;
+
+    for symbol_string in symbol_data {
+      let parts: Vec<&str> = symbol_string.split(',').collect();
+      if parts.len() < 2 {
+        continue;
+      }
+
+      let symbol = parts[0].to_string();
+      let name = parts[1].to_string();
+      let s_id = SecurityType::encode(SecurityType::Crypto, base_sid);
+
+      let record = AlphaSymbol::new(
+        symbol.clone(),
+        name,
+        config.security_type.clone(),
+        config.region.clone(),
+        config.market_open.clone(),
+        config.market_close.clone(),
+        config.timezone.clone(),
+        config.currency.clone(),
+        1.0,
+      );
+
+      if symbol_map.insert(symbol.clone(), s_id).is_some() {
+        eprintln!("Duplicate symbol: {}", symbol);
+      } else {
+        println!("Inserting symbol: {}:{}", symbol, s_id);
+        create_symbol(conn, s_id, record)?;
+      }
+
+      base_sid += 1;
+    }
+
+    println!("Total symbols processed: {}", symbol_map.len());
+    Ok(())
+  }
+}
+
+/// News processing functionality
+pub fn get_news_data(url: &str) -> Result<NewsRoot, BaseError> {
+  let client = AlphaVantageClient::new()?;
+  Ok(client.get_json(url)?)
+}
+
+/// Utility functions
+pub mod utils {
+  use super::*;
+
+  /// Parse timestamp from Alpha Vantage format
+  pub fn parse_timestamp(input: &str) -> Result<NaiveDateTime, BaseError> {
+    let mut parts = input.rsplitn(2, ' ');
+    let _timezone = parts.next().unwrap();
+    let datetime_str = parts.next().unwrap();
+
+    Ok(NaiveDateTime::parse_from_str(
+      datetime_str,
+      "%Y-%m-%d %H:%M:%S",
+    )?)
+  }
+}
+
+/// Get API key from environment
+pub fn get_api_key() -> Result<String, VarError> {
+  std::env::var("ALPHA_VANTAGE_API_KEY")
+}
+
+// Re-export commonly used items
+pub use crypto_processing::*;
+pub use data_processing::*;
+pub use symbol_processing::*;
+pub use utils::*;
+
+// Legacy function wrappers for backward compatibility
+pub fn process_symbols(sec_vec: Vec<Vec<String>>, load_missed: bool) -> Result<(), BaseError> {
+  let config = ProcessingConfig {
+    load_missed,
+    ..Default::default()
+  };
+
+  let mut processor = SymbolProcessor::new(config)?;
+  processor.process_symbols(sec_vec)
+}
+
+pub fn get_overview(
+  connection: &mut PgConnection,
+  s_id: i64,
+  symbol: String,
+) -> Result<(), BaseError> {
+  let processor = OverviewProcessor::new()?;
+  processor.process_overview(connection, s_id, symbol)
 }
 
 pub fn load_intraday(
   conn: &mut PgConnection,
-  symb: &String,
+  symbol: &String,
   s_id: i64,
-  sectype: SecurityType,
-) -> Result<(), Error> {
-  const HEADER: &str = "timestamp,open,high,low,close,volume";
-  let api_key = get_api_key()?;
-  let url = match sectype {
-    SecurityType::Crypto => create_url!(FuncType::CryptoIntraDay, symb, api_key),
-    SecurityType::Equity => create_url!(FuncType::TsIntra, symb, api_key),
-    _ => panic!("Unknown security type"),
-  };
-
-  let text = get_api_data(&url)?;
-  if !text.contains(HEADER) {
-    // todo: Improve logging here
-    // eprintln!("Error: for {}: {:?}", symb, text);
-    // alpha vantage will return an error for a symol missing a price
-    return Ok(());
-  };
-
-  let ticks = parse_intraday_from_csv(&text)?;
-  persist_ticks(conn, s_id, &symb, ticks)?;
-
-  Ok(())
+  sec_type: SecurityType,
+) -> Result<(), BaseError> {
+  let processor = IntradayProcessor::new()?;
+  processor.load_intraday(conn, symbol, s_id, sec_type)
 }
 
-fn gen_new_summary_price(json_inp: (&String, &Value), sym: String) -> Option<RawDailyPrice> {
-  //todo   Refactor
-  let dt = NaiveDate::parse_from_str(json_inp.0, "%Y-%m-%d")
-    .map_err(|e| {
-      println!("Error parsing date: {:?}", e);
-      e
-    })
-    .ok()?;
-
-  let open = json_inp.1["1. open"]
-    .as_str()
-    .unwrap()
-    .parse::<f32>()
-    .ok()?;
-  let high = json_inp.1["2. high"]
-    .as_str()
-    .unwrap()
-    .parse::<f32>()
-    .ok()?;
-  let low = json_inp.1["3. low"].as_str().unwrap().parse::<f32>().ok()?;
-  let close = json_inp.1["4. close"]
-    .as_str()
-    .unwrap()
-    .parse::<f32>()
-    .ok()?;
-  let volume = json_inp.1["5. volume"]
-    .as_str()
-    .unwrap()
-    .parse::<i32>()
-    .ok()?;
-
-  Some(RawDailyPrice {
-    date: dt,
-    symbol: sym,
-    open,
-    high,
-    low,
-    close,
-    volume,
-  })
-}
-/// Loads and updates the daily stock price summaries for a given symbol.
-///
-/// This function retrieves the daily stock prices from an external API and updates
-/// the database with the new information that has not yet been recorded up to the
-/// latest date known in the database for the given stock symbol and source ID.
-///
-/// # Parameters
-/// - `conn`: A mutable reference to a PostgreSQL connection to perform database operations.
-/// - `symb`: The stock symbol for which the daily summary is being loaded.
-/// - `s_id`: A unique identifier for the source of the stock data.
-///
-/// # Returns
-/// - `Ok(())` if the daily summaries were successfully loaded and updated in the database.
-/// - `Err(e)` where `e` is a boxed error if any operation within the function fails, including API
-///   data retrieval, data parsing, or database operations.
-///
-/// # Errors
-/// - Returns an error if the API key retrieval fails.
-/// - Returns an error if there is a failure in fetching or parsing the API data.
-/// - Database related errors are propagated if any insert operation fails.
-///
-/// # Example
-/// ```ignore
-/// use your_crate::db_operations::{PgConnection, load_summary};
-///
-/// let mut conn = PgConnection::establish("connection_string").unwrap();
-/// let symbol = "AAPL".to_string();
-/// let source_id = 1;
-///
-/// match load_summary(&mut conn, symbol, source_id) {
-///     Ok(_) => println!("Summary loaded successfully."),
-///     Err(e) => eprintln!("Failed to load summary: {}", e),
-/// }
-/// ```
-///
-/// # Remarks
-/// - The function checks if the returned data from the API contains a specific header ("Meta
-///   Data"). If this header is not present, it assumes that there was an error with the provided
-///   symbol (such as missing price data) and will not perform any database updates for this symbol.
-/// - It logs the latest date for which data is available in the database and only inserts new
-///   records for dates that are after this last known date.
-pub fn load_summary(conn: &mut PgConnection, symb: &str, s_id: i64) -> Result<(), Error> {
-  let api_key = get_api_key()?;
-  let url = create_url!(FuncType::TsDaily, symb, api_key);
-  let text = get_api_data(&url)?;
-  const HEADER: &str = "Meta Data";
-  if !text.contains(HEADER) {
-    //todo: improve logging here
-    // eprintln!("Error: for {}: {:?}", symb.clone(), text);
-    // alpha vantage will return an error for a symol missing a price
-    return Ok(());
-  };
-
-  let daily_prices = get_open_close(&text, &symb.to_string())?;
-  let last_date = get_summary_max_date(conn, s_id)?;
-  //todo: improve logging here
-
-  // println!("last date for sid{} is {:?}", s_id, last_date);
-  for oc in daily_prices {
-    //todo: improve logging here
-
-    // print!("{:?}", oc.date);
-    if oc.date > last_date {
-      insert_open_close(conn, &symb.to_string(), s_id, oc)?;
-    }
-  }
-
-  Ok(())
+pub fn load_summary(conn: &mut PgConnection, symbol: &str, s_id: i64) -> Result<(), BaseError> {
+  let processor = SummaryProcessor::new()?;
+  processor.load_summary(conn, symbol, s_id)
 }
 
-/// Retrieves the opening and closing prices for a given financial symbol from a JSON string.
-///
-/// This function parses the input JSON string, expecting to find daily prices under
-/// the "Time Series (Daily)" key. For each day, it will attempt to generate a `RawDailyPrice`
-/// using the provided `gen_new_summary_price` function and the given financial symbol.
-///
-/// # Arguments
-/// * `inp` - A string slice representing the JSON input containing daily prices.
-/// * `symb` - A reference to a string representing the financial symbol for which we are retrieving
-///   the opening and closing prices.
-///
-/// # Returns
-/// * On success, a `Result` containing a vector of `RawDailyPrice` items.
-/// * On error, a `Result` containing an error of type `Box<dyn Error>`.
-///
-/// # Errors
-/// This function will return an error if:
-/// * The input string cannot be parsed into a valid JSON structure.
-/// * The parsed JSON does not contain the expected "Time Series (Daily)" key or it's not an object.
-/// * Any error that might arise from the `gen_new_summary_price` function.
-///
-/// # Examples
-///
-/// ```ignore
-/// // Assuming a valid JSON string `json_str` and a symbol `symb`:
-/// let results = get_open_close(&json_str, &symb);
-/// match results {
-///     Ok(daily_prices) => {
-///         for price in daily_prices {
-///             println!("{:?}", price);
-///         }
-///     },
-///     Err(e) => eprintln!("Error: {}", e),
-/// }
-/// ```
-fn get_open_close(inp: &str, symb: &String) -> Result<Vec<RawDailyPrice>, Error> {
-  const HEADER: &str = "Time Series (Daily)";
-  let mut daily_prices: Vec<RawDailyPrice> = Vec::new();
-  let json_data: Value = serde_json::from_str(inp)?;
-
-  let json_prices = json_data[HEADER]
-    .as_object()
-    .ok_or_else(|| Error::MissingHeader(HEADER.to_string()))?;
-
-  for (date, data) in json_prices.iter() {
-    if let Some(open_close) = gen_new_summary_price((date, data), symb.clone()) {
-      daily_prices.push(open_close);
-    }
-  }
-
-  Ok(daily_prices)
+pub fn load_tops(conn: &mut PgConnection) -> Result<(), BaseError> {
+  let processor = TopProcessor::new()?;
+  processor.load_tops(conn)
 }
 
-pub fn process_digital_symbols(sed_vec: Vec<String>) -> Result<(), Error> {
-  let sec_type = "Crypto";
-  let region = "USA";
-  let currency = "USD";
-  let timezone = "UTC-04";
-  let marketopen = "00:00";
-  let marketclose = "23:59";
-
-  let mut symbol_map: HashMap<String, i64> = HashMap::new();
-  let conn = &mut establish_connection_or_exit();
-
-  // assuming there are no digital currencies
-  let mut base_sid = 1;
-  for sym_string in sed_vec {
-    let sym_vec: Vec<&str> = sym_string.split(',').collect();
-    let symbol = sym_vec[0].to_string();
-    let name = sym_vec[1].to_string();
-
-    let s_id = SecurityType::encode(SecurityType::Crypto, base_sid);
-    let record = AlphaSymbol::new(
-      symbol,
-      name,
-      sec_type.to_string(),
-      region.to_string(),
-      marketopen.to_string(),
-      marketclose.to_string(),
-      timezone.to_string(),
-      currency.to_string(),
-      1.0,
-    );
-    if symbol_map.insert(record.symbol.clone(), s_id).is_some() {
-      eprintln!("Duplilcate symbol: {}", record.symbol);
-    } else {
-      println!("Inserting symbol: {}:{}", record.symbol, s_id);
-      create_symbol(conn, s_id, record).expect("Can't insert symbol");
-    }
-
-    base_sid += 1;
-  }
-
-  println!("Total sybols: {}", symbol_map.len());
-
-  Ok(())
-}
-
-/// Loads the top stock performers from an API and updates the database with the current
-/// information.
-///
-/// This function fetches data for top gainers, top losers, and most actively traded stocks from
-/// The AlphaVantage API and updates the database with these details, organizing the data by
-/// category and tagging each entry with the timestamp of the last update.
-///
-/// # Parameters
-/// - `conn`: A mutable reference to a PostgreSQL connection to perform database operations.
-///
-/// # Returns
-/// - `Ok(())` if the data is successfully fetched and processed into the database.
-/// - `Err(e)` where `e` is a boxed error if there is a failure in any part of the process,
-///   including retrieving or processing the API data, or any database operations.
-///
-/// # Errors
-/// - The function propagates errors from the underlying API call, data parsing, or database
-///   operations.
-/// - Errors from obtaining the API key or constructing the URL are also propagated.
-///
-/// # Example
-/// ```ignore
-/// use alpha_vantage_rust::db_operations::{PgConnection, load_tops};
-///
-/// let mut conn = PgConnection::establish("connection_string").unwrap();
-///
-/// match load_tops(&mut conn) {
-///     Ok(_) => println!("Top stocks data updated successfully."),
-///     Err(e) => eprintln!("Failed to update top stocks data: {}", e),
-/// }
-/// ```
-///
-/// # Remarks
-/// - The function first retrieves an API key and constructs a URL for the API request.
-/// - The data for top gainers, top losers, and most actively traded stocks is retrieved as a `Root`
-///   object.
-/// - Each category of data (top gainers, losers, and active trades) is processed separately.
-/// - All entries are tagged with a timestamp indicating the last update from the API, ensuring that
-///   the database contains the most current information available.
-///
-/// This function is designed to be run at regular intervals to keep the database up to date with
-/// the latest market movements.
-pub fn load_tops(conn: &mut PgConnection) -> Result<(), Error> {
-  let api_key = get_api_key()?;
-  let url = create_url!(FuncType::TopQuery, " ", api_key);
-
-  let root: Root = get_top_data(&url)?;
-
-  let last_update = get_time_stamp(root.last_updated)?;
-
-  process_data_for_type(conn, &root.top_gainers, TopType::TopGainer, last_update)?;
-  process_data_for_type(conn, &root.top_losers, TopType::TopLoser, last_update)?;
-  process_data_for_type(
-    conn,
-    &root.most_actively_traded,
-    TopType::TopActive,
-    last_update,
-  )?;
-
-  Ok(())
-}
-
-/// Processes a set of data items for a specific type, converting them to top statistics
-/// and inserting them into a database.
-///
-/// This function iterates through a collection of data items, converts each item into a
-/// top statistic using the provided conversion trait, determines the corresponding ID
-/// for the ticker, and then inserts the top statistic into the database.
-///
-/// # Parameters
-///
-/// * `conn`: A mutable reference to a PostgreSQL connection.
-/// * `data`: A slice of data items that implement the `Convert` trait.
-/// * `top_type`: The type of top data being processed, represented by the `TopType` enum.
-/// * `last_update`: A timestamp indicating the last update time for the data.
-///
-/// # Returns
-///
-/// * `Ok(())` if the processing succeeds.
-/// * `Err(Box<dyn Error>)` if any step in the process encounters an error.
-///
-/// # Note
-///
-/// If there's an error while fetching the ID for a specific ticker, the function will
-/// skip that ticker and continue with the next item in the data collection.
-fn process_data_for_type(
-  conn: &mut PgConnection,
-  data: &[impl Convert],
-  top_type: TopType,
-  last_update: NaiveDateTime,
-) -> Result<(), Error> {
-  for item in data {
-    let tt = item.make_top_stat()?;
-    let s_id = match get_sid(conn, tt.ticker.clone()) {
-      Ok(value) => value,
-      Err(_) => continue,
-    };
-    let typ = top_constants(&top_type);
-    insert_top_stat(conn, s_id, tt.clone(), &typ, last_update)?;
-  }
-  Ok(())
-}
-
-/// Parses a string to extract a date and time, ignoring the timezone.
-///
-/// This function takes a string input that contains a date, time, and timezone,
-/// parses it to extract the datetime component, and returns a `NaiveDateTime` object.
-/// The timezone part of the string is ignored during parsing.
-///
-/// # Parameters
-/// - `inp`: A string in the format "YYYY-MM-DD HH:MM:SS TZ" where TZ is the timezone.
-///
-/// # Returns
-/// - `Ok(NaiveDateTime)` if the datetime string is successfully parsed.
-/// - `Err(e)` where `e` is a boxed error if parsing fails.
-///
-/// # Errors
-/// - The function will return an error if the input string does not contain exactly two parts
-///   separated by a space, or if the datetime part of the string is not in the expected format.
-///
-/// # Example
-/// ```ignore
-/// use alpha_vantage_rust::time_functions::get_time_stamp;
-/// use chrono::NaiveDateTime;
-///
-/// let input = "2023-04-01 15:30:00 UTC";
-/// match get_time_stamp(input.to_string()) {
-///     Ok(datetime) => println!("Parsed datetime: {}", datetime),
-///     Err(e) => eprintln!("Error parsing datetime: {}", e),
-/// }
-/// ```
-///
-/// # Remarks
-/// - This function assumes that the input string will always follow the format with a space
-///   separating the datetime and timezone components. It uses `rsplitn` with a limit of 2 to split
-///   the string from the end, ensuring that the last part (timezone) is separated first.
-fn get_time_stamp(inp: String) -> Result<NaiveDateTime, Error> {
-  let mut parts = inp.rsplitn(2, ' ');
-  let _tz = parts.next().unwrap();
-  let tm = parts.next().unwrap();
-  let naive_dt = NaiveDateTime::parse_from_str(tm, "%Y-%m-%d %H:%M:%S")?;
-  Ok(naive_dt)
-}
+// Legacy alias for the error type
+pub type Error = BaseError;
 
 #[cfg(test)]
-mod test {
-  use crate::alpha_lib::alpha_io::base::get_time_stamp;
+mod tests {
+  use super::*;
 
   #[test]
-  fn t_001() {
-    let inp = "2023-10-03 16:15:59 US/Eastern";
+  fn test_parse_timestamp() {
+    let input = "2023-10-03 16:15:59 US/Eastern";
+    assert!(parse_timestamp(input).is_ok());
+  }
 
-    assert!(get_time_stamp(inp.to_string()).is_ok());
+  #[test]
+  fn test_crypto_config_default() {
+    let config = CryptoConfig::default();
+    assert_eq!(config.security_type, "Crypto");
+    assert_eq!(config.region, "USA");
+  }
+
+  #[test]
+  fn test_processing_config_default() {
+    let config = ProcessingConfig::default();
+    assert!(!config.load_missed);
+    assert_eq!(config.region_filter, Some("USA".to_string()));
+    assert_eq!(config.max_errors, config::MAX_ERRORS);
+  }
+
+  #[test]
+  fn test_alpha_vantage_client_creation() {
+    // This test will fail if API key is not set, which is expected
+    match AlphaVantageClient::new() {
+      Ok(_) => println!("Client created successfully"),
+      Err(BaseError::ApiKey(_)) => println!("API key not set - expected for testing"),
+      Err(e) => panic!("Unexpected error: {}", e),
+    }
   }
 }

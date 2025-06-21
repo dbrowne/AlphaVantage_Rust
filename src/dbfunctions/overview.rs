@@ -79,7 +79,7 @@ pub fn create_overview(conn: &mut PgConnection, full_ov: FullOverview) -> Result
     db_models::{NewOverview, NewOverviewext},
     dbfunctions::symbols,
     schema::{overviewexts, overviews},
-    security_types::sec_types::SymbolFlag,
+    security_types::SymbolFlag,
   };
 
   let localt: DateTime<Local> = Local::now();

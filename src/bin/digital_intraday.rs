@@ -38,7 +38,7 @@ use alpha_vantage_rust::{
     process::{get_proc_id_or_insert, log_proc_end, log_proc_start},
     symbols::get_symbols_and_sids_for,
   },
-  security_types::sec_types::SecurityType,
+  security_types::SecurityType,
 };
 use dotenvy::dotenv;
 use indicatif::ProgressBar;

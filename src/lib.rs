@@ -1,3 +1,4 @@
+#![deny(unused_imports)]
 extern crate core;
 
 pub mod alpha_lib;

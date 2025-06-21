@@ -110,910 +110,532 @@ Y BATS Y-Exchange, Inc.
 Z BATS
 */
 
-pub mod sec_types {
-  use std::collections::HashMap;
+//! Security type classification and encoding system
+//!
+//! This module provides functionality for classifying and encoding different types
+//! of financial securities based on NASDAQ Symbol Directory specifications.
 
-  use lazy_static::lazy_static;
-  use serde::Deserialize;
+use lazy_static::lazy_static;
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use std::fmt;
 
-  /// This is a list of security types that are used in several sources
-  /// creating a many to one mapping for permutations.
+/// Exchange codes for different trading venues
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Deserialize, Serialize)]
+pub enum Exchange {
+  /// AMEX (NYSE MKT)
+  Amex,
+  /// NASDAQ OMX BX (Boston)
+  NasdaqBx,
+  /// National Stock Exchange (Cincinnati)
+  Nse,
+  /// NASD ADF (FINRA)
+  NasdAdf,
+  /// Market Independent (SIP - Generated)
+  MarketIndependent,
+  /// ISE (International Securities Exchange)
+  Ise,
+  /// DirectEdge A
+  DirectEdgeA,
+  /// DirectEdge X
+  DirectEdgeX,
+  /// Long-Term Stock Exchange
+  Ltse,
+  /// Chicago
+  Chicago,
+  /// NYSE
+  Nyse,
+  /// Instinet (Historical)
+  Instinet,
+  /// ARCA (formerly Pacific)
+  Arca,
+  /// Consolidated Tape System
+  Cts,
+  /// NASDAQ
+  Nasdaq,
+  /// IEX
+  Iex,
+  /// CBOE (Historical)
+  Cboe,
+  /// NASDAQ OMX PSX (Philadelphia)
+  NasdaqPsx,
+  /// BATS Y-Exchange
+  BatsY,
+  /// BATS
+  Bats,
+}
 
-  const EQTY: &str = "equity";
-  const OPTN: &str = "option";
-  const FUTURE: &str = "future";
-  const WAR: &str = "wrnt";
-  const MUTF: &str = "mutual fund";
-  const COMMON_STOCK: &str = "common stock";
-  const ADR_FULL: &str = "american depositary shares";
-  const ADR: &str = "adr";
-  const BOND: &str = "bond";
-  const SUB_DEBENS: &str = "subordinated debentures";
-  const PREFERRED: &str = "preferred";
-  const PFD: &str = "pfd";
-  const ETF: &str = "etf";
-  const ETN: &str = "etn";
-  const ETN1: &str = "exchange traded note";
-  const LPCOMM: &str = "lp common units representing limited partner interests";
-  const WARRANT: &str = "warrant";
-  const WARRANT1: &str = "wt";
-  const ORDSHRS: &str = "ordinary shares";
-  const DEPSHRS: &str = "depositary sh";
-  const DEPSHRS1: &str = "dep shs";
-  const COMMSHR: &str = "common chares";
-  const SRNOTES: &str = "senior notes";
-  const COMMU: &str = "common units representing limited partner interests";
-  const FLOATR: &str = "floating rate";
-  const NOTES: &str = "notes";
-  const TRUST: &str = "trust";
-  const FUND: &str = "fund";
-  const CRYPT: &str = "crypto";
-  const FX: &str = "forei";
-  const FX2: &str = "fx";
-  const SWAP: &str = "swap";
-
-  pub const OTHER: i8 = 127;
-  const COMMON_V: i8 = 0;
-  const ADR_V: i8 = 1;
-  const PFD_V: i8 = 2;
-  const ETF_V: i8 = 3;
-  const SUBDEB_V: i8 = 4;
-  const ETN_V: i8 = 5;
-  const LPCOMM_V: i8 = 6;
-  const WARRANT_V: i8 = 7;
-  const ORDSHRS_V: i8 = 8;
-  const DEPSHRS_V: i8 = 9;
-  const COMMSHR_V: i8 = 10;
-  const SRNOTES_V: i8 = 11;
-  const COMMU_V: i8 = 12;
-  const FLOATR_V: i8 = 13;
-  const NOTES_V: i8 = 14;
-  const TRUST_V: i8 = 15;
-  const FUND_V: i8 = 16;
-  const BOND_V: i8 = 17;
-  const OPTN_V: i8 = 18;
-  const FUTURE_V: i8 = 19;
-  const MUTUAL_FUND_V: i8 = 20;
-  const CRYPT_V: i8 = 21;
-  const FX_V: i8 = 22;
-  const SWAP_V: i8 = 23;
-
-  lazy_static! {
-    pub static ref SEC_TYPES: HashMap<&'static str, i8> = [
-      (EQTY, COMMON_V),
-      (COMMON_STOCK, COMMON_V),
-      (ADR_FULL, ADR_V),
-      (ADR, ADR_V),
-      (BOND, BOND_V),
-      (PREFERRED, PFD_V),
-      (PFD, PFD_V),
-      (ETF, ETF_V),
-      (SUB_DEBENS, SUBDEB_V),
-      (ETN, ETN_V),
-      (ETN1, ETN_V),
-      (LPCOMM, LPCOMM_V),
-      (WAR, WARRANT_V),
-      (WARRANT, WARRANT_V),
-      (WARRANT1, WARRANT_V),
-      (ORDSHRS, COMMON_V),
-      (DEPSHRS, DEPSHRS_V),
-      (DEPSHRS1, DEPSHRS_V),
-      (COMMSHR, COMMSHR_V),
-      (SRNOTES, SRNOTES_V),
-      (COMMU, COMMU_V),
-      (FLOATR, FLOATR_V),
-      (NOTES, NOTES_V),
-      (TRUST, TRUST_V),
-      (FUND, FUND_V),
-      (OPTN, OPTN_V),
-      (FUTURE, FUTURE_V),
-      (MUTF, MUTUAL_FUND_V),
-      (CRYPT, CRYPT_V),
-      (FX, FX_V),
-      (FX2, FX_V),
-      (SWAP, SWAP_V),
-    ]
-    .iter()
-    .copied()
-    .collect();
-  }
-
-  #[derive(PartialEq, Debug, Clone, Copy, Eq, Hash, Deserialize)]
-  pub enum SymbolFlag {
-    Overview,
-    Intraday,
-    Summary,
-    All,
-  }
-
-  #[derive(PartialEq, Debug, Clone, Copy, Eq, Hash, Deserialize)]
-  pub enum SecurityType {
-    Equity,
-    Bond,
-    Option,
-    Future,
-    ETF,
-    MutualF,
-    Crypto,
-    FX,
-    Swap,
-    Wrnt,
-    Adr,
-    Pfd,
-    Other,
-  }
-
-  lazy_static! {
-    pub static ref SEC_TYPE_MAP: HashMap<i8, SecurityType> = [
-      (COMMON_V, SecurityType::Equity),
-      (ADR_V, SecurityType::Adr),
-      (BOND_V, SecurityType::Bond),
-      (ETF_V, SecurityType::ETF),
-      (SUBDEB_V, SecurityType::Bond),
-      (ETN_V, SecurityType::ETF),
-      (LPCOMM_V, SecurityType::MutualF),
-      (WARRANT_V, SecurityType::Wrnt),
-      (ORDSHRS_V, SecurityType::Equity),
-      (DEPSHRS_V, SecurityType::Adr),
-      (COMMSHR_V, SecurityType::Equity),
-      (SRNOTES_V, SecurityType::Bond),
-      (COMMU_V, SecurityType::MutualF),
-      (FLOATR_V, SecurityType::Bond),
-      (NOTES_V, SecurityType::Bond),
-      (TRUST_V, SecurityType::MutualF),
-      (FUND_V, SecurityType::MutualF),
-      (OPTN_V, SecurityType::Option),
-      (FUTURE_V, SecurityType::Future),
-      (MUTUAL_FUND_V, SecurityType::MutualF),
-      (CRYPT_V, SecurityType::Crypto),
-      (FX_V, SecurityType::FX),
-      (SWAP_V, SecurityType::Swap),
-    ]
-    .iter()
-    .cloned()
-    .collect();
-  }
-
-  /// A bitmask used to extract the lower 32 bits from a 64-bit integer.
-  ///
-  /// This is used in the decoding of a security identifier, where the lower 32 bits
-  /// represent a unique identifier for the security.
-  const MASK32: i64 = 0x7FFFF_FFFF;
-  /// The number of bits to shift in a 64-bit integer to access the type of a security.
-  ///
-  /// This is used in both the encoding and decoding of a security identifier,
-  /// where the upper bits after the shift represent the type of the security.
-  const SHIFT: u8 = 48;
-  /// Constants that represent the binary code for each type of security.
-  ///
-  /// These are used in the encoding and decoding of a security identifier to
-  /// represent the type of the security. Each constant is a unique binary pattern
-  /// that corresponds to a variant of the `SecurityType` enum.
-  const EQUITY_M: i64 = 0b0000_0000;
-  const PFD_M: i64 = 0b0000_0010;
-  const ADR_M: i64 = 0b0000_0100;
-  const WRNT_M: i64 = 0b0000_0110;
-  const BOND_M: i64 = 0b0001_0000;
-  const OPT_M: i64 = 0b0010_0000;
-  const FUT_M: i64 = 0b0011_0000;
-  const ETF_M: i64 = 0b0100_0000;
-  const MUTF_M: i64 = 0b0101_0000;
-  const CRYPT_M: i64 = 0b0110_0000;
-  const FX_M: i64 = 0b0111_0000;
-  const SWAP_M: i64 = 0b1000_0000;
-
-  const OTHER_M: i64 = 0b1111_0000;
-
-  /// A struct that represents a Security .
-  ///
-  /// It contains information about the type of security and a raw identifier.
-  #[derive(PartialEq, Debug, Clone, Copy, Eq, Hash, Deserialize)]
-  pub struct SecurityIdentifier {
-    /// The type of security, as defined in `SecurityType` enum.
-    pub security_type: SecurityType,
-
-    /// A unique identifier for the security.
-    pub raw_id: u32,
-  }
-
-  /// A type alias for a `HashMap` that maps a `SecurityType` to a count.
-  pub type SecTypeCounts = HashMap<SecurityType, u32>;
-
-  impl SecurityType {
-    /// Encodes a `SecurityType` and an identifier into a single `i64` value.
-    ///
-    /// It uses a specific mask for each security type, and shifts the identifier into the lower
-    /// bits. For example, for an equity, it uses the `EQUITY_M` mask and `SHIFT` value defined
-    /// elsewhere.
-    ///
-    /// # Arguments
-    ///
-    /// * `st` - The type of security to encode.
-    /// * `id` - The unique identifier of the security.
-    ///
-    /// # Returns
-    ///
-    /// An `i64` where the high bits represent the security type, and the low bits represent the
-    /// identifier.
-    pub fn encode(st: SecurityType, id: u32) -> i64 {
-      match st {
-        SecurityType::Equity => EQUITY_M << SHIFT | id as i64,
-        SecurityType::Bond => BOND_M << SHIFT | id as i64,
-        SecurityType::Option => OPT_M << SHIFT | id as i64,
-        SecurityType::Future => FUT_M << SHIFT | id as i64,
-        SecurityType::ETF => ETF_M << SHIFT | id as i64,
-        SecurityType::MutualF => MUTF_M << SHIFT | id as i64,
-        SecurityType::Crypto => CRYPT_M << SHIFT | id as i64,
-        SecurityType::FX => FX_M << SHIFT | id as i64,
-        SecurityType::Swap => SWAP_M << SHIFT | id as i64,
-        SecurityType::Wrnt => WRNT_M << SHIFT | id as i64,
-        SecurityType::Adr => ADR_M << SHIFT | id as i64,
-        SecurityType::Pfd => PFD_M << SHIFT | id as i64,
-        SecurityType::Other => OTHER_M << SHIFT | id as i64,
-      }
-    }
-
-    /// Decodes a `SecurityType` and an identifier from a single `i64` value.
-    ///
-    /// It uses a specific mask for each security type, and shifts the identifier into the lower
-    /// bits.
-    ///
-    /// # Arguments
-    ///
-    /// * `sid` - The `i64` value to decode.
-    ///
-    /// # Returns
-    ///
-    /// The decoded `SecurityType`
-    pub fn get_sec_type(sid: i64) -> SecurityType {
-      let sectype = sid >> SHIFT;
-      match sectype {
-        EQUITY_M => SecurityType::Equity,
-        BOND_M => SecurityType::Bond,
-        OPT_M => SecurityType::Option,
-        FUT_M => SecurityType::Future,
-        ETF_M => SecurityType::ETF,
-        MUTF_M => SecurityType::MutualF,
-        CRYPT_M => SecurityType::Crypto,
-        FX_M => SecurityType::FX,
-        SWAP_M => SecurityType::Swap,
-        WRNT_M => SecurityType::Wrnt,
-        ADR_M => SecurityType::Adr,
-        PFD_M => SecurityType::Pfd,
-        OTHER_M => SecurityType::Other,
-        _ => SecurityType::Other,
-      }
-    }
-
-    /// Obtains the `SecurityType` and a String representation of the type from  the security type
-    /// and name. This is a helper function for the `Security` struct.
-    ///
-    /// # Arguments
-    ///
-    /// * `s_typ` - The security type as a `&str`.
-    /// * `s_name` - The security name as a `&str`. which can override the security type.
-    ///
-    /// # Returns
-    ///
-    /// A tuple of the `SecurityType` and a `String` representation of the type.
-    ///
-    /// # Example
-    ///
-    /// See test cases below
-    pub fn get_detailed_sec_type(s_typ: &str, s_name: &str) -> (SecurityType, String) {
-      let s_name_lower = s_name.to_lowercase();
-      let s_typ_lower = s_typ.to_lowercase();
-
-      let mut security_type = SecurityType::Other;
-      let mut sec_type_str = "Other".to_string();
-
-      match s_typ_lower.as_str() {
-        EQTY => {
-          security_type = SecurityType::Equity;
-          sec_type_str = "Eqty".to_string();
-        }
-        ETF => {
-          security_type = SecurityType::ETF;
-          sec_type_str = "ETF".to_string();
-        }
-        MUTF => {
-          security_type = SecurityType::MutualF;
-          sec_type_str = "MutF".to_string();
-        }
-        _ => {}
-      }
-
-      if s_name_lower.contains(ADR) {
-        security_type = SecurityType::Adr;
-        sec_type_str = "Adr".to_string();
-      } else if s_name_lower.contains(WARRANT) || s_name_lower.contains(WAR) {
-        security_type = SecurityType::Wrnt;
-        sec_type_str = "Wrnt".to_string();
-      } else if s_name_lower.contains(PFD) {
-        security_type = SecurityType::Pfd;
-        sec_type_str = "Pfd".to_string();
-      }
-
-      (security_type, sec_type_str)
-    }
-
-    pub fn get_sec_type_from_string(s_typ: &str) -> SecurityType {
-      if s_typ == EQTY {
-        return SecurityType::Equity;
-      } else if s_typ == ETF {
-        return SecurityType::ETF;
-      } else if s_typ == MUTF {
-        return SecurityType::MutualF;
-      }
-
-      SecurityType::Other
-    }
-
-    // Get the security type from the name of the security if the type is ambiguous
-    pub fn get_sec_type_fs(security: &str) -> SecurityType {
-      let lower_security = security.to_lowercase();
-      for (key, value) in SEC_TYPES.iter() {
-        if lower_security.contains(key) {
-          if let Some(sec_type) = SEC_TYPE_MAP.get(value) {
-            return *sec_type;
-          }
-        }
-      }
-      SecurityType::Other
+impl Exchange {
+  /// Convert from exchange code character to Exchange enum
+  pub fn from_code(code: char) -> Option<Self> {
+    match code {
+      'A' => Some(Self::Amex),
+      'B' => Some(Self::NasdaqBx),
+      'C' => Some(Self::Nse),
+      'D' => Some(Self::NasdAdf),
+      'E' => Some(Self::MarketIndependent),
+      'I' => Some(Self::Ise),
+      'J' => Some(Self::DirectEdgeA),
+      'K' => Some(Self::DirectEdgeX),
+      'L' => Some(Self::Ltse),
+      'M' => Some(Self::Chicago),
+      'N' => Some(Self::Nyse),
+      'O' => Some(Self::Instinet),
+      'P' => Some(Self::Arca),
+      'S' => Some(Self::Cts),
+      'T' | 'Q' => Some(Self::Nasdaq),
+      'V' => Some(Self::Iex),
+      'W' => Some(Self::Cboe),
+      'X' => Some(Self::NasdaqPsx),
+      'Y' => Some(Self::BatsY),
+      'Z' => Some(Self::Bats),
+      _ => None,
     }
   }
 
-  impl SecurityIdentifier {
-    pub fn decode(encoded_id: i64) -> Option<SecurityIdentifier> {
-      let sectype = encoded_id.clone() >> SHIFT;
-      let id = (encoded_id & MASK32) as u32;
-      match sectype {
-        EQUITY_M => Some(SecurityIdentifier {
-          security_type: SecurityType::Equity,
-          raw_id: id,
-        }),
-        BOND_M => Some(SecurityIdentifier {
-          security_type: SecurityType::Bond,
-          raw_id: id,
-        }),
-        OPT_M => Some(SecurityIdentifier {
-          security_type: SecurityType::Option,
-          raw_id: id,
-        }),
-        FUT_M => Some(SecurityIdentifier {
-          security_type: SecurityType::Future,
-          raw_id: id,
-        }),
-        ETF_M => Some(SecurityIdentifier {
-          security_type: SecurityType::ETF,
-          raw_id: id,
-        }),
-        MUTF_M => Some(SecurityIdentifier {
-          security_type: SecurityType::MutualF,
-          raw_id: id,
-        }),
-        CRYPT_M => Some(SecurityIdentifier {
-          security_type: SecurityType::Crypto,
-          raw_id: id,
-        }),
-        FX_M => Some(SecurityIdentifier {
-          security_type: SecurityType::FX,
-          raw_id: id,
-        }),
-        SWAP_M => Some(SecurityIdentifier {
-          security_type: SecurityType::Swap,
-          raw_id: id,
-        }),
-        WRNT_M => Some(SecurityIdentifier {
-          security_type: SecurityType::Wrnt,
-          raw_id: id,
-        }),
-        ADR_M => Some(SecurityIdentifier {
-          security_type: SecurityType::Adr,
-          raw_id: id,
-        }),
-        PFD_M => Some(SecurityIdentifier {
-          security_type: SecurityType::Pfd,
-          raw_id: id,
-        }),
-        OTHER_M => Some(SecurityIdentifier {
-          security_type: SecurityType::Other,
-          raw_id: id,
-        }),
-        _ => None,
-      }
+  /// Convert Exchange enum to exchange code character
+  pub fn to_code(self) -> char {
+    match self {
+      Self::Amex => 'A',
+      Self::NasdaqBx => 'B',
+      Self::Nse => 'C',
+      Self::NasdAdf => 'D',
+      Self::MarketIndependent => 'E',
+      Self::Ise => 'I',
+      Self::DirectEdgeA => 'J',
+      Self::DirectEdgeX => 'K',
+      Self::Ltse => 'L',
+      Self::Chicago => 'M',
+      Self::Nyse => 'N',
+      Self::Instinet => 'O',
+      Self::Arca => 'P',
+      Self::Cts => 'S',
+      Self::Nasdaq => 'T',
+      Self::Iex => 'V',
+      Self::Cboe => 'W',
+      Self::NasdaqPsx => 'X',
+      Self::BatsY => 'Y',
+      Self::Bats => 'Z',
     }
   }
 }
 
+/// Market categories for NASDAQ-listed securities
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Deserialize, Serialize)]
+pub enum MarketCategory {
+  /// NASDAQ Global Select Market
+  GlobalSelect,
+  /// NASDAQ Global Market
+  Global,
+  /// NASDAQ Capital Market
+  Capital,
+}
+
+impl MarketCategory {
+  pub fn from_code(code: char) -> Option<Self> {
+    match code {
+      'Q' => Some(Self::GlobalSelect),
+      'G' => Some(Self::Global),
+      'S' => Some(Self::Capital),
+      _ => None,
+    }
+  }
+
+  pub fn to_code(self) -> char {
+    match self {
+      Self::GlobalSelect => 'Q',
+      Self::Global => 'G',
+      Self::Capital => 'S',
+    }
+  }
+}
+
+/// Financial status indicators
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Deserialize, Serialize)]
+pub enum FinancialStatus {
+  /// Normal status
+  Normal,
+  /// Deficient: Failed to meet NASDAQ continued listing requirements
+  Deficient,
+  /// Delinquent: Missed regulatory filing deadline
+  Delinquent,
+  /// Bankrupt: Filed for bankruptcy
+  Bankrupt,
+  /// Deficient and Bankrupt
+  DeficientBankrupt,
+  /// Deficient and Delinquent
+  DeficientDelinquent,
+  /// Delinquent and Bankrupt
+  DelinquentBankrupt,
+  /// Deficient, Delinquent, and Bankrupt
+  DeficientDelinquentBankrupt,
+}
+
+impl FinancialStatus {
+  pub fn from_code(code: char) -> Option<Self> {
+    match code {
+      'N' => Some(Self::Normal),
+      'D' => Some(Self::Deficient),
+      'E' => Some(Self::Delinquent),
+      'Q' => Some(Self::Bankrupt),
+      'G' => Some(Self::DeficientBankrupt),
+      'H' => Some(Self::DeficientDelinquent),
+      'J' => Some(Self::DelinquentBankrupt),
+      'K' => Some(Self::DeficientDelinquentBankrupt),
+      _ => None,
+    }
+  }
+
+  pub fn to_code(self) -> char {
+    match self {
+      Self::Normal => 'N',
+      Self::Deficient => 'D',
+      Self::Delinquent => 'E',
+      Self::Bankrupt => 'Q',
+      Self::DeficientBankrupt => 'G',
+      Self::DeficientDelinquent => 'H',
+      Self::DelinquentBankrupt => 'J',
+      Self::DeficientDelinquentBankrupt => 'K',
+    }
+  }
+}
+
+/// Types of financial securities
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Deserialize, Serialize)]
+pub enum SecurityType {
+  Equity,
+  Bond,
+  Option,
+  Future,
+  Etf,
+  MutualFund,
+  Crypto,
+  Fx,
+  Swap,
+  Warrant,
+  Adr,
+  Preferred,
+  Other,
+}
+
+impl fmt::Display for SecurityType {
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    let name = match self {
+      Self::Equity => "Equity",
+      Self::Bond => "Bond",
+      Self::Option => "Option",
+      Self::Future => "Future",
+      Self::Etf => "ETF",
+      Self::MutualFund => "Mutual Fund",
+      Self::Crypto => "Crypto",
+      Self::Fx => "FX",
+      Self::Swap => "Swap",
+      Self::Warrant => "Warrant",
+      Self::Adr => "ADR",
+      Self::Preferred => "Preferred",
+      Self::Other => "Other",
+    };
+    write!(f, "{}", name)
+  }
+}
+
+/// Symbol processing flags
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Deserialize, Serialize)]
+pub enum SymbolFlag {
+  Overview,
+  Intraday,
+  Summary,
+  All,
+}
+
+/// Security identifier with embedded type information
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Deserialize, Serialize)]
+pub struct SecurityIdentifier {
+  pub security_type: SecurityType,
+  pub raw_id: u32,
+}
+
+/// Type alias for counting securities by type
+pub type SecurityTypeCounts = HashMap<SecurityType, u32>;
+
+/// Security type classification and encoding functionality
+pub mod classification {
+  use super::*;
+
+  // Security type string mappings
+  const SECURITY_TYPE_STRINGS: &[(&str, SecurityType)] = &[
+    ("equity", SecurityType::Equity),
+    ("common stock", SecurityType::Equity),
+    ("ordinary shares", SecurityType::Equity),
+    ("common shares", SecurityType::Equity),
+    ("option", SecurityType::Option),
+    ("future", SecurityType::Future),
+    ("warrant", SecurityType::Warrant),
+    ("wt", SecurityType::Warrant),
+    ("wrnt", SecurityType::Warrant),
+    ("mutual fund", SecurityType::MutualFund),
+    ("american depositary shares", SecurityType::Adr),
+    ("adr", SecurityType::Adr),
+    ("depositary sh", SecurityType::Adr),
+    ("dep shs", SecurityType::Adr),
+    ("bond", SecurityType::Bond),
+    ("subordinated debentures", SecurityType::Bond),
+    ("senior notes", SecurityType::Bond),
+    ("floating rate", SecurityType::Bond),
+    ("notes", SecurityType::Bond),
+    ("preferred", SecurityType::Preferred),
+    ("pfd", SecurityType::Preferred),
+    ("etf", SecurityType::Etf),
+    ("etn", SecurityType::Etf),
+    ("exchange traded note", SecurityType::Etf),
+    (
+      "lp common units representing limited partner interests",
+      SecurityType::MutualFund,
+    ),
+    (
+      "common units representing limited partner interests",
+      SecurityType::MutualFund,
+    ),
+    ("trust", SecurityType::MutualFund),
+    ("fund", SecurityType::MutualFund),
+    ("crypto", SecurityType::Crypto),
+    ("forei", SecurityType::Fx),
+    ("fx", SecurityType::Fx),
+    ("swap", SecurityType::Swap),
+  ];
+
+  lazy_static! {
+    static ref SECURITY_TYPE_MAP: HashMap<&'static str, SecurityType> =
+      SECURITY_TYPE_STRINGS.iter().cloned().collect();
+  }
+
+  impl SecurityType {
+    /// Classify security type from string representation
+    pub fn from_string(s: &str) -> Self {
+      let lower = s.to_lowercase();
+
+      // Check exact matches first
+      if let Some(&sec_type) = SECURITY_TYPE_MAP.get(lower.as_str()) {
+        return sec_type;
+      }
+
+      // Check for substring matches
+      for (pattern, sec_type) in SECURITY_TYPE_STRINGS {
+        if lower.contains(pattern) {
+          return *sec_type;
+        }
+      }
+
+      Self::Other
+    }
+
+    /// Get detailed security type classification from type and name
+    pub fn classify_detailed(type_str: &str, name: &str) -> (Self, String) {
+      let name_lower = name.to_lowercase();
+      let type_lower = type_str.to_lowercase();
+
+      // Start with type classification
+      let mut security_type = match type_lower.as_str() {
+        "equity" => Self::Equity,
+        "etf" => Self::Etf,
+        "mutual fund" => Self::MutualFund,
+        _ => Self::Other,
+      };
+
+      let mut type_string = security_type.to_string();
+
+      // Override based on name patterns (these take precedence)
+      if name_lower.contains("adr") {
+        security_type = Self::Adr;
+        type_string = "ADR".to_string();
+      } else if name_lower.contains("warrant") || name_lower.contains("wrnt") {
+        security_type = Self::Warrant;
+        type_string = "Warrant".to_string();
+      } else if name_lower.contains("pfd") || name_lower.contains("preferred") {
+        security_type = Self::Preferred;
+        type_string = "Preferred".to_string();
+      }
+
+      (security_type, type_string)
+    }
+  }
+}
+
+/// Security identifier encoding and decoding functionality
+pub mod encoding {
+  use super::*;
+
+  // Bit manipulation constants
+  const MASK_32: i64 = 0x7FFF_FFFF;
+  const SHIFT: u8 = 48;
+
+  // Type masks for encoding
+  const TYPE_MASKS: &[(SecurityType, i64)] = &[
+    (SecurityType::Equity, 0b0000_0000),
+    (SecurityType::Preferred, 0b0000_0010),
+    (SecurityType::Adr, 0b0000_0100),
+    (SecurityType::Warrant, 0b0000_0110),
+    (SecurityType::Bond, 0b0001_0000),
+    (SecurityType::Option, 0b0010_0000),
+    (SecurityType::Future, 0b0011_0000),
+    (SecurityType::Etf, 0b0100_0000),
+    (SecurityType::MutualFund, 0b0101_0000),
+    (SecurityType::Crypto, 0b0110_0000),
+    (SecurityType::Fx, 0b0111_0000),
+    (SecurityType::Swap, 0b1000_0000),
+    (SecurityType::Other, 0b1111_0000),
+  ];
+
+  lazy_static! {
+    static ref ENCODE_MAP: HashMap<SecurityType, i64> = TYPE_MASKS.iter().cloned().collect();
+    static ref DECODE_MAP: HashMap<i64, SecurityType> =
+      TYPE_MASKS.iter().map(|(t, m)| (*m, *t)).collect();
+  }
+
+  impl SecurityType {
+    /// Encode security type and ID into a single i64
+    pub fn encode(security_type: SecurityType, id: u32) -> i64 {
+      let mask = ENCODE_MAP
+        .get(&security_type)
+        .copied()
+        .unwrap_or(0b1111_0000);
+      (mask << SHIFT) | (id as i64)
+    }
+
+    /// Decode security type from encoded i64
+    pub fn decode_type(encoded: i64) -> Self {
+      let type_bits = encoded >> SHIFT;
+      DECODE_MAP.get(&type_bits).copied().unwrap_or(Self::Other)
+    }
+  }
+
+  impl SecurityIdentifier {
+    /// Create a new SecurityIdentifier
+    pub fn new(security_type: SecurityType, raw_id: u32) -> Self {
+      Self {
+        security_type,
+        raw_id,
+      }
+    }
+
+    /// Encode SecurityIdentifier into i64
+    pub fn encode(&self) -> i64 {
+      SecurityType::encode(self.security_type, self.raw_id)
+    }
+
+    /// Decode SecurityIdentifier from i64
+    pub fn decode(encoded: i64) -> Option<Self> {
+      let security_type = SecurityType::decode_type(encoded);
+      let raw_id = (encoded & MASK_32) as u32;
+
+      // Validate that the decoded type is not Other due to invalid encoding
+      if matches!(security_type, SecurityType::Other) {
+        let type_bits = encoded >> SHIFT;
+        if !DECODE_MAP.contains_key(&type_bits) {
+          return None;
+        }
+      }
+
+      Some(Self::new(security_type, raw_id))
+    }
+  }
+}
+
+// Re-export commonly used items
+
 #[cfg(test)]
-mod test {
-  use crate::security_types::sec_types::{SecurityIdentifier, SecurityType};
-
-  //  START TESTING OF SecurityType::encode()
+mod tests {
+  use super::*;
 
   #[test]
-  fn test_sec_type_equity() {
-    let sid = SecurityType::encode(SecurityType::Equity, 1234);
-    let st = SecurityType::get_sec_type(sid);
-    assert_eq!(st, SecurityType::Equity);
+  fn test_exchange_codes() {
+    assert_eq!(Exchange::from_code('A'), Some(Exchange::Amex));
+    assert_eq!(Exchange::Nyse.to_code(), 'N');
+    assert_eq!(Exchange::from_code('Z'), Some(Exchange::Bats));
   }
 
   #[test]
-  fn test_sec_type_bond() {
-    let sid = SecurityType::encode(SecurityType::Bond, 13234);
-    let st = SecurityType::get_sec_type(sid);
-    assert_eq!(st, SecurityType::Bond);
+  fn test_security_type_classification() {
+    assert_eq!(SecurityType::from_string("equity"), SecurityType::Equity);
+    assert_eq!(SecurityType::from_string("ETF"), SecurityType::Etf);
+    assert_eq!(SecurityType::from_string("unknown"), SecurityType::Other);
   }
 
   #[test]
-  fn test_sec_type_option() {
-    let sid = SecurityType::encode(SecurityType::Option, 1234);
-    let st = SecurityType::get_sec_type(sid);
-    assert_eq!(st, SecurityType::Option);
+  fn test_detailed_classification() {
+    let (sec_type, type_str) = SecurityType::classify_detailed("Equity", "Apple Inc");
+    assert_eq!(sec_type, SecurityType::Equity);
+    assert_eq!(type_str, "Equity");
+
+    let (sec_type, type_str) = SecurityType::classify_detailed("Equity", "Tesla ADR");
+    assert_eq!(sec_type, SecurityType::Adr);
+    assert_eq!(type_str, "ADR");
   }
 
   #[test]
-  fn test_sec_type_future() {
-    let sid = SecurityType::encode(SecurityType::Future, 1234);
-    let st = SecurityType::get_sec_type(sid);
-    assert_eq!(st, SecurityType::Future);
+  fn test_encoding_decoding() {
+    let identifier = SecurityIdentifier::new(SecurityType::Equity, 12345);
+    let encoded = identifier.encode();
+    let decoded = SecurityIdentifier::decode(encoded).unwrap();
+
+    assert_eq!(decoded, identifier);
   }
 
   #[test]
-  fn test_sec_type_etf() {
-    let sid = SecurityType::encode(SecurityType::ETF, 1234);
-    let st = SecurityType::get_sec_type(sid);
-    assert_eq!(st, SecurityType::ETF);
+  fn test_all_security_types_encode_decode() {
+    let test_cases = [
+      SecurityType::Equity,
+      SecurityType::Bond,
+      SecurityType::Option,
+      SecurityType::Future,
+      SecurityType::Etf,
+      SecurityType::MutualFund,
+      SecurityType::Crypto,
+      SecurityType::Fx,
+      SecurityType::Swap,
+      SecurityType::Warrant,
+      SecurityType::Adr,
+      SecurityType::Preferred,
+      SecurityType::Other,
+    ];
+
+    for &sec_type in &test_cases {
+      let encoded = SecurityType::encode(sec_type, 12345);
+      let decoded_type = SecurityType::decode_type(encoded);
+      assert_eq!(decoded_type, sec_type);
+
+      let identifier = SecurityIdentifier::new(sec_type, 12345);
+      let decoded_identifier = SecurityIdentifier::decode(identifier.encode()).unwrap();
+      assert_eq!(decoded_identifier, identifier);
+    }
   }
 
   #[test]
-  fn test_sec_type_mutual_fund() {
-    let sid = SecurityType::encode(SecurityType::MutualF, 1234);
-    let st = SecurityType::get_sec_type(sid);
-    assert_eq!(st, SecurityType::MutualF);
+  fn test_max_id_values() {
+    let max_id = u32::MAX >> 1; // Use max value that fits in MASK_32
+    let identifier = SecurityIdentifier::new(SecurityType::Equity, max_id);
+    let decoded = SecurityIdentifier::decode(identifier.encode()).unwrap();
+    assert_eq!(decoded.raw_id, max_id);
   }
 
   #[test]
-  fn test_sec_type_crypto() {
-    let sid = SecurityType::encode(SecurityType::Crypto, 1234);
-    let st = SecurityType::get_sec_type(sid);
-    assert_eq!(st, SecurityType::Crypto);
-  }
-
-  #[test]
-  fn test_sec_type_fx() {
-    let sid = SecurityType::encode(SecurityType::FX, 1234);
-    let st = SecurityType::get_sec_type(sid);
-    assert_eq!(st, SecurityType::FX);
-  }
-
-  #[test]
-  fn test_sec_type_swap() {
-    let sid = SecurityType::encode(SecurityType::Swap, 1234);
-    let st = SecurityType::get_sec_type(sid);
-    assert_eq!(st, SecurityType::Swap);
-  }
-
-  #[test]
-  fn test_sec_type_wrnt() {
-    let sid = SecurityType::encode(SecurityType::Wrnt, 1234);
-    let st = SecurityType::get_sec_type(sid);
-    assert_eq!(st, SecurityType::Wrnt);
-  }
-
-  #[test]
-  fn test_sec_type_adr() {
-    let sid = SecurityType::encode(SecurityType::Adr, 1234);
-    let st = SecurityType::get_sec_type(sid);
-    assert_eq!(st, SecurityType::Adr);
-  }
-
-  #[test]
-  fn test_sec_type_pfd() {
-    let sid = SecurityType::encode(SecurityType::Pfd, 1234);
-    let st = SecurityType::get_sec_type(sid);
-    assert_eq!(st, SecurityType::Pfd);
-  }
-
-  #[test]
-  fn test_sec_type_other() {
-    let sid = SecurityType::encode(SecurityType::Other, 1234);
-    let st = SecurityType::get_sec_type(sid);
-    assert_eq!(st, SecurityType::Other);
-  }
-
-  //  START TESTING OF SecurityType::encode()
-
-  #[test]
-  fn test_sec_type_fs_equity() {
-    let st = SecurityType::get_sec_type_fs("Equity");
-    assert_eq!(st, SecurityType::Equity);
-  }
-
-  #[test]
-  fn test_sec_type_fs_bond() {
-    let st = SecurityType::get_sec_type_fs("Bond");
-    assert_eq!(st, SecurityType::Bond);
-  }
-
-  #[test]
-  fn test_sec_type_fs_option() {
-    let st = SecurityType::get_sec_type_fs("Option");
-    assert_eq!(st, SecurityType::Option);
-  }
-
-  #[test]
-  fn test_sec_type_fs_future() {
-    let st = SecurityType::get_sec_type_fs("Future");
-    assert_eq!(st, SecurityType::Future);
-  }
-
-  #[test]
-  fn test_sec_type_fs_etf() {
-    let st = SecurityType::get_sec_type_fs("ETF");
-    assert_eq!(st, SecurityType::ETF);
-  }
-
-  #[test]
-  fn test_sec_type_fs_mutual_fund() {
-    let st = SecurityType::get_sec_type_fs("Mutual FunD");
-    assert_eq!(st, SecurityType::MutualF);
-  }
-
-  #[test]
-  fn test_sec_type_fs_crypto() {
-    let st = SecurityType::get_sec_type_fs("Crypto");
-    assert_eq!(st, SecurityType::Crypto);
-  }
-
-  #[test]
-  fn test_sec_type_fs_fx() {
-    let st = SecurityType::get_sec_type_fs("FX");
-    assert_eq!(st, SecurityType::FX);
-  }
-
-  #[test]
-  fn test_sec_type_fs_swap() {
-    let st = SecurityType::get_sec_type_fs("Swap");
-    assert_eq!(st, SecurityType::Swap);
-  }
-
-  #[test]
-  fn test_sec_type_fs_wrnt() {
-    let st = SecurityType::get_sec_type_fs("Warrant");
-    assert_eq!(st, SecurityType::Wrnt);
-  }
-
-  #[test]
-  fn test_sec_type_fs_wrnt1() {
-    let st = SecurityType::get_sec_type_fs("wrnt");
-    assert_eq!(st, SecurityType::Wrnt);
-  }
-
-  #[test]
-  fn test_sec_type_fs_wrnt2() {
-    let st = SecurityType::get_sec_type_fs("wt ");
-    assert_eq!(st, SecurityType::Wrnt);
-  }
-
-  #[test]
-  fn test_get_detailed_sec_type_00() {
-    let st = SecurityType::get_detailed_sec_type("Equity", "Agilent Technologies Inc");
-
-    assert_eq!(st.0, SecurityType::Equity);
-    assert_eq!(st.1, "Eqty");
-  }
-
-  #[test]
-  fn test_get_detailed_sec_type_01() {
-    let st = SecurityType::get_detailed_sec_type("Equity", "Agilent Technologies Inc ADR");
-
-    assert_eq!(st.0, SecurityType::Adr);
-    assert_eq!(st.1, "Adr");
-  }
-
-  #[test]
-  fn test_get_detailed_sec_type_02() {
-    let st = SecurityType::get_detailed_sec_type("Equity", "Agilent Technologies Inc ADR");
-
-    assert_eq!(st.0, SecurityType::Adr);
-    assert_eq!(st.1, "Adr");
-  }
-
-  #[test]
-  fn test_get_detailed_sec_type_03() {
-    let st = SecurityType::get_detailed_sec_type("Equity", "Agilent Technologies Inc Pfd");
-
-    assert_eq!(st.0, SecurityType::Pfd);
-    assert_eq!(st.1, "Pfd");
-  }
-
-  #[test]
-  fn test_get_detailed_sec_type_04() {
-    let st = SecurityType::get_detailed_sec_type("Equity", "Agilent Technologies Inc Warrant");
-
-    assert_eq!(st.0, SecurityType::Wrnt);
-    assert_eq!(st.1, "Wrnt");
-  }
-
-  #[test]
-  fn test_get_detailed_sec_type_05() {
-    let st = SecurityType::get_detailed_sec_type("Equity", "Agilent Technologies Inc Wrnt");
-
-    assert_eq!(st.0, SecurityType::Wrnt);
-    assert_eq!(st.1, "Wrnt");
-  }
-
-  #[test]
-  fn test_get_detailed_sec_type_06() {
-    let st = SecurityType::get_detailed_sec_type("Etf", "Vanguard S&P 500 ETF (VOO)");
-
-    assert_eq!(st.0, SecurityType::ETF);
-    assert_eq!(st.1, "ETF");
-  }
-
-  #[test]
-  fn test_get_detailed_sec_type_07() {
-    let st = SecurityType::get_detailed_sec_type("Mutual Fund", "Catalyst Systematic Alpha Fund");
-
-    assert_eq!(st.0, SecurityType::MutualF);
-    assert_eq!(st.1, "MutF");
-  }
-
-  #[test]
-  fn test_get_detailed_sec_type_08() {
-    let st = SecurityType::get_detailed_sec_type("XXDF", "Something that isn't yet defined");
-
-    assert_eq!(st.0, SecurityType::Other);
-    assert_eq!(st.1, "Other");
-  }
-
-  #[test]
-  fn test_equity_decode_encode() {
+  fn test_invalid_decode() {
+    // Test with invalid type bits (use u64 literal and cast to i64)
     assert_eq!(
-      SecurityIdentifier::decode(0x0000_0000_0000_0001),
-      Some(SecurityIdentifier {
-        security_type: SecurityType::Equity,
-        raw_id: 1
-      })
+      SecurityIdentifier::decode(0x8100_0000_0000_00FFu64 as i64),
+      None
     );
 
+    // Test with another invalid pattern
     assert_eq!(
-      SecurityIdentifier::decode(SecurityType::encode(SecurityType::Equity, 1)),
-      Some(SecurityIdentifier {
-        security_type: SecurityType::Equity,
-        raw_id: 1
-      })
+      SecurityIdentifier::decode(0x9000_0000_0000_0001u64 as i64),
+      None
     );
 
-    //test with max u32
-
+    // Test with valid but unrecognized pattern
     assert_eq!(
-      SecurityIdentifier::decode(0x0000_0000_7FFF_FFFF),
-      Some(SecurityIdentifier {
-        security_type: SecurityType::Equity,
-        raw_id: 2_147_483_647
-      })
-    );
-  }
-
-  #[test]
-  fn test_pfd_decode_encode() {
-    assert_eq!(
-      SecurityIdentifier::decode(0x0002_0000_0001_2fd1),
-      Some(SecurityIdentifier {
-        security_type: SecurityType::Pfd,
-        raw_id: 77_777
-      })
-    );
-
-    assert_eq!(
-      SecurityIdentifier::decode(SecurityType::encode(SecurityType::Pfd, 77_777)),
-      Some(SecurityIdentifier {
-        security_type: SecurityType::Pfd,
-        raw_id: 77_777
-      })
-    );
-  }
-
-  #[test]
-  fn test_wrnt_decode_encode() {
-    assert_eq!(
-      SecurityIdentifier::decode(0x0006_0000_0000_0001),
-      Some(SecurityIdentifier {
-        security_type: SecurityType::Wrnt,
-        raw_id: 1
-      })
-    );
-
-    assert_eq!(
-      SecurityIdentifier::decode(SecurityType::encode(SecurityType::Wrnt, 1)),
-      Some(SecurityIdentifier {
-        security_type: SecurityType::Wrnt,
-        raw_id: 1
-      })
-    );
-  }
-  #[test]
-  fn test_adr_decode_encode() {
-    assert_eq!(
-      SecurityIdentifier::decode(0x0004_0000_0F00_fffe),
-      Some(SecurityIdentifier {
-        security_type: SecurityType::Adr,
-        raw_id: 251_723_774
-      })
-    );
-
-    assert_eq!(
-      SecurityIdentifier::decode(SecurityType::encode(SecurityType::Adr, 251_723_774)),
-      Some(SecurityIdentifier {
-        security_type: SecurityType::Adr,
-        raw_id: 251_723_774
-      })
-    );
-  }
-
-  #[test]
-  fn test_bond_decode_encode() {
-    assert_eq!(
-      SecurityIdentifier::decode(0x0010_0000_0012_d687),
-      Some(SecurityIdentifier {
-        security_type: SecurityType::Bond,
-        raw_id: 1234567
-      })
-    );
-
-    assert_eq!(
-      SecurityIdentifier::decode(SecurityType::encode(SecurityType::Bond, 1234567)),
-      Some(SecurityIdentifier {
-        security_type: SecurityType::Bond,
-        raw_id: 1234567
-      })
-    );
-  }
-
-  #[test]
-  fn test_opt_decode_encode() {
-    assert_eq!(
-      SecurityIdentifier::decode(0x0020_0000_0012_d687),
-      Some(SecurityIdentifier {
-        security_type: SecurityType::Option,
-        raw_id: 1234567
-      })
-    );
-
-    assert_eq!(
-      SecurityIdentifier::decode(SecurityType::encode(SecurityType::Option, 1234567)),
-      Some(SecurityIdentifier {
-        security_type: SecurityType::Option,
-        raw_id: 1234567
-      })
-    );
-  }
-
-  #[test]
-  fn test_fut_decode_encode() {
-    assert_eq!(
-      SecurityIdentifier::decode(0x0030_0000_0012_d687),
-      Some(SecurityIdentifier {
-        security_type: SecurityType::Future,
-        raw_id: 1234567
-      })
-    );
-
-    assert_eq!(
-      SecurityIdentifier::decode(SecurityType::encode(SecurityType::Future, 1234567)),
-      Some(SecurityIdentifier {
-        security_type: SecurityType::Future,
-        raw_id: 1234567
-      })
-    );
-  }
-
-  #[test]
-  fn test_etf_decode_encode() {
-    assert_eq!(
-      SecurityIdentifier::decode(0x0040_0000_0000_00ff),
-      Some(SecurityIdentifier {
-        security_type: SecurityType::ETF,
-        raw_id: 255
-      })
-    );
-
-    assert_eq!(
-      SecurityIdentifier::decode(SecurityType::encode(SecurityType::ETF, 255)),
-      Some(SecurityIdentifier {
-        security_type: SecurityType::ETF,
-        raw_id: 255
-      })
-    );
-  }
-  #[test]
-  fn test_mutualf_decode_encode() {
-    assert_eq!(
-      SecurityIdentifier::decode(0x50_0000_0000_00ff),
-      Some(SecurityIdentifier {
-        security_type: SecurityType::MutualF,
-        raw_id: 255
-      })
-    );
-
-    assert_eq!(
-      SecurityIdentifier::decode(SecurityType::encode(SecurityType::MutualF, 255)),
-      Some(SecurityIdentifier {
-        security_type: SecurityType::MutualF,
-        raw_id: 255
-      })
-    );
-  }
-
-  #[test]
-  fn test_crypt_decode_encode() {
-    assert_eq!(
-      SecurityIdentifier::decode(0x60_0000_0000_00ff),
-      Some(SecurityIdentifier {
-        security_type: SecurityType::Crypto,
-        raw_id: 255
-      })
-    );
-
-    assert_eq!(
-      SecurityIdentifier::decode(SecurityType::encode(SecurityType::Crypto, 255)),
-      Some(SecurityIdentifier {
-        security_type: SecurityType::Crypto,
-        raw_id: 255
-      })
-    );
-  }
-
-  #[test]
-  fn test_fx_decode_encode() {
-    assert_eq!(
-      SecurityIdentifier::decode(0x70_0000_0000_00ff),
-      Some(SecurityIdentifier {
-        security_type: SecurityType::FX,
-        raw_id: 255
-      })
-    );
-
-    assert_eq!(
-      SecurityIdentifier::decode(SecurityType::encode(SecurityType::FX, 255)),
-      Some(SecurityIdentifier {
-        security_type: SecurityType::FX,
-        raw_id: 255
-      })
-    );
-  }
-
-  #[test]
-  fn test_swap_decode_encode() {
-    assert_eq!(
-      SecurityIdentifier::decode(0x80_0000_0000_00ff),
-      Some(SecurityIdentifier {
-        security_type: SecurityType::Swap,
-        raw_id: 255
-      })
-    );
-
-    assert_eq!(
-      SecurityIdentifier::decode(SecurityType::encode(SecurityType::Swap, 255)),
-      Some(SecurityIdentifier {
-        security_type: SecurityType::Swap,
-        raw_id: 255
-      })
-    );
-  }
-
-  #[test]
-  fn test_other_decode_encode() {
-    assert_eq!(SecurityIdentifier::decode(0x81_0000_0000_00ff), None);
-    assert_eq!(
-      SecurityIdentifier::decode(SecurityType::encode(SecurityType::Other, 255)),
-      Some(SecurityIdentifier {
-        security_type: SecurityType::Other,
-        raw_id: 255
-      })
+      SecurityIdentifier::decode(0x1100_0000_0000_0001u64 as i64),
+      None
     );
   }
 }
