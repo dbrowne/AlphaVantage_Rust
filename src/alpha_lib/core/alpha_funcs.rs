@@ -1,12 +1,7 @@
 /*
- *
- *
- *
- *
  * MIT License
  * Copyright (c) 2024. Dwight J. Browne
  * dwight[-dot-]browne[-at-]dwightjbrowne[-dot-]com
- *
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -27,54 +22,35 @@
  * SOFTWARE.
  */
 
+//! Alpha Vantage utility functions
+//!
+//! Simple utility functions for normalizing region names and getting type constants.
+
 use crate::alpha_lib::core::alpha_data_types::TopType;
 
-/// Normalizes region names to their respective short forms.
+/// Normalize region names to abbreviated forms.
 ///
-/// This function takes a string slice (`&str`) that represents a region name and
-/// returns a `String` that contains a shortened form of the region name.
-///
-/// The function recognizes the following region names and their respective short forms:
-/// - "United States" -> "USA"
-/// - "United Kingdom" -> "UK"
-/// - "Frankfurt" -> "Frank"
-/// - "Toronto Venture" -> "TOR"
-/// - "India/Bombay" -> "Bomb"
-/// - "Brazil/Sao Paolo" -> "SaoP"
-///
-/// If a region name is not recognized, the function simply returns the original name.
-///
-/// # Arguments
-///
-/// * `reg` - A string slice that holds the name of the region to be normalized.
-///
-/// # Returns
-///
-/// * A `String` containing the shortened form of the region name. If the region name is not
-///   recognized, the function returns the original name.
-///
-/// # Examples
-///
-/// ```ignore
-/// let region = "United States";
-/// let short_region = normalize_alpha_region(region);
-/// assert_eq!(short_region, "USA");
-/// ```
-pub fn normalize_alpha_region(reg: &str) -> String {
-  match reg {
+/// Converts common region names to their standard abbreviated forms used
+/// throughout the application. Unknown regions are returned unchanged.
+pub fn normalize_alpha_region(region: &str) -> String {
+  match region {
     "United States" => "USA",
     "United Kingdom" => "UK",
     "Frankfurt" => "Frank",
     "Toronto Venture" => "TOR",
     "India/Bombay" => "Bomb",
     "Brazil/Sao Paolo" => "SaoP",
-    _ => reg,
+    _ => region,
   }
   .to_string()
 }
 
-pub fn top_constants(act: &TopType) -> String {
-  match act {
+/// Get database constant for TopType.
+///
+/// Returns the string constant used in the database to represent
+/// different types of top performer lists.
+pub fn top_constants(top_type: &TopType) -> String {
+  match top_type {
     TopType::TopGainer => "GAIN",
     TopType::TopLoser => "LOSE",
     TopType::TopActive => "ACTV",
@@ -87,16 +63,26 @@ mod tests {
   use super::*;
 
   #[test]
-  fn test_normalize_alpha_region() {
-    let region = "United States";
-    let short_region = normalize_alpha_region(region);
-    assert_eq!(short_region, "USA");
+  fn test_normalize_alpha_region_known() {
+    assert_eq!(normalize_alpha_region("United States"), "USA");
+    assert_eq!(normalize_alpha_region("United Kingdom"), "UK");
+    assert_eq!(normalize_alpha_region("Frankfurt"), "Frank");
+    assert_eq!(normalize_alpha_region("Toronto Venture"), "TOR");
+    assert_eq!(normalize_alpha_region("India/Bombay"), "Bomb");
+    assert_eq!(normalize_alpha_region("Brazil/Sao Paolo"), "SaoP");
   }
 
   #[test]
-  fn test_normalize_alpha_region_2() {
-    let region = "Whatever";
-    let short_region = normalize_alpha_region(region);
-    assert_eq!(short_region, "Whatever");
+  fn test_normalize_alpha_region_unknown() {
+    assert_eq!(normalize_alpha_region("Whatever"), "Whatever");
+    assert_eq!(normalize_alpha_region("Mars"), "Mars");
+    assert_eq!(normalize_alpha_region(""), "");
+  }
+
+  #[test]
+  fn test_top_constants() {
+    assert_eq!(top_constants(&TopType::TopGainer), "GAIN");
+    assert_eq!(top_constants(&TopType::TopLoser), "LOSE");
+    assert_eq!(top_constants(&TopType::TopActive), "ACTV");
   }
 }

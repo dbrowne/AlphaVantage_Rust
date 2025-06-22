@@ -100,7 +100,7 @@ mod tests {
       &alpha_symbol,
     );
     assert!(result.is_ok());
-    assert_eq!(result.unwrap(), NaiveTime::from_hms(9, 30, 0));
+    assert_eq!(result.unwrap(), NaiveTime::from_hms_opt(9, 30, 0).unwrap());
 
     // Test valid marketClose time
     let result = parse_time(
@@ -109,7 +109,7 @@ mod tests {
       &alpha_symbol,
     );
     assert!(result.is_ok());
-    assert_eq!(result.unwrap(), NaiveTime::from_hms(16, 0, 0));
+    assert_eq!(result.unwrap(), NaiveTime::from_hms_opt(16, 0, 0).unwrap());
   }
 
   #[test]
