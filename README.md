@@ -1,5 +1,8 @@
 # alpha_vantage_rust
+#
+# THIS PROJECT IS  REFERENCE ONLY AS OF AUG , 23 2025
 
+# SEE the [alphavantage](https://github.com/dbrowne/alphavantage) repo for the newer version
 ![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-green.svg)
 ![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)
 ![Build Status:](https://github.com/dbrowne/alpha_vantage_rust/actions/workflows/rust.yml/badge.svg)
