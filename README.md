@@ -1,6 +1,7 @@
-# alpha_vantage_rust
-#
-# THIS PROJECT IS  REFERENCE ONLY AS OF AUG , 23 2025
+# ⚠️ DEPRECATED - alpha_vantage_rust 
+
+**This project is no longer maintained and has been deprecated as of [Aug 23, 2025].**
+
 
 # SEE the [alphavantage](https://github.com/dbrowne/alphavantage) repo for the newer version
 ![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-green.svg)
@@ -9,7 +10,7 @@
 
 A Rust API client and demonstration for the [Alpha Vantage](https://www.alphavantage.co/) API.
 
-> 🚧 **Project Status**: Currently under active development with frequent updates.
+> 🚧 **Project Status**: ARCHIVED. 
 
 ## Table of Contents
 - [Getting Started](#getting-started)
